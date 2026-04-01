@@ -18,7 +18,8 @@ Simple mobile-friendly one-screen design with the app name and user profile icon
     - Can specify the event type (Hotel, Restaurant, Activity), name, cost, location address (optional)
     - Ensure the date and time can be selected (with timezone option)
 Simple operations:
-  - Name the project at the top
+  - Name the trip at the top
+  - Add an image for the trip as a background header
   - Click the plus icon to create a new event
   - Edit icon on existing events to modify their fields
   - Delete icon on existing events to remove events
