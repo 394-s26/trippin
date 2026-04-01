@@ -17,6 +17,7 @@ Simple mobile-friendly one-screen design with the app name on the left and user 
   - A plus button in the bottom right that when clicked opens an event creation menu:
     - Can specify the event type (Hotel, Restaurant, Activity), name, cost, location address (optional)
     - Ensure the date and time can be selected (with timezone option)
+  - Conflicting events are added to the itinerary but display red text to flag the user to update.
 Simple operations:
   - Name the trip at the top
   - Add an image for the trip as a background header
@@ -29,25 +30,28 @@ Simple operations:
 
 Here is an example session.
 
-- Alice, Bob, Cathy, and Dave are a team of developers.
-- Alice, Cathy, and Dave meet to do mob programming for 90 minutes.
-- Alice starts the app on her phone. 
-- It shows a countdown timer, set to 10 minutes, a start button, and a shuffled list of team member names with checkmarks.
-- The first name is highlighted. It happens to be Bob.
-- Alice taps Bob's nam because he is not there. The highlight moves to Dave.
-- Dave sits at the keyboard and starts the timer. He begins entering code suggested by the other team members. 
-- Pizza arrives, so Dave stops the timer and grabs a slice. After a few minutes, he starts the timer to continue his turn.
-- A beep at 9 minutes warns the team is almost time to rotate.
-- Whem time goes to zero, an alarm sounds. Dave stops. The highlight moves to Cathy
-- Cathy taps the start button to begin her turn.
+- Tanner is a Northwestern student looking to enjoy his spring break.
+- Tanner creates a mental model of his trip with a budget in mind.
+- Tanner opens the Trippin' app to determine the fine details of his trip.
+- Trippin' shows an itinerary with event entries, a + button to add new events, edit and delete icons on existing events, a trip banner with a background image and trip name, and a button to set the total budget.
+- Tanner names his trip and uploads a photo to be the header background.
+- He taps the budget button and sets a total trip budget of $600.
+- Tanner taps the + button to add his first event. He selects Hotel, names it "Chicago Hotel", enters $250 as the cost, and picks Thursday April 2nd at 4:00 PM CT as his checkin.
+- He adds a Restaurant event named "Chicago Restaurant", adds $80, and sets the date as Wednesday April 1st at 2:00 PM.
+- The itinerary reorders the events by date and time. The restaurant now appears above the hotel and sectioned by day of the week.
+- Tanner notices a conflicting event entry and taps the event update icon to change its time.
+- Tanner notices a duplicate restaurant entry and taps the delete icon to remove it.
+- The total expenses currently sit at $330 for Tanner which is within his budget. Tanner's expenses are displayed automatically in green text, turning more red the closer the expenses get to the budget amount.
+- Tanner scrolls through the finalized schedule, and he is ready for his trip.
 
 # Coding notes
 
-- Use setInterval() to implement the timer.
-- Use AudioContext to play sounds.
-- Define and import a MockAudioContext class for unit testing sounds. 
+- Use Firebase Storage to handle trip banner image uploads.
+- Sort events on the itinerary client-side by date and time whenever the events are updated.
+- Use Firestore's onSnapshot() to sync itinerary changes across collaborators in real time.
 
 # Testing notes
-- Define unit tests for skipping team members in the rotation.
-- Define unit tests for when Start and Stop should appear.
-- Define unit tests for when sounds should happen.
+
+- Define unit tests for adding, editing, and deleting events.
+- Define unit tests for budget calculations and per-person share splitting.
+- Define unit tests for chronological reordering of events after additions or edits.
