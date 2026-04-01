@@ -12,17 +12,16 @@ An efficient way to collaborate with friends to organize, plan, schedule and fin
 
 # Key features
 
-Simple mobile-friendly one-screen design with the app name at the top, and below it:
-  - large countdown timer, defaulting to 10 minutes, but adjustable at the start of each session,
-  - a single start/pause buttonm
-  - the team members, shuffled at the start of each session, with the first name highlighted
+Simple mobile-friendly one-screen design with the app name and user profile icon at the top, and below it:
+  - A vertical sequence of scheduled events, with the most recent events at the top and latest events at the bottom
+  - A plus button in the bottom right that when clicked opens an event creation menu:
+    - Can specify the event type (Hotel, Restaurant, Activity), name, cost, location address (optional)
+    - Ensure the date and time can be selected (with timezone option)
 Simple operations:
-  - Tap a name to skip or include that team member in the rotation.
-  - Tap start to start the timer, tap again to pause it.
-  - When one minute is left, timer beeps and starts flashing.
-  - When time is up, timer sounds an alarm, resets time, rotates to the next team member, and waits for start.
-Recording-keeping:
-  - At end of each turn, the app logs to the console the current time, rotation duration setting, the driver, and the navigators.
+  - Name the project at the top
+  - Click the plus icon to create a new event
+  - Edit icon on existing events to modify their fields
+  - Delete icon on existing events to remove events
 
 # Example scenario
 
