@@ -12,7 +12,7 @@ An efficient way to collaborate with friends to organize, plan, schedule and fin
 
 # Key features
 
-Simple mobile-friendly one-screen design with the app name and user profile icon at the top, and below it:
+Simple mobile-friendly one-screen design with the app name on the left and user profile icon on the right at the top, and below it:
   - A vertical sequence of scheduled events, with the most recent events at the top and latest events at the bottom
   - A plus button in the bottom right that when clicked opens an event creation menu:
     - Can specify the event type (Hotel, Restaurant, Activity), name, cost, location address (optional)
@@ -20,6 +20,7 @@ Simple mobile-friendly one-screen design with the app name and user profile icon
 Simple operations:
   - Name the trip at the top
   - Add an image for the trip as a background header
+  - Setting a budget for the trip
   - Click the plus icon to create a new event
   - Edit icon on existing events to modify their fields
   - Delete icon on existing events to remove events
