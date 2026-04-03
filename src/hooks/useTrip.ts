@@ -10,6 +10,7 @@ const useTrip = (tripId: string) => {
     const [trip, setTrip] = useState<Trip | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [permissionDenied, setPermissionDenied] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onSnapshot(
@@ -27,7 +28,11 @@ const useTrip = (tripId: string) => {
                 setLoading(false);
             },
             (err: FirestoreError) => {
-                setError(err.message);
+                if (err.code === 'permission-denied') {
+                    setPermissionDenied(true);
+                } else {
+                    setError(err.message);
+                }
                 setLoading(false);
             }
         );
@@ -67,7 +72,7 @@ const useTrip = (tripId: string) => {
         }
     };
 
-    return { trip, loading, error, updateTripName, updateBudget, updateBannerImage, deleteTrip };
+    return { trip, loading, error, permissionDenied, updateTripName, updateBudget, updateBannerImage, deleteTrip };
 };
 
 export default useTrip;

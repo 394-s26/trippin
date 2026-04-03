@@ -1,0 +1,138 @@
+@reference "../index.css";
+
+.trip-share-bar {
+  @apply absolute top-3 left-3 z-10 hidden md:flex items-center gap-2;
+}
+
+/* Mobile card variant — shown below the banner on small screens */
+.trip-share-bar-card {
+  @apply flex md:hidden items-center justify-between bg-white rounded-2xl px-4 py-3 shadow-sm;
+}
+
+.trip-share-bar-card-avatars {
+  @apply flex items-center;
+}
+
+.trip-share-bar-card-overflow {
+  @apply w-9 h-9 rounded-full bg-green-800 text-white text-sm font-semibold flex items-center justify-center flex-shrink-0 border-2 border-white;
+}
+
+.trip-share-bar-card-invite-btn {
+  @apply flex items-center gap-2 text-green-800 font-semibold text-base;
+}
+
+.trip-share-bar-users {
+  @apply flex items-center rounded-full bg-gray-500/60 p-1;
+}
+
+.trip-share-bar-avatar {
+  @apply w-9 h-9 rounded-full object-cover border-2 border-white flex-shrink-0;
+}
+
+.trip-share-bar-avatar-default {
+  @apply bg-gray-400 flex items-center justify-center text-white;
+}
+
+.trip-share-bar-empty-label {
+  @apply text-gray-400 text-sm;
+}
+
+.trip-share-bar-add-btn {
+  @apply flex items-center gap-1 text-white/90 hover:text-white transition-colors flex-shrink-0 ml-1.5 p-0.5;
+}
+
+.trip-share-bar-add-label {
+  @apply text-sm font-medium mr-1;
+}
+
+.trip-share-bar-copy-btn {
+  @apply flex items-center justify-center rounded-full bg-gray-500/60 p-3 text-white/90 hover:text-white transition-colors;
+}
+
+.trip-share-bar-avatar-btn {
+  @apply flex-shrink-0 rounded-full focus:outline-none;
+}
+
+/* Remove popover */
+
+.trip-share-bar-remove-backdrop {
+  @apply fixed inset-0 z-40;
+}
+
+.trip-share-bar-remove-popover {
+  @apply fixed z-50 bg-white rounded-xl shadow-lg p-3 -translate-x-1/2 min-w-44;
+}
+
+.trip-share-bar-remove-question {
+  @apply text-sm font-medium text-gray-800 text-center mb-2.5;
+}
+
+.trip-share-bar-remove-actions {
+  @apply flex gap-2;
+}
+
+.trip-share-bar-remove-confirm {
+  @apply flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg py-1.5 transition-colors;
+}
+
+.trip-share-bar-remove-cancel {
+  @apply flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg py-1.5 transition-colors;
+}
+
+/* Share modal */
+
+.share-modal-overlay {
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50;
+}
+
+.share-modal {
+  @apply bg-white rounded-2xl p-6 w-96 max-w-[90vw] shadow-xl flex flex-col;
+}
+
+.share-modal-title {
+  @apply text-xl font-bold text-gray-900 mb-1;
+}
+
+.share-modal-subtitle {
+  @apply text-sm text-gray-500 mb-4;
+}
+
+.share-modal-input-area {
+  @apply border border-gray-200 rounded-xl p-2 flex flex-wrap gap-2 min-h-12 cursor-text focus-within:border-gray-400 transition-colors;
+}
+
+.share-modal-pill {
+  @apply flex items-center gap-1.5 bg-gray-100 rounded-full pl-1 pr-2 py-0.5 text-sm text-gray-800 flex-shrink-0;
+}
+
+.share-modal-pill-invalid {
+  @apply bg-red-100 text-red-700;
+}
+
+.share-modal-pill-avatar {
+  @apply w-5 h-5 rounded-full object-cover flex-shrink-0;
+}
+
+.share-modal-pill-avatar-default {
+  @apply bg-gray-300 flex items-center justify-center text-gray-600;
+}
+
+.share-modal-pill-label {
+  @apply text-sm leading-none;
+}
+
+.share-modal-pill-remove {
+  @apply text-gray-400 hover:text-gray-700 transition-colors leading-none text-base ml-0.5;
+}
+
+.share-modal-pill-invalid .share-modal-pill-remove {
+  @apply text-red-400 hover:text-red-600;
+}
+
+.share-modal-input {
+  @apply outline-none flex-1 min-w-28 text-sm bg-transparent placeholder-gray-400;
+}
+
+.share-modal-submit {
+  @apply mt-4 w-full bg-green-700 hover:bg-green-800 text-white rounded-xl py-2.5 font-semibold transition-colors;
+}

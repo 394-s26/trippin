@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { ImagePlusIcon, CalendarIcon, PencilIcon, CheckIcon, TrashIcon } from '../services/svgIcons';
 import { uploadTripBanner } from '../services/storageService';
+import TripShareBar from './TripShareBar';
 import greenBg from '../images/green_bg.jpg';
 import './TripBanner.css';
 
@@ -8,18 +9,20 @@ interface TripBannerProps {
   tripName: string;
   backgroundImage: string | null;
   dateRange: string;
+  tripId: string;
+  shared?: string[];
+  isOwner?: boolean;
   onChangeName?: (url: string) => void;
   onChangeImage?: (url: string) => void;
   onChangeStartDate?: (date: Date) => void;
   onDelete?: () => void;
 }
 
-const TripBanner = ({ tripName, backgroundImage, dateRange, onChangeName, onChangeImage, onChangeStartDate, onDelete }: TripBannerProps) => {
+const TripBanner = ({ tripName, backgroundImage, dateRange, tripId, shared = [], isOwner = false, onChangeName, onChangeImage, onChangeStartDate, onDelete }: TripBannerProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState(tripName);
-
   const commitNameEdit = () => {
     const trimmed = editNameValue.trim();
     if (trimmed && trimmed !== tripName) onChangeName?.(trimmed);
@@ -46,6 +49,8 @@ const TripBanner = ({ tripName, backgroundImage, dateRange, onChangeName, onChan
       style={{ backgroundImage: `url(${backgroundImage ?? greenBg})` }}
     >
       <div className="trip-banner-overlay" />
+
+      <TripShareBar shared={shared} tripId={tripId} isOwner={isOwner} />
 
       {onChangeImage && (
         <>

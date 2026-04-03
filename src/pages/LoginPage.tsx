@@ -91,7 +91,7 @@ const LoginPage = () => {
       <div className="login-bg" style={{ backgroundImage: `url(${forestBg})` }} />
       <div className="login-bg-overlay" />
       <p className="login-photo-credit">
-        Photo by <a href="https://unsplash.com/@toxilicity?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Aleesha Wood</a> on <a href="https://unsplash.com/photos/empty-asphalt-road-between-tress-O3pQYVd2Bc0?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Unsplash</a>
+        Photo by <a href="https://unsplash.com/@toxilicity?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank">Aleesha Wood</a> on <a href="https://unsplash.com/photos/empty-asphalt-road-between-tress-O3pQYVd2Bc0?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Unsplash</a>
       </p>
       <div className="login-card">
         <div className="flex justify-center mb-1">

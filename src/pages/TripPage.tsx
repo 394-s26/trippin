@@ -6,12 +6,14 @@ import TripBanner from '../components/TripBanner';
 import ItineraryList from '../components/ItineraryList';
 import EventFormModal from '../components/EventFormModal';
 import BudgetModal from '../components/BudgetModal';
+import TripShareBar from '../components/TripShareBar';
 import { Event } from '../types/event';
 import { Day } from '../types/day';
 import useTrip from '../hooks/useTrip';
 import useDays from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { createEvent, deleteEvent } from '../services/firestoreEventsService';
+import { useAuth } from '../contexts/AuthContext';
 import './Home.css';
 
 const formatDateRange = (days: Omit<Day, 'events'>[]): string => {
@@ -23,7 +25,8 @@ const formatDateRange = (days: Omit<Day, 'events'>[]): string => {
 const TripPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { trip, loading, error, updateTripName, updateBannerImage, deleteTrip } = useTrip(id!);
+  const { appUser } = useAuth();
+  const { trip, loading, error, permissionDenied, updateTripName, updateBannerImage, deleteTrip } = useTrip(id!);
   const { days, addDay, renameDayLabel, removeDay, changeStartDate } = useDays(id!);
   const { events } = useItinerary(id!);
 
@@ -100,6 +103,25 @@ const TripPage = () => {
     );
   }
 
+  const noAccessView = (
+    <div className="home-wrapper">
+      <div className="home-container">
+        <AppHeader />
+        <main className="home-main">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem' }}>
+            <p style={{ color: '#6b7280' }}>You do not have permission to view this trip.</p>
+            <button style={{ color: '#2d5a27', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => navigate('/')}>
+              Go to home
+            </button>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+
+  // Firestore blocked the read (backend enforcement).
+  if (permissionDenied) return noAccessView;
+
   if (error || !trip) {
     return (
       <div className="home-wrapper">
@@ -118,6 +140,11 @@ const TripPage = () => {
     );
   }
 
+  // Frontend guard: trip loaded but user is neither owner nor in shared[].
+  if (appUser && appUser.uid !== trip.userId && !trip.shared.includes(appUser.uid)) {
+    return noAccessView;
+  }
+
   return (
     <div className="home-wrapper">
       <div className="home-container">
@@ -128,10 +155,19 @@ const TripPage = () => {
               tripName={tripName}
               backgroundImage={bannerImage}
               dateRange={formatDateRange(days)}
+              tripId={id!}
+              shared={trip.shared}
+              isOwner={appUser?.uid === trip.userId}
               onChangeName={handleChangeName}
               onChangeImage={handleChangeBannerImage}
               onChangeStartDate={handleChangeStartDate}
               onDelete={() => setShowDeleteConfirm(true)}
+            />
+            <TripShareBar
+              shared={trip.shared}
+              tripId={id!}
+              isOwner={appUser?.uid === trip.userId}
+              variant="card"
             />
             <BudgetModal tripId={id!} spent={events.reduce((sum, e) => sum + (e.cost ?? 0), 0)} />
             <ItineraryList

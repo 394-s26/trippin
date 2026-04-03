@@ -69,14 +69,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const [firstName, ...rest] = (firebaseUser.displayName ?? '').split(' ');
       const lastName = rest.join(' ');
       const username = (firebaseUser.displayName ?? '').replace(/\s+/g, '').toLowerCase();
-      await createAppUser({
+      const newAppUser: AppUser = {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         firstName,
         lastName,
         username,
         photoURL: firebaseUser.photoURL,
-      });
+      };
+      await createAppUser(newAppUser);
+      setAppUser(newAppUser);
     }
   };
 
@@ -86,14 +88,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const registerWithEmail = async (email: string, password: string, username: string) => {
     const firebaseUser = await signUpWithEmail(email, password);
-    await createAppUser({
+    const newAppUser: AppUser = {
       uid: firebaseUser.uid,
       email: firebaseUser.email,
       firstName: '',
       lastName: '',
       username,
       photoURL: null,
-    });
+    };
+    await createAppUser(newAppUser);
+    setAppUser(newAppUser);
   };
 
   const logout = async () => {
