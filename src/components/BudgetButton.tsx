@@ -1,10 +1,10 @@
 import './BudgetButton.css';
 import BudgetModal from './BudgetModal';
 
-const BudgetButton = ({ tripId }: { tripId: string }) => {
+const BudgetButton = ({ tripId, spent }: { tripId: string; spent: number }) => {
   return (
     <div className="budget-btn-wrapper">
-      <BudgetModal tripId={tripId} />
+      <BudgetModal tripId={tripId} spent={spent} />
     </div>
   );
 };
