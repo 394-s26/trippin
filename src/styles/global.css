@@ -1,0 +1,22 @@
+@theme {
+  --color-primary: #2D5A27;
+  --color-primary-light: #3d7a35;
+  --color-secondary: #98FB98;
+  --color-tertiary: #8A9A5B;
+  --color-neutral: #F8FAF8;
+
+  --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@utility animate-slide-up {
+  animation: slide-up 0.75s cubic-bezier(0.32, 0.72, 0, 1);
+}

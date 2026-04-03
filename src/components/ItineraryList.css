@@ -1,0 +1,115 @@
+@reference "../index.css";
+
+.itinerary-list {
+  @apply flex flex-col gap-6;
+}
+
+.day-section {
+  @apply rounded-2xl p-3 -mx-3 transition-colors;
+}
+
+.day-section-editing {
+  @apply bg-green-50;
+}
+
+.day-header {
+  @apply flex items-center gap-3 mb-3;
+}
+
+.day-number {
+  @apply w-8 h-8 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center shrink-0;
+}
+
+.day-label-wrapper {
+  @apply flex items-center gap-2 flex-1 min-w-0;
+}
+
+.day-label-input {
+  @apply flex-1 min-w-0 text-primary font-bold text-base bg-transparent border-b-2 border-primary focus:outline-none;
+}
+
+.day-confirm-btn {
+  @apply text-primary hover:text-primary-light transition-colors shrink-0 ml-auto;
+}
+
+.day-label-text {
+  @apply text-primary font-bold text-base truncate;
+}
+
+.day-actions {
+  @apply ml-auto flex items-center gap-2 shrink-0 relative;
+}
+
+.day-add-event-btn {
+  @apply flex items-center gap-1 text-xs font-semibold text-white bg-primary border border-primary rounded-lg px-2 py-1 hover:bg-primary-light transition-colors;
+}
+
+.day-edit-btn {
+  @apply text-gray-400 hover:text-primary transition-colors;
+}
+
+.day-delete-btn {
+  @apply text-gray-400 hover:text-red-500 transition-colors;
+}
+
+.delete-popover {
+  @apply absolute right-0 top-7 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-52;
+}
+
+.delete-popover-text {
+  @apply text-xs text-gray-700 font-medium mb-3;
+}
+
+.delete-popover-actions {
+  @apply flex gap-2;
+}
+
+.delete-confirm-btn {
+  @apply flex-1 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors;
+}
+
+.delete-cancel-btn {
+  @apply flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-1.5 rounded-lg transition-colors;
+}
+
+.day-events {
+  @apply relative pl-4 flex flex-col gap-3;
+}
+
+.day-timeline {
+  @apply absolute left-0 top-2 bottom-2 w-0.5 rounded-full;
+  background: linear-gradient(to bottom, var(--color-secondary), rgba(45, 90, 39, 0.2));
+}
+
+.day-no-events {
+  @apply text-gray-300 text-xs py-2;
+}
+
+.empty-trip-hint {
+  @apply flex flex-col items-center gap-1 pb-2;
+}
+
+.empty-trip-text {
+  @apply text-gray-400 text-sm font-medium;
+}
+
+.empty-trip-caret {
+  @apply text-2xl leading-none;
+  color: rgba(45, 90, 39, 0.4);
+  animation: caret-bob 1.2s ease-in-out infinite;
+}
+
+@keyframes caret-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+
+.add-day-btn {
+  @apply flex items-center justify-center gap-2 w-full py-3 rounded-2xl border-2 border-dashed text-primary text-sm font-medium transition-colors;
+  border-color: rgba(45, 90, 39, 0.3);
+}
+
+.add-day-btn:hover {
+  border-color: rgba(45, 90, 39, 0.6);
+  background-color: rgba(45, 90, 39, 0.05);
+}

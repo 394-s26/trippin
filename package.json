@@ -1,7 +1,7 @@
 {
-  "name": "react-copilot",
+  "name": "trippin-prototype",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,8 +13,10 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
+    "firebase": "^9.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-router-dom": "^6.0.0",
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {

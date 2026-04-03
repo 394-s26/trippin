@@ -1,0 +1,37 @@
+@reference "../index.css";
+
+.app-header {
+  @apply flex justify-between items-center px-5 py-4 bg-white border-b border-gray-100;
+}
+
+.app-header-logo {
+  @apply flex items-center gap-2;
+}
+
+.app-header-profile-wrapper {
+  @apply relative;
+}
+
+.app-header-profile-btn {
+  @apply cursor-pointer w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center text-tertiary border-2 border-primary;
+}
+
+.app-header-avatar {
+  @apply w-full h-full object-cover;
+}
+
+.app-header-submenu {
+  @apply absolute right-0 mt-2 w-44 bg-white rounded-lg shadow-lg border border-gray-100 flex flex-col py-1 z-50;
+}
+
+.app-header-submenu-username {
+  @apply px-4 py-2 text-sm italic text-gray-500 border-b border-gray-100;
+}
+
+.app-header-submenu-item {
+  @apply px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed;
+}
+
+.app-header-submenu-logout {
+  @apply text-red-500 hover:bg-red-50;
+}

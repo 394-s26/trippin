@@ -1,0 +1,101 @@
+@reference "../index.css";
+
+.budget-cards-row {
+  @apply flex gap-3;
+}
+
+.budget-card {
+  @apply flex-1 flex flex-row items-center justify-between rounded-2xl p-4 text-left duration-100 cursor-pointer;
+}
+
+.budget-card-text {
+  @apply flex flex-col gap-1;
+}
+
+.budget-card svg {
+  transition: transform 150ms ease;
+}
+
+.budget-card:hover svg {
+  transform: scale(1.1);
+}
+
+.budget-card--dark {
+  @apply bg-primary text-white;
+}
+
+.budget-card--dark:hover {
+  @apply bg-primary-light;
+}
+
+.budget-card--over {
+  @apply bg-red-400 text-white;
+}
+
+.budget-card--over:hover {
+  @apply bg-red-300;
+}
+
+.budget-card--light {
+  @apply bg-green-200 text-primary;
+}
+
+.budget-card--light:hover {
+  @apply bg-green-300;
+}
+
+.budget-card-label {
+  @apply text-xs font-semibold tracking-widest uppercase opacity-80;
+}
+
+.budget-card-value {
+  @apply text-2xl font-bold;
+}
+
+.budget-card-budget {
+  @apply text-base font-normal opacity-75;
+}
+
+.budget-modal-overlay {
+  @apply fixed inset-0 z-50 flex items-end justify-center;
+}
+
+.budget-modal-backdrop {
+  @apply absolute inset-0 bg-black/40;
+}
+
+.budget-modal-sheet {
+  @apply relative w-full max-w-sm bg-white rounded-t-2xl p-6 pb-8;
+}
+
+.budget-modal-title {
+  @apply text-lg font-bold text-gray-900 mb-4;
+}
+
+.budget-modal-form {
+  @apply flex flex-col gap-3;
+}
+
+.budget-modal-label {
+  @apply text-sm font-medium text-gray-700;
+}
+
+.budget-input-wrapper {
+  @apply relative;
+}
+
+.budget-input-prefix {
+  @apply absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium;
+}
+
+.budget-input {
+  @apply w-full border border-gray-200 rounded-xl pl-7 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary;
+}
+
+.budget-submit-btn {
+  @apply bg-primary text-white py-3 rounded-xl font-medium text-sm mt-1;
+}
+
+.budget-cancel-btn {
+  @apply text-gray-400 py-2 rounded-xl font-medium text-sm;
+}

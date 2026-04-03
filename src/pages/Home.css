@@ -1,0 +1,45 @@
+@reference "../index.css";
+
+.home-wrapper {
+  @apply min-h-screen bg-gray-200 flex justify-center;
+}
+
+.home-container {
+  @apply w-full md:w-1/2 bg-neutral min-h-screen flex flex-col relative shadow-2xl;
+}
+
+.home-main {
+  @apply flex-grow overflow-y-auto pb-20;
+}
+
+.home-content {
+  @apply p-4 flex flex-col gap-4;
+}
+
+.delete-confirm-overlay {
+  @apply fixed inset-0 z-50 flex items-end justify-center;
+}
+
+.delete-confirm-backdrop {
+  @apply absolute inset-0 bg-black/40;
+}
+
+.delete-confirm-sheet {
+  @apply relative w-full max-w-sm bg-white rounded-t-2xl p-6 pb-8 flex flex-col gap-3;
+}
+
+.delete-confirm-title {
+  @apply text-lg font-bold text-gray-900;
+}
+
+.delete-confirm-body {
+  @apply text-sm text-gray-500;
+}
+
+.delete-confirm-btn {
+  @apply bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-medium text-sm transition-colors;
+}
+
+.delete-cancel-btn {
+  @apply text-gray-400 py-2 rounded-xl font-medium text-sm;
+}
