@@ -18,13 +18,13 @@
     "invite_member",
     "remove_member",
     "change_member_role",
-    
+
     "delete_trip"
   ],
   "roles": {
     "owner":  ["add_event","edit_event","delete_event","add_day","edit_day","delete_day","change_trip_name","change_start_date","change_banner","change_budget","change_split_method","invite_member","remove_member","change_member_role","delete_trip"],
     "admin":  ["add_event","edit_event","delete_event","add_day","edit_day","delete_day","change_trip_name","change_start_date","change_banner","change_budget","change_split_method","invite_member","remove_member"],
-    "editor": ["add_event","edit_event","delete_event","add_day","edit_day","delete_day"],
+    "editor": ["add_event","edit_event","delete_event","add_day","edit_day","delete_day", "change_trip_name"],
     "viewer": []
   }
 }
