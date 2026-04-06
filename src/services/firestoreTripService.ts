@@ -4,22 +4,30 @@
 
 import { db } from './firebase';
 import { Trip } from '../types/trip';
-import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, or, where } from 'firebase/firestore';
+import { Role, TripAction } from '../config/permissions';
+import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, or, where, arrayUnion, arrayRemove, deleteField } from 'firebase/firestore';
+import { hasActionPermission, PermissionError } from './permissionService';
 
 export const firestoreTripService = {
     getTripRef: (tripId: string) => doc(db, 'trips', tripId),
-    updateTripBudget: async (tripId: string, budget: number) => {
+    updateTripBudget: async (uid: string, tripId: string, budget: number) => {
+        const allowed = await hasActionPermission(uid, tripId, 'change_budget');
+        if (!allowed) throw new PermissionError('change_budget');
         await updateDoc(doc(db, 'trips', tripId), { budget });
     },
 };
 
 const tripsCollection = collection(db, 'trips');
 
-// Function to create a new trip — pre-generates the Firestore ID so it can be stored on the document.
-export const createTrip = async (tripData: Omit<Trip, 'id'>): Promise<string> => {
+// Creates a new trip. Seeds permissions with the creator as owner.
+export const createTrip = async (uid: string, tripData: Omit<Trip, 'id'>): Promise<string> => {
     try {
         const newDocRef = doc(tripsCollection);
-        const trip: Trip = { ...tripData, id: newDocRef.id };
+        const trip: Trip = {
+            ...tripData,
+            id: newDocRef.id,
+            permissions: { [uid]: 'owner' },
+        };
         await setDoc(newDocRef, trip);
         return newDocRef.id;
     } catch (error) {
@@ -28,8 +36,10 @@ export const createTrip = async (tripData: Omit<Trip, 'id'>): Promise<string> =>
     }
 };
 
-// Function to update an existing trip
-export const updateTrip = async (tripId: string, tripData: Partial<Trip>) => {
+// Updates an existing trip. The action param determines which permission is checked.
+export const updateTrip = async (uid: string, tripId: string, tripData: Partial<Trip>, action: TripAction) => {
+    const allowed = await hasActionPermission(uid, tripId, action);
+    if (!allowed) throw new PermissionError(action);
     try {
         const tripDoc = doc(db, 'trips', tripId);
         await updateDoc(tripDoc, tripData);
@@ -39,8 +49,10 @@ export const updateTrip = async (tripId: string, tripData: Partial<Trip>) => {
     }
 };
 
-// Function to delete a trip document
-export const deleteTrip = async (tripId: string) => {
+// Deletes a trip document.
+export const deleteTrip = async (uid: string, tripId: string) => {
+    const allowed = await hasActionPermission(uid, tripId, 'delete_trip');
+    if (!allowed) throw new PermissionError('delete_trip');
     try {
         await deleteDoc(doc(db, 'trips', tripId));
     } catch (error) {
@@ -49,13 +61,45 @@ export const deleteTrip = async (tripId: string) => {
     }
 };
 
-// Function to listen for trip updates in real-time
+// Adds members to the trip. Writes to both shared[] and permissions map atomically.
+export const inviteMembers = async (actorUid: string, tripId: string, newUids: string[], role: Role) => {
+    const allowed = await hasActionPermission(actorUid, tripId, 'invite_member');
+    if (!allowed) throw new PermissionError('invite_member');
+    const permissionsUpdate = Object.fromEntries(
+        newUids.map(uid => [`permissions.${uid}`, role])
+    );
+    await updateDoc(doc(db, 'trips', tripId), {
+        shared: arrayUnion(...newUids),
+        ...permissionsUpdate,
+    });
+};
+
+// Removes a member from the trip. Removes from both shared[] and permissions map.
+export const removeMember = async (actorUid: string, tripId: string, targetUid: string) => {
+    const allowed = await hasActionPermission(actorUid, tripId, 'remove_member');
+    if (!allowed) throw new PermissionError('remove_member');
+    await updateDoc(doc(db, 'trips', tripId), {
+        shared: arrayRemove(targetUid),
+        [`permissions.${targetUid}`]: deleteField(),
+    });
+};
+
+// Changes an existing member's role.
+export const changeMemberRole = async (actorUid: string, tripId: string, targetUid: string, newRole: Role) => {
+    const allowed = await hasActionPermission(actorUid, tripId, 'change_member_role');
+    if (!allowed) throw new PermissionError('change_member_role');
+    await updateDoc(doc(db, 'trips', tripId), {
+        [`permissions.${targetUid}`]: newRole,
+    });
+};
+
+// Listens for trip updates in real-time.
 export const subscribeToTrips = (userId: string, callback: (trips: Trip[]) => void) => {
     const q = query(tripsCollection,
         or(
             where('userId', '==', userId),
             where('shared', 'array-contains', userId)
-        )    
+        )
     );
     return onSnapshot(q, (snapshot) => {
         const trips: Trip[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Trip));

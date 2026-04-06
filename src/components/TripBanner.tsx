@@ -3,6 +3,7 @@ import { ImagePlusIcon, CalendarIcon, PencilIcon, CheckIcon, TrashIcon } from '.
 import { uploadTripBanner } from '../services/storageService';
 import TripShareBar from './TripShareBar';
 import greenBg from '../images/green_bg.jpg';
+import { Role } from '../config/permissions';
 import './TripBanner.css';
 
 interface TripBannerProps {
@@ -11,14 +12,27 @@ interface TripBannerProps {
   dateRange: string;
   tripId: string;
   shared?: string[];
-  isOwner?: boolean;
+  permissions?: Record<string, Role>;
+  canChangeName?: boolean;
+  canChangeBanner?: boolean;
+  canChangeStartDate?: boolean;
+  canDelete?: boolean;
+  canManageMembers?: boolean;
+  canRemoveMembers?: boolean;
+  canChangeRole?: boolean;
   onChangeName?: (url: string) => void;
   onChangeImage?: (url: string) => void;
   onChangeStartDate?: (date: Date) => void;
   onDelete?: () => void;
 }
 
-const TripBanner = ({ tripName, backgroundImage, dateRange, tripId, shared = [], isOwner = false, onChangeName, onChangeImage, onChangeStartDate, onDelete }: TripBannerProps) => {
+const TripBanner = ({
+  tripName, backgroundImage, dateRange, tripId, shared = [],
+  permissions = {},
+  canChangeName = false, canChangeBanner = false, canChangeStartDate = false,
+  canDelete = false, canManageMembers = false, canRemoveMembers = false, canChangeRole = false,
+  onChangeName, onChangeImage, onChangeStartDate, onDelete,
+}: TripBannerProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -50,9 +64,16 @@ const TripBanner = ({ tripName, backgroundImage, dateRange, tripId, shared = [],
     >
       <div className="trip-banner-overlay" />
 
-      <TripShareBar shared={shared} tripId={tripId} isOwner={isOwner} />
+      <TripShareBar
+        shared={shared}
+        tripId={tripId}
+        permissions={permissions}
+        canInvite={canManageMembers}
+        canRemove={canRemoveMembers}
+        canChangeRole={canChangeRole}
+      />
 
-      {onChangeImage && (
+      {canChangeBanner && onChangeImage && (
         <>
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -64,7 +85,7 @@ const TripBanner = ({ tripName, backgroundImage, dateRange, tripId, shared = [],
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
         </>
       )}
-      {onDelete && (
+      {canDelete && onDelete && (
         <button
           onClick={onDelete}
           aria-label="Delete trip"
@@ -93,7 +114,7 @@ const TripBanner = ({ tripName, backgroundImage, dateRange, tripId, shared = [],
           ) : (
             <>
               <h1 className="trip-banner-title">{tripName}</h1>
-              {onChangeName && (
+              {canChangeName && onChangeName && (
                 <button
                   onClick={() => { setEditNameValue(tripName); setIsEditingName(true); }}
                   className="trip-banner-name-edit-btn"
@@ -106,21 +127,28 @@ const TripBanner = ({ tripName, backgroundImage, dateRange, tripId, shared = [],
             </>
           )}
         </div>
-        <button
-          onClick={() => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.click()}
-          className="trip-banner-date-btn"
-          aria-label="Change start date"
-        >
-          <CalendarIcon size={14} />
-          <span>{dateRange || 'None'}</span>
-        </button>
-        {onChangeStartDate && (
-          <input
-            ref={dateInputRef}
-            type="date"
-            className="trip-banner-date-input"
-            onChange={handleDateChange}
-          />
+        {canChangeStartDate ? (
+          <>
+            <button
+              onClick={() => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.click()}
+              className="trip-banner-date-btn"
+              aria-label="Change start date"
+            >
+              <CalendarIcon size={14} />
+              <span>{dateRange || 'None'}</span>
+            </button>
+            <input
+              ref={dateInputRef}
+              type="date"
+              className="trip-banner-date-input"
+              onChange={handleDateChange}
+            />
+          </>
+        ) : (
+          <div className="trip-banner-date-btn trip-banner-date-btn--readonly">
+            <CalendarIcon size={14} />
+            <span>{dateRange || 'None'}</span>
+          </div>
         )}
       </div>
     </div>

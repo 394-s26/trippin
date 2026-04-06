@@ -10,8 +10,12 @@ import {
     deleteDay as deleteDayDoc,
     subscribeToDays,
 } from '../services/firestoreDayService';
+import { useAuth } from '../contexts/AuthContext';
 
 const useDays = (tripId: string) => {
+    const { appUser } = useAuth();
+    const uid = appUser?.uid ?? '';
+
     const [days, setDays] = useState<Omit<Day, 'events'>[]>([]);
 
     useEffect(() => {
@@ -22,15 +26,15 @@ const useDays = (tripId: string) => {
         const nextDate = new Date(afterDate);
         nextDate.setDate(nextDate.getDate() + 1);
         const label = nextDate.toLocaleDateString('en-US', { weekday: 'long' });
-        await createDay(tripId, nextDate, label);
+        await createDay(uid, tripId, nextDate, label);
     };
 
     const renameDayLabel = async (dayId: string, label: string): Promise<void> => {
-        await updateLabel(tripId, dayId, label);
+        await updateLabel(uid, tripId, dayId, label);
     };
 
     const removeDay = async (dayId: string): Promise<void> => {
-        await deleteDayDoc(tripId, dayId);
+        await deleteDayDoc(uid, tripId, dayId);
     };
 
     // Shifts every day's date so that day 0 falls on newStartDate.
@@ -39,7 +43,7 @@ const useDays = (tripId: string) => {
             days.map((day, i) => {
                 const shifted = new Date(newStartDate);
                 shifted.setDate(shifted.getDate() + i);
-                return updateDayDate(tripId, day.id, shifted);
+                return updateDayDate(uid, tripId, day.id, shifted);
             })
         );
     };

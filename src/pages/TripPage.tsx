@@ -30,7 +30,7 @@ const TripPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { appUser } = useAuth();
-  const { trip, loading, error, permissionDenied, updateTripName, updateBannerImage, deleteTrip } = useTrip(id!);
+  const { trip, loading, error, permissionDenied, can, updateTripName, updateBannerImage, deleteTrip } = useTrip(id!);
   const { days, addDay, renameDayLabel, removeDay, changeStartDate } = useDays(id!);
   const { events } = useItinerary(id!);
   const { mySelectedIds, allSelections, toggleSelection } = useSessionSelections(id!, appUser?.uid);
@@ -91,7 +91,7 @@ const TripPage = () => {
   const handleChangeName = (tripName: string) => {
     setTripName(tripName);
     updateTripName(tripName);
-  }
+  };
 
   const handleChangeBannerImage = (url: string) => {
     setBannerImage(url);
@@ -100,8 +100,8 @@ const TripPage = () => {
 
   const handleNewEvent = async (event: Omit<Event, 'id' | 'tripId' | 'dayId'>) => {
     const dayId = activeDay?.id;
-    if (!dayId) return;
-    await createEvent({ ...event, tripId: id!, dayId });
+    if (!dayId || !appUser) return;
+    await createEvent(appUser.uid, { ...event, tripId: id!, dayId });
   };
 
   if (loading) {
@@ -173,7 +173,14 @@ const TripPage = () => {
               dateRange={formatDateRange(days)}
               tripId={id!}
               shared={trip.shared}
-              isOwner={appUser?.uid === trip.userId}
+              permissions={trip.permissions ?? {}}
+              canChangeName={can('change_trip_name')}
+              canChangeBanner={can('change_banner')}
+              canChangeStartDate={can('change_start_date')}
+              canDelete={can('delete_trip')}
+              canManageMembers={can('invite_member')}
+              canRemoveMembers={can('remove_member')}
+              canChangeRole={can('change_member_role')}
               onChangeName={handleChangeName}
               onChangeImage={handleChangeBannerImage}
               onChangeStartDate={handleChangeStartDate}
@@ -182,8 +189,11 @@ const TripPage = () => {
             <TripShareBar
               shared={trip.shared}
               tripId={id!}
-              isOwner={appUser?.uid === trip.userId}
               variant="card"
+              permissions={trip.permissions ?? {}}
+              canInvite={can('invite_member')}
+              canRemove={can('remove_member')}
+              canChangeRole={can('change_member_role')}
             />
             <BudgetModal
               tripId={id!}
@@ -191,6 +201,8 @@ const TripPage = () => {
               events={events}
               tripUsers={tripUsers}
               currentUserId={appUser?.uid ?? ''}
+              canEditBudget={can('change_budget')}
+              canEditSplitMethod={can('change_split_method')}
             />
             <ItineraryList
               days={daysWithEvents}
@@ -198,11 +210,17 @@ const TripPage = () => {
               onUpdateDayLabel={handleUpdateDayLabel}
               onDeleteDay={handleDeleteDay}
               onAddEvent={(day) => setActiveDay({ id: day.id, date: day.date })}
-              onDeleteEvent={(tripId, dayId, eventId) => deleteEvent(tripId, dayId, eventId)}
+              onDeleteEvent={(tripId, dayId, eventId) => deleteEvent(appUser!.uid, tripId, dayId, eventId)}
               selectedEventIds={mySelectedIds}
               onSelectEvent={toggleSelection}
               allSelections={allSelections}
               currentUserId={appUser?.uid}
+              canAddEvent={can('add_event')}
+              canAddDay={can('add_day')}
+              canEditDay={can('edit_day')}
+              canDeleteDay={can('delete_day')}
+              canEditEvent={can('edit_event')}
+              canDeleteEvent={can('delete_event')}
             />
           </div>
         </main>

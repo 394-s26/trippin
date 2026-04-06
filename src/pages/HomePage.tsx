@@ -21,13 +21,14 @@ const HomePage = () => {
   const handleNewTrip = async () => {
     setCreating(true);
     try {
-      const id = await createTrip({
+      const id = await createTrip(user!.uid, {
         userId: user!.uid,
         name: 'New Trip',
         startDate: new Date(),
         budget: 0,
         bannerImageUrl: null,
         shared: [],
+        permissions: {},
       });
       navigate(`/trip/${id}`);
     } catch (err) {

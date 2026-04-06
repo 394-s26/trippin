@@ -16,9 +16,15 @@ interface ItineraryListProps {
   onSelectEvent?: (eventId: string) => void;
   allSelections?: UserSelection[];
   currentUserId?: string;
+  canAddEvent?: boolean;
+  canAddDay?: boolean;
+  canEditDay?: boolean;
+  canDeleteDay?: boolean;
+  canEditEvent?: boolean;
+  canDeleteEvent?: boolean;
 }
 
-const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEvent, onDeleteEvent, selectedEventIds = [], onSelectEvent, allSelections = [], currentUserId }: ItineraryListProps) => {
+const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEvent, onDeleteEvent, selectedEventIds = [], onSelectEvent, allSelections = [], currentUserId, canAddEvent = false, canAddDay = false, canEditDay = false, canDeleteDay = false, canEditEvent = false, canDeleteEvent = false }: ItineraryListProps) => {
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -78,28 +84,34 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
 
                     {/* Right-aligned action buttons */}
                     <div className="day-actions">
-                      <button
-                        onClick={() => onAddEvent?.(day)}
-                        aria-label={`Add event to day ${index + 1}`}
-                        className="day-add-event-btn"
-                      >
-                        <PlusIcon size={14} />
-                        Event
-                      </button>
-                      <button
-                        onClick={() => startEdit(day)}
-                        aria-label={`Edit label for day ${index + 1}`}
-                        className="day-edit-btn"
-                      >
-                        <PencilIcon size={20} />
-                      </button>
-                      <button
-                        onClick={() => setConfirmDeleteId(day.id)}
-                        aria-label={`Delete day ${index + 1}`}
-                        className="day-delete-btn"
-                      >
-                        <TrashIcon size={20} />
-                      </button>
+                      {canAddEvent && (
+                        <button
+                          onClick={() => onAddEvent?.(day)}
+                          aria-label={`Add event to day ${index + 1}`}
+                          className="day-add-event-btn"
+                        >
+                          <PlusIcon size={14} />
+                          Event
+                        </button>
+                      )}
+                      {canEditDay && (
+                        <button
+                          onClick={() => startEdit(day)}
+                          aria-label={`Edit label for day ${index + 1}`}
+                          className="day-edit-btn"
+                        >
+                          <PencilIcon size={20} />
+                        </button>
+                      )}
+                      {canDeleteDay && (
+                        <button
+                          onClick={() => setConfirmDeleteId(day.id)}
+                          aria-label={`Delete day ${index + 1}`}
+                          className="day-delete-btn"
+                        >
+                          <TrashIcon size={20} />
+                        </button>
+                      )}
 
                       {/* Delete confirmation popover */}
                       {isConfirmingDelete && (
@@ -145,6 +157,8 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
                     isSelected={selectedEventIds.includes(event.id)}
                     allSelections={allSelections}
                     currentUserId={currentUserId}
+                    canEdit={canEditEvent}
+                    canDelete={canDeleteEvent}
                   />
                 ))
               ) : (
@@ -164,13 +178,15 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
       )}
 
       {/* Add Day button */}
-      <button
-        onClick={onAddDay}
-        className="add-day-btn"
-      >
-        <PlusIcon size={18} />
-        Add Day
-      </button>
+      {canAddDay && (
+        <button
+          onClick={onAddDay}
+          className="add-day-btn"
+        >
+          <PlusIcon size={18} />
+          Add Day
+        </button>
+      )}
     </div>
   );
 };

@@ -5,8 +5,14 @@ import { onSnapshot, DocumentSnapshot, FirestoreError, Timestamp } from 'firebas
 import { firestoreTripService, updateTrip, deleteTrip as deleteTripDoc } from '../services/firestoreTripService';
 import { Trip, SplitMethod } from '../types/trip';
 import { toDate } from '../utilities/timestamps';
+import { useAuth } from '../contexts/AuthContext';
+import { canPerformAction } from '../services/permissionService';
+import { TripAction } from '../config/permissions';
 
 const useTrip = (tripId: string) => {
+    const { appUser } = useAuth();
+    const uid = appUser?.uid ?? '';
+
     const [trip, setTrip] = useState<Trip | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -40,9 +46,15 @@ const useTrip = (tripId: string) => {
         return () => unsubscribe();
     }, [tripId]);
 
+    // Synchronous permission check — uses the already-loaded trip, no extra Firestore reads.
+    const can = (action: TripAction): boolean => {
+        if (!trip || !uid) return false;
+        return canPerformAction(uid, trip, action);
+    };
+
     const updateBudget = async (newBudget: number) => {
         try {
-            await firestoreTripService.updateTripBudget(tripId, newBudget);
+            await firestoreTripService.updateTripBudget(uid, tripId, newBudget);
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         }
@@ -50,15 +62,15 @@ const useTrip = (tripId: string) => {
 
     const updateTripName = async (name: string) => {
         try {
-            await updateTrip(tripId, { name });
+            await updateTrip(uid, tripId, { name }, 'change_trip_name');
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         }
-    }
+    };
 
     const updateBannerImage = async (bannerImageUrl: string) => {
         try {
-            await updateTrip(tripId, { bannerImageUrl });
+            await updateTrip(uid, tripId, { bannerImageUrl }, 'change_banner');
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         }
@@ -66,7 +78,7 @@ const useTrip = (tripId: string) => {
 
     const updateSplitMethod = async (splitMethod: SplitMethod) => {
         try {
-            await updateTrip(tripId, { splitMethod });
+            await updateTrip(uid, tripId, { splitMethod }, 'change_split_method');
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         }
@@ -74,13 +86,13 @@ const useTrip = (tripId: string) => {
 
     const deleteTrip = async () => {
         try {
-            await deleteTripDoc(tripId);
+            await deleteTripDoc(uid, tripId);
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         }
     };
 
-    return { trip, loading, error, permissionDenied, updateTripName, updateBudget, updateSplitMethod, updateBannerImage, deleteTrip };
+    return { trip, loading, error, permissionDenied, can, updateTripName, updateBudget, updateSplitMethod, updateBannerImage, deleteTrip };
 };
 
 export default useTrip;

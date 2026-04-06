@@ -1,11 +1,14 @@
 import { db } from './firebase';
 import { collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { Event } from '../types/event';
+import { hasActionPermission, PermissionError } from './permissionService';
 
 const eventsCol = (tripId: string, dayId: string) =>
   collection(db, 'trips', tripId, 'days', dayId, 'events');
 
-export const createEvent = async (event: Omit<Event, 'id'>): Promise<Event> => {
+export const createEvent = async (uid: string, event: Omit<Event, 'id'>): Promise<Event> => {
+  const allowed = await hasActionPermission(uid, event.tripId, 'add_event');
+  if (!allowed) throw new PermissionError('add_event');
   try {
     const docRef = await addDoc(eventsCol(event.tripId, event.dayId), event);
     return { ...event, id: docRef.id } as Event;
@@ -15,7 +18,9 @@ export const createEvent = async (event: Omit<Event, 'id'>): Promise<Event> => {
   }
 };
 
-export const updateEvent = async (tripId: string, dayId: string, id: string, updatedEvent: Partial<Event>) => {
+export const updateEvent = async (uid: string, tripId: string, dayId: string, id: string, updatedEvent: Partial<Event>) => {
+  const allowed = await hasActionPermission(uid, tripId, 'edit_event');
+  if (!allowed) throw new PermissionError('edit_event');
   try {
     await updateDoc(doc(eventsCol(tripId, dayId), id), updatedEvent);
   } catch (error) {
@@ -24,7 +29,9 @@ export const updateEvent = async (tripId: string, dayId: string, id: string, upd
   }
 };
 
-export const deleteEvent = async (tripId: string, dayId: string, id: string) => {
+export const deleteEvent = async (uid: string, tripId: string, dayId: string, id: string) => {
+  const allowed = await hasActionPermission(uid, tripId, 'delete_event');
+  if (!allowed) throw new PermissionError('delete_event');
   try {
     await deleteDoc(doc(eventsCol(tripId, dayId), id));
   } catch (error) {

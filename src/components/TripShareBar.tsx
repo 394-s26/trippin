@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { AppUser } from '../types/auth';
 import UserAvatar from './UserAvatar';
+import { Role } from '../config/permissions';
+import { inviteMembers, removeMember, changeMemberRole } from '../services/firestoreTripService';
+import { useAuth } from '../contexts/AuthContext';
 import './TripShareBar.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -25,22 +28,33 @@ interface RemovePopover {
 interface TripShareBarProps {
   shared: string[];
   tripId: string;
-  isOwner: boolean;
+  permissions?: Record<string, Role>;
+  canInvite?: boolean;
+  canRemove?: boolean;
+  canChangeRole?: boolean;
   variant?: 'banner' | 'card';
 }
 
-const TripShareBar = ({ shared, tripId, isOwner, variant = 'banner' }: TripShareBarProps) => {
+const TripShareBar = ({
+  shared, tripId, permissions = {},
+  canInvite = false, canRemove = false, canChangeRole = false,
+  variant = 'banner',
+}: TripShareBarProps) => {
+  const { appUser } = useAuth();
+  const uid = appUser?.uid ?? '';
+
   const [sharedUsers, setSharedUsers] = useState<AppUser[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [pills, setPills] = useState<EmailPill[]>([]);
+  const [inviteRole, setInviteRole] = useState<Role>('editor');
   const [removePopover, setRemovePopover] = useState<RemovePopover | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const sharedKey = shared.join(',');
   useEffect(() => {
     if (!shared.length) { setSharedUsers([]); return; }
-    Promise.all(shared.map(uid => getDoc(doc(db, 'users', uid)))).then(docs => {
+    Promise.all(shared.map(u => getDoc(doc(db, 'users', u)))).then(docs => {
       setSharedUsers(docs.filter(d => d.exists()).map(d => d.data() as AppUser));
     });
   }, [sharedKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -84,7 +98,7 @@ const TripShareBar = ({ shared, tripId, isOwner, variant = 'banner' }: TripShare
       .map(p => p.user!.uid);
 
     if (newUids.length > 0) {
-      await updateDoc(doc(db, 'trips', tripId), { shared: arrayUnion(...newUids) });
+      await inviteMembers(uid, tripId, newUids, inviteRole);
     }
 
     closeModal();
@@ -94,21 +108,26 @@ const TripShareBar = ({ shared, tripId, isOwner, variant = 'banner' }: TripShare
     setShowModal(false);
     setPills([]);
     setInputValue('');
+    setInviteRole('editor');
   };
 
-  const handleAvatarClick = (uid: string, e: React.MouseEvent<HTMLButtonElement>) => {
-    if (removePopover?.uid === uid) {
+  const handleAvatarClick = (targetUid: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    if (removePopover?.uid === targetUid) {
       setRemovePopover(null);
       return;
     }
     const rect = e.currentTarget.getBoundingClientRect();
-    setRemovePopover({ uid, top: rect.bottom + 8, left: rect.left + rect.width / 2 });
+    setRemovePopover({ uid: targetUid, top: rect.bottom + 8, left: rect.left + rect.width / 2 });
   };
 
   const handleRemoveUser = async () => {
     if (!removePopover) return;
-    await updateDoc(doc(db, 'trips', tripId), { shared: arrayRemove(removePopover.uid) });
+    await removeMember(uid, tripId, removePopover.uid);
     setRemovePopover(null);
+  };
+
+  const handleChangeRole = async (targetUid: string, newRole: Role) => {
+    await changeMemberRole(uid, tripId, targetUid, newRole);
   };
 
   const renderAvatar = (user: AppUser, _i: number, style?: React.CSSProperties) => (
@@ -121,18 +140,23 @@ const TripShareBar = ({ shared, tripId, isOwner, variant = 'banner' }: TripShare
       className="trip-share-bar-avatar-btn"
       style={{ ...style, zIndex: removePopover?.uid === user.uid ? 999 : sharedUsers.length - i + 1 }}
       onClick={e => handleAvatarClick(user.uid, e)}
-      aria-label={`Remove ${user.firstName}`}
+      aria-label={`Manage ${user.firstName}`}
     >
       {renderAvatar(user, i)}
     </button>
   );
+
+  const roleLabelOf = (targetUid: string): string => {
+    const role = permissions[targetUid];
+    return role ? role.charAt(0).toUpperCase() + role.slice(1) : '';
+  };
 
   // ── Banner variant (inside the trip image header) ───────────────────────────
   const bannerContent = (
     <div className="trip-share-bar">
       <div className="trip-share-bar-users">
         {sharedUsers.map((user, i) => (
-          isOwner ? (
+          canRemove ? (
             renderAvatarBtn(user, i, { marginLeft: i === 0 ? 0 : -10 })
           ) : (
             <span key={user.uid} style={{ marginLeft: i === 0 ? 0 : -10, zIndex: sharedUsers.length - i + 1, display: 'contents' }}>
@@ -140,7 +164,7 @@ const TripShareBar = ({ shared, tripId, isOwner, variant = 'banner' }: TripShare
             </span>
           )
         ))}
-        {isOwner && (
+        {canInvite && (
           <button
             className="trip-share-bar-add-btn"
             aria-label="Add user"
@@ -184,7 +208,7 @@ const TripShareBar = ({ shared, tripId, isOwner, variant = 'banner' }: TripShare
       )}
       <div className="trip-share-bar-card-avatars">
         {visibleUsers.map((user, i) => (
-          isOwner ? (
+          canRemove ? (
             renderAvatarBtn(user, i, { marginLeft: i === 0 ? 0 : -10 })
           ) : (
             <span key={user.uid} style={{ marginLeft: i === 0 ? 0 : -10, zIndex: sharedUsers.length - i + 1, display: 'contents' }}>
@@ -199,7 +223,7 @@ const TripShareBar = ({ shared, tripId, isOwner, variant = 'banner' }: TripShare
         )}
       </div>
 
-      {isOwner && (
+      {canInvite && (
         <button
           className="trip-share-bar-card-invite-btn"
           onClick={() => setShowModal(true)}
@@ -228,11 +252,32 @@ const TripShareBar = ({ shared, tripId, isOwner, variant = 'banner' }: TripShare
             className="trip-share-bar-remove-popover"
             style={{ top: removePopover.top, left: removePopover.left }}
           >
-            <p className="trip-share-bar-remove-question">Remove user from trip?</p>
-            <div className="trip-share-bar-remove-actions">
-              <button className="trip-share-bar-remove-confirm" onClick={handleRemoveUser}>Remove</button>
-              <button className="trip-share-bar-remove-cancel" onClick={() => setRemovePopover(null)}>Cancel</button>
-            </div>
+            {canChangeRole && (
+              <div className="trip-share-bar-role-row">
+                <span className="trip-share-bar-role-label">Role:</span>
+                <select
+                  className="trip-share-bar-role-select"
+                  value={permissions[removePopover.uid] ?? 'editor'}
+                  onChange={e => handleChangeRole(removePopover.uid, e.target.value as Role)}
+                >
+                  <option value="admin">Admin</option>
+                  <option value="editor">Editor</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </div>
+            )}
+            {!canChangeRole && roleLabelOf(removePopover.uid) && (
+              <p className="trip-share-bar-role-display">{roleLabelOf(removePopover.uid)}</p>
+            )}
+            {canRemove && (
+              <>
+                <p className="trip-share-bar-remove-question">Remove user from trip?</p>
+                <div className="trip-share-bar-remove-actions">
+                  <button className="trip-share-bar-remove-confirm" onClick={handleRemoveUser}>Remove</button>
+                  <button className="trip-share-bar-remove-cancel" onClick={() => setRemovePopover(null)}>Cancel</button>
+                </div>
+              </>
+            )}
           </div>
         </>
       )}
@@ -278,6 +323,19 @@ const TripShareBar = ({ shared, tripId, isOwner, variant = 'banner' }: TripShare
                 placeholder={pills.length === 0 ? 'Enter email address...' : ''}
                 autoFocus
               />
+            </div>
+
+            <div className="share-modal-role-row">
+              <label className="share-modal-role-label">Invite as:</label>
+              <select
+                className="share-modal-role-select"
+                value={inviteRole}
+                onChange={e => setInviteRole(e.target.value as Role)}
+              >
+                {canChangeRole && <option value="admin">Admin</option>}
+                <option value="editor">Editor</option>
+                <option value="viewer">Viewer</option>
+              </select>
             </div>
 
             <button className="share-modal-submit" onClick={handleShare}>
