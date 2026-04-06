@@ -12,6 +12,8 @@ interface EventCardProps {
   isSelected?: boolean;
   allSelections?: UserSelection[];
   currentUserId?: string;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 const TYPE_ICONS: Record<Event['type'], ReactElement> = {
@@ -21,7 +23,7 @@ const TYPE_ICONS: Record<Event['type'], ReactElement> = {
   Food: <FoodIcon size={24} />,
 };
 
-const EventCard = ({ event, onEdit, onDelete, onSelect, isSelected = false, allSelections = [], currentUserId }: EventCardProps) => {
+const EventCard = ({ event, onEdit, onDelete, onSelect, isSelected = false, allSelections = [], currentUserId, canEdit = false, canDelete = false }: EventCardProps) => {
   const time = new Date(event.date).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
@@ -61,16 +63,22 @@ const EventCard = ({ event, onEdit, onDelete, onSelect, isSelected = false, allS
           {TYPE_ICONS[event.type]}
         </div>
       </div>
-      <div className="event-card-actions">
-        <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="event-card-edit-btn">
-          <PencilIcon />
-          Edit
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="event-card-delete-btn">
-          <TrashIcon />
-          Delete
-        </button>
-      </div>
+      {(canEdit || canDelete) && (
+        <div className="event-card-actions">
+          {canEdit && (
+            <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="event-card-edit-btn">
+              <PencilIcon />
+              Edit
+            </button>
+          )}
+          {canDelete && (
+            <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="event-card-delete-btn">
+              <TrashIcon />
+              Delete
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

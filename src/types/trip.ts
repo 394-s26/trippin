@@ -1,5 +1,7 @@
 // This file defines TypeScript interfaces for trip data structures.
 
+import { Role } from '../config/permissions';
+
 // The total budget for a trip, stored in USD.
 export type Budget = number;
 
@@ -14,5 +16,6 @@ export interface Trip {
   bannerImageUrl: string | null;  // null = use default green background
   shared: string[];     // UIDs of users this trip has been shared with
   splitMethod?: SplitMethod; // How costs are split; defaults to 'even' when absent
+  permissions: Record<string, Role>; // { [uid]: role } — who can do what
   // Days are stored in the subcollection trips/{tripId}/days — see firestoreDayService.ts
 }

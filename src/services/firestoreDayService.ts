@@ -6,6 +6,7 @@ import { db } from './firebase';
 import { collection, doc, setDoc, updateDoc, getDocs, onSnapshot, query, orderBy, where, writeBatch, Timestamp } from 'firebase/firestore';
 import { Day } from '../types/day';
 import { toDate } from '../utilities/timestamps';
+import { hasActionPermission, PermissionError } from './permissionService';
 
 // Shape stored in Firestore — events are excluded; date is a Timestamp.
 type StoredDay = { id: string; tripId: string; date: Timestamp; label: string };
@@ -13,7 +14,9 @@ type StoredDay = { id: string; tripId: string; date: Timestamp; label: string };
 const daysCol = (tripId: string) => collection(db, 'trips', tripId, 'days');
 
 // Creates a new day document and returns the generated Firestore ID.
-export const createDay = async (tripId: string, date: Date, label: string): Promise<string> => {
+export const createDay = async (uid: string, tripId: string, date: Date, label: string): Promise<string> => {
+  const allowed = await hasActionPermission(uid, tripId, 'add_day');
+  if (!allowed) throw new PermissionError('add_day');
   const ref = doc(daysCol(tripId));
   const stored: StoredDay = { id: ref.id, tripId, date: Timestamp.fromDate(date), label };
   await setDoc(ref, stored);
@@ -21,17 +24,23 @@ export const createDay = async (tripId: string, date: Date, label: string): Prom
 };
 
 // Updates only the user-visible label of a day.
-export const updateDayLabel = async (tripId: string, dayId: string, label: string): Promise<void> => {
+export const updateDayLabel = async (uid: string, tripId: string, dayId: string, label: string): Promise<void> => {
+  const allowed = await hasActionPermission(uid, tripId, 'edit_day');
+  if (!allowed) throw new PermissionError('edit_day');
   await updateDoc(doc(daysCol(tripId), dayId), { label });
 };
 
 // Updates the calendar date of a day (used when shifting all days after a start-date change).
-export const updateDayDate = async (tripId: string, dayId: string, date: Date): Promise<void> => {
+export const updateDayDate = async (uid: string, tripId: string, dayId: string, date: Date): Promise<void> => {
+  const allowed = await hasActionPermission(uid, tripId, 'edit_day');
+  if (!allowed) throw new PermissionError('edit_day');
   await updateDoc(doc(daysCol(tripId), dayId), { date: Timestamp.fromDate(date) });
 };
 
 // Deletes a day document and all events belonging to that day.
-export const deleteDay = async (tripId: string, dayId: string): Promise<void> => {
+export const deleteDay = async (uid: string, tripId: string, dayId: string): Promise<void> => {
+  const allowed = await hasActionPermission(uid, tripId, 'delete_day');
+  if (!allowed) throw new PermissionError('delete_day');
   const eventsSnapshot = await getDocs(
     query(
       collection(db, 'events'),

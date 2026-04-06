@@ -13,9 +13,11 @@ interface BudgetModalProps {
   events: Event[];
   tripUsers: AppUser[];
   currentUserId: string;
+  canEditBudget?: boolean;
+  canEditSplitMethod?: boolean;
 }
 
-const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId }: BudgetModalProps) => {
+const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditBudget = false, canEditSplitMethod = false }: BudgetModalProps) => {
   const { trip, updateBudget, updateSplitMethod } = useTrip(tripId);
   const [inputValue, setInputValue] = useState(trip?.budget ?? 0);
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
@@ -58,21 +60,39 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId }: Budget
   return (
     <>
       <div className="budget-cards-row">
-        <button className={`budget-card ${overBudget ? 'budget-card--over' : 'budget-card--dark'}`} onClick={handleBudgetOpen}>
-          <div className="budget-card-text">
-            <span className="budget-card-label">TOTAL BUDGET</span>
-            <span className="budget-card-value">{fmt(spent)} <span className="budget-card-budget">({fmt(budget)})</span></span>
+        {canEditBudget ? (
+          <button className={`budget-card ${overBudget ? 'budget-card--over' : 'budget-card--dark'}`} onClick={handleBudgetOpen}>
+            <div className="budget-card-text">
+              <span className="budget-card-label">TOTAL BUDGET</span>
+              <span className="budget-card-value">{fmt(spent)} <span className="budget-card-budget">({fmt(budget)})</span></span>
+            </div>
+            <ChevronsUpDownIcon size={22} />
+          </button>
+        ) : (
+          <div className={`budget-card ${overBudget ? 'budget-card--over' : 'budget-card--dark'}`}>
+            <div className="budget-card-text">
+              <span className="budget-card-label">TOTAL BUDGET</span>
+              <span className="budget-card-value">{fmt(spent)} <span className="budget-card-budget">({fmt(budget)})</span></span>
+            </div>
           </div>
-          <ChevronsUpDownIcon size={22} />
-        </button>
+        )}
 
-        <button className="budget-card budget-card--light" onClick={() => setIsShareOpen(true)}>
-          <div className="budget-card-text">
-            <span className="budget-card-label">YOUR SHARE</span>
-            <span className="budget-card-value">{fmt(yourShare)}</span>
+        {canEditSplitMethod ? (
+          <button className="budget-card budget-card--light" onClick={() => setIsShareOpen(true)}>
+            <div className="budget-card-text">
+              <span className="budget-card-label">YOUR SHARE</span>
+              <span className="budget-card-value">{fmt(yourShare)}</span>
+            </div>
+            <PencilIcon size={22} />
+          </button>
+        ) : (
+          <div className="budget-card budget-card--light">
+            <div className="budget-card-text">
+              <span className="budget-card-label">YOUR SHARE</span>
+              <span className="budget-card-value">{fmt(yourShare)}</span>
+            </div>
           </div>
-          <PencilIcon size={22} />
-        </button>
+        )}
       </div>
 
       {isBudgetOpen && (
