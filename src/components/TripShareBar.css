@@ -74,11 +74,11 @@
 /* Share modal */
 
 .share-modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50;
+  @apply fixed inset-0 z-50 flex items-start justify-center px-4 pt-[10vh] bg-black/50;
 }
 
 .share-modal {
-  @apply bg-white rounded-2xl p-6 w-96 max-w-[90vw] shadow-xl flex flex-col;
+  @apply bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl flex flex-col;
 }
 
 .share-modal-title {
@@ -90,7 +90,7 @@
 }
 
 .share-modal-input-area {
-  @apply border border-gray-200 rounded-xl p-2 flex flex-wrap gap-2 min-h-12 cursor-text focus-within:border-gray-400 transition-colors;
+  @apply flex-1 border border-gray-200 rounded-xl p-2 flex flex-wrap gap-2 min-h-12 cursor-text focus-within:border-gray-400 transition-colors;
 }
 
 .share-modal-pill {
@@ -127,4 +127,113 @@
 
 .share-modal-submit {
   @apply mt-4 w-full bg-green-700 hover:bg-green-800 text-white rounded-xl py-2.5 font-semibold transition-colors;
+}
+
+/* Role row in banner popover */
+.trip-share-bar-role-row {
+  @apply flex items-center gap-2 mb-2;
+}
+.trip-share-bar-role-label {
+  @apply text-sm text-gray-600;
+}
+.trip-share-bar-role-select {
+  @apply text-sm border border-gray-200 rounded-lg px-2 py-1 text-gray-800 bg-white;
+}
+.trip-share-bar-role-display {
+  @apply text-xs text-gray-500 text-center mb-2;
+}
+
+/* Revamped share modal */
+.share-modal-header {
+  @apply flex justify-between items-start mb-4;
+}
+.share-modal-close-btn {
+  @apply text-gray-400 hover:text-gray-700 transition-colors text-2xl font-light leading-none mt-0.5 flex-shrink-0;
+}
+.share-modal-input-row {
+  @apply flex items-start gap-2 w-full;
+}
+.share-modal-send-btn {
+  @apply flex-shrink-0 p-2 text-green-700 transition-colors mt-0.5 rounded-xl bg-gray-100 border border-transparent hover:border-green-600 hover:text-green-900 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent;
+}
+.share-modal-divider {
+  @apply h-px bg-gray-100 my-3;
+}
+.share-modal-members {
+  @apply w-full max-h-60 overflow-y-auto border-collapse;
+  display: table;
+}
+.share-modal-members-body {
+  display: table-row-group;
+}
+.share-modal-member-row {
+  display: table-row;
+}
+.share-modal-member-row td {
+  @apply py-1.5 align-middle border-0;
+}
+.share-modal-td-status {
+  @apply w-5 pr-1;
+  display: table-cell;
+}
+.share-modal-td-avatar {
+  @apply w-8 pr-2;
+  display: table-cell;
+}
+.share-modal-td-name {
+  @apply text-sm text-gray-800;
+  display: table-cell;
+  max-width: 0;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.share-modal-td-name--pending {
+  @apply italic text-gray-500;
+}
+.share-modal-td-role {
+  @apply pl-2;
+  display: table-cell;
+  white-space: nowrap;
+}
+.share-modal-td-remove {
+  @apply pl-1 w-6;
+  display: table-cell;
+}
+.share-modal-pending-dot {
+  @apply w-2 h-2 rounded-full bg-amber-500 block mx-auto;
+}
+.share-modal-member-role-select {
+  @apply text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-700 bg-white;
+}
+.share-modal-member-role-badge {
+  @apply text-xs text-gray-500 capitalize;
+}
+.share-modal-member-remove-btn {
+  @apply text-gray-300 hover:text-red-500 transition-colors text-xl leading-none w-5 text-center block;
+}
+.share-modal-confirm-row {
+  display: table-row;
+}
+.share-modal-remove-confirm {
+  @apply mx-1 mb-1 p-3 bg-red-50 rounded-xl;
+}
+.share-modal-remove-confirm-text {
+  @apply text-sm text-gray-700 text-center mb-2;
+}
+.share-modal-remove-confirm-actions {
+  @apply flex gap-2;
+}
+.share-modal-remove-confirm-btn {
+  @apply flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg py-1.5 transition-colors;
+}
+.share-modal-remove-cancel-btn {
+  @apply flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg py-1.5 transition-colors;
+}
+.share-modal-empty {
+  @apply text-sm text-gray-400 text-center py-4;
+}
+.share-modal-save-btn {
+  @apply mt-4 w-full bg-amber-600 hover:bg-amber-700 text-white rounded-xl py-2.5 font-semibold transition-colors disabled:opacity-60;
 }
