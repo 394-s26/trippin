@@ -62,5 +62,16 @@ service cloud.firestore {
     match /{path=**}/events/{eventId} {
       allow read, write: if isAuthed();
     }
+
+    // Session selections — scoped to a trip's members.
+    // Any trip member can read all selections for that trip.
+    // A user can only write their own selection document.
+    match /sessions/{tripId}/selections/{userId} {
+      allow read: if isAuthed() &&
+        hasTripAccess(get(/databases/$(database)/documents/trips/$(tripId)).data);
+      allow write: if isAuthed() &&
+        request.auth.uid == userId &&
+        hasTripAccess(get(/databases/$(database)/documents/trips/$(tripId)).data);
+    }
   }
 }
