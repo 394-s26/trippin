@@ -1,0 +1,30 @@
+@reference "../index.css";
+
+.trip-card {
+  @apply relative w-72 h-40 rounded-xl overflow-hidden bg-cover bg-center cursor-pointer transition-all duration-150;
+}
+
+.trip-card:hover {
+  @apply -translate-y-0.5 shadow-xl;
+}
+
+.trip-card-overlay {
+  @apply absolute inset-0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.1) 60%);
+}
+
+.trip-card-content {
+  @apply absolute bottom-0 left-0 right-0 px-4 py-3 text-white;
+}
+
+.trip-card-name {
+  @apply text-lg font-semibold mb-0.5 truncate;
+}
+
+.trip-card-date {
+  @apply text-xs mb-0.5 opacity-90;
+}
+
+.trip-card-meta {
+  @apply text-xs opacity-75;
+}

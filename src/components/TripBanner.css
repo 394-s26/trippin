@@ -1,0 +1,53 @@
+@reference "../index.css";
+
+.trip-banner {
+  @apply relative h-42 rounded-2xl overflow-hidden bg-cover bg-center flex items-end;
+}
+
+.trip-banner-overlay {
+  @apply absolute inset-0 bg-gradient-to-t from-black/60 to-transparent;
+}
+
+.trip-banner-action-btn {
+  @apply absolute z-10 text-white rounded-xl p-2 transition-colors;
+}
+
+.trip-banner-change-btn {
+  @apply top-3 right-3 bg-black/40 hover:bg-black/60;
+}
+
+.trip-banner-delete-btn {
+  @apply bottom-3 right-3 border-2 border-red-500 hover:bg-red-400 p-2;
+}
+
+.trip-banner-content {
+  @apply relative z-10 p-4;
+}
+
+.trip-banner-title {
+  @apply text-3xl font-bold text-white leading-tight;
+}
+
+.trip-banner-title-row {
+  @apply flex items-center gap-6;
+}
+
+.trip-banner-title-input {
+  @apply text-3xl font-bold text-white leading-tight bg-transparent border-b border-white/60 outline-none w-full;
+}
+
+.trip-banner-name-edit-btn {
+  @apply text-white/70 hover:text-white transition-colors flex-shrink-0;
+}
+
+.trip-banner-name-confirm-btn {
+  @apply bg-white/20 border-2 border-white/60 rounded-lg p-1;
+}
+
+.trip-banner-date-btn {
+  @apply flex items-center gap-1.5 text-white/90 text-sm mt-1 hover:text-white transition-colors;
+}
+
+.trip-banner-date-input {
+  @apply absolute opacity-0 pointer-events-none w-0 h-0;
+}

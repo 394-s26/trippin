@@ -1,0 +1,38 @@
+@reference "../index.css";
+
+.home-page-wrapper {
+  @apply min-h-screen bg-gray-200 flex justify-center;
+}
+
+.home-page-container {
+  @apply w-full md:w-1/2 bg-neutral min-h-screen flex flex-col shadow-2xl;
+}
+
+.home-page-main {
+  @apply flex-grow flex flex-col gap-8 px-6 py-8;
+}
+
+.home-page-section {
+  @apply flex flex-col gap-3;
+}
+
+.home-page-section-header {
+  @apply flex items-center justify-between;
+}
+
+.home-page-section-title {
+  @apply text-lg font-semibold text-gray-700;
+}
+
+.home-page-empty {
+  @apply flex flex-col items-center gap-2 text-sm text-gray-400;
+}
+
+.home-page-empty-img {
+  @apply w-48 opacity-60;
+}
+
+.home-page-new-trip-btn {
+  @apply bg-primary text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-primary-light transition-colors disabled:opacity-50 cursor-pointer;
+  box-shadow: 0 2px 8px rgba(45, 90, 39, 0.3);
+}

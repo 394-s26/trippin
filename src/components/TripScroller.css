@@ -1,0 +1,26 @@
+@reference "../index.css";
+
+.trip-scroller {
+  @apply relative flex items-center gap-2;
+}
+
+.trip-scroller-track {
+  @apply flex flex-row gap-3 overflow-x-auto flex-1;
+  scroll-snap-type: x mandatory;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.trip-scroller-track::-webkit-scrollbar {
+  display: none;
+}
+
+.trip-scroller-track > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+.trip-scroller-arrow {
+  @apply flex-shrink-0 w-8 h-10 rounded-lg bg-white shadow text-gray-600 text-xl font-light flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors z-10 disabled:opacity-30 disabled:cursor-not-allowed;
+  line-height: 1;
+}

@@ -1,0 +1,77 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    function isTripOwner(tripData) {
+      return request.auth.uid == tripData.userId;
+    }
+
+    function hasTripAccess(tripData) {
+      return isTripOwner(tripData) || request.auth.uid in tripData.shared;
+    }
+
+    // Users — any authenticated user can read (needed for email lookup),
+    // but only the account owner can write their own document.
+    match /users/{userId} {
+      allow read:  if isAuthed();
+      allow write: if isAuthed() && request.auth.uid == userId;
+    }
+
+    match /trips/{tripId} {
+      // Owner or anyone in shared[] can read.
+      allow read: if isAuthed() && hasTripAccess(resource.data);
+
+      // Authenticated user can create a trip they own.
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
+
+      // Owner can update any field.
+      // Shared users can update other fields (e.g. budget edits if added later)
+      // but are NOT allowed to modify shared[] or userId.
+      allow update: if isAuthed() && (
+        isTripOwner(resource.data)
+        ||
+        (
+          request.auth.uid in resource.data.shared &&
+          request.resource.data.shared == resource.data.shared &&
+          request.resource.data.userId == resource.data.userId
+        )
+      );
+
+      // Only the owner can delete a trip.
+      allow delete: if isAuthed() && isTripOwner(resource.data);
+
+      // Days subcollection — owner or shared users.
+      match /days/{dayId} {
+        allow read, write: if isAuthed() &&
+          hasTripAccess(get(/databases/$(database)/documents/trips/$(tripId)).data);
+      }
+
+      // Events nested under days — owner or shared users.
+      match /days/{dayId}/events/{eventId} {
+        allow read, write: if isAuthed() &&
+          hasTripAccess(get(/databases/$(database)/documents/trips/$(tripId)).data);
+      }
+    }
+
+    // Wildcard rule required for collectionGroup("events") queries.
+    match /{path=**}/events/{eventId} {
+      allow read, write: if isAuthed();
+    }
+
+    // Session selections — scoped to a trip's members.
+    // Any trip member can read all selections for that trip.
+    // A user can only write their own selection document.
+    match /sessions/{tripId}/selections/{userId} {
+      allow read: if isAuthed() &&
+        hasTripAccess(get(/databases/$(database)/documents/trips/$(tripId)).data);
+      allow write: if isAuthed() &&
+        request.auth.uid == userId &&
+        hasTripAccess(get(/databases/$(database)/documents/trips/$(tripId)).data);
+    }
+  }
+}
