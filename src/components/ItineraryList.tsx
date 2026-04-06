@@ -2,6 +2,7 @@ import { useState } from 'react';
 import EventCard from './EventCard';
 import { PencilIcon, CheckIcon, PlusIcon, TrashIcon } from '../services/svgIcons';
 import { Day } from '../types/day';
+import { UserSelection } from '../hooks/useSessionSelections';
 import './ItineraryList.css';
 
 interface ItineraryListProps {
@@ -11,9 +12,13 @@ interface ItineraryListProps {
   onDeleteDay: (dayId: string) => void;
   onAddEvent?: (day: Day) => void;
   onDeleteEvent?: (tripId: string, dayId: string, eventId: string) => void;
+  selectedEventIds?: string[];
+  onSelectEvent?: (eventId: string) => void;
+  allSelections?: UserSelection[];
+  currentUserId?: string;
 }
 
-const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEvent, onDeleteEvent }: ItineraryListProps) => {
+const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEvent, onDeleteEvent, selectedEventIds = [], onSelectEvent, allSelections = [], currentUserId }: ItineraryListProps) => {
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -131,7 +136,16 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
               <div className="day-timeline" />
               {dayEvents.length > 0 ? (
                 dayEvents.map((event) => (
-                  <EventCard key={event.id} event={event} onEdit={() => {}} onDelete={() => onDeleteEvent?.(event.tripId, event.dayId, event.id)} />
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onEdit={() => {}}
+                    onDelete={() => onDeleteEvent?.(event.tripId, event.dayId, event.id)}
+                    onSelect={() => onSelectEvent?.(event.id)}
+                    isSelected={selectedEventIds.includes(event.id)}
+                    allSelections={allSelections}
+                    currentUserId={currentUserId}
+                  />
                 ))
               ) : (
                 <p className="day-no-events">No events yet.</p>

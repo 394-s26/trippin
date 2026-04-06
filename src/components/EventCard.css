@@ -1,7 +1,19 @@
 @reference "../index.css";
 
 .event-card {
-  @apply bg-white rounded-2xl p-4 shadow-sm border border-gray-100;
+  @apply bg-white rounded-2xl p-4 shadow-sm border-4 border-white cursor-pointer transition-colors duration-150;
+}
+
+.event-card:hover {
+  @apply bg-green-50 border-green-50;
+}
+
+.event-card--selected {
+  @apply border-4 border-primary;
+}
+
+.event-card--selected:hover {
+  @apply border-primary;
 }
 
 .event-card-header {
@@ -18,6 +30,18 @@
 
 .event-card-time {
   @apply text-xs font-medium bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5;
+}
+
+.event-card-selectors {
+  @apply flex items-center gap-0.5;
+}
+
+.event-card-selector-dot {
+  @apply w-2 h-2 rounded-full inline-block shrink-0;
+}
+
+.event-card-selector-dot--me {
+  @apply ring-1 ring-white ring-offset-1;
 }
 
 .event-card-name {

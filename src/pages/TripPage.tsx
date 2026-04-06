@@ -15,6 +15,7 @@ import { AppUser } from '../types/auth';
 import useTrip from '../hooks/useTrip';
 import useDays from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
+import { useSessionSelections } from '../hooks/useSessionSelections';
 import { createEvent, deleteEvent } from '../services/firestoreEventsService';
 import { useAuth } from '../contexts/AuthContext';
 import './Home.css';
@@ -32,6 +33,7 @@ const TripPage = () => {
   const { trip, loading, error, permissionDenied, updateTripName, updateBannerImage, deleteTrip } = useTrip(id!);
   const { days, addDay, renameDayLabel, removeDay, changeStartDate } = useDays(id!);
   const { events } = useItinerary(id!);
+  const { mySelectedIds, allSelections, toggleSelection } = useSessionSelections(id!, appUser?.uid);
 
   const [activeDay, setActiveDay] = useState<{ id: string; date: Date } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -197,6 +199,10 @@ const TripPage = () => {
               onDeleteDay={handleDeleteDay}
               onAddEvent={(day) => setActiveDay({ id: day.id, date: day.date })}
               onDeleteEvent={(tripId, dayId, eventId) => deleteEvent(tripId, dayId, eventId)}
+              selectedEventIds={mySelectedIds}
+              onSelectEvent={toggleSelection}
+              allSelections={allSelections}
+              currentUserId={appUser?.uid}
             />
           </div>
         </main>
