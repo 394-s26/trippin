@@ -48,6 +48,63 @@
   @apply w-full border border-gray-200 rounded-xl px-4 py-3 pl-7 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white;
 }
 
+/* ── Cost + Paid By row ───────────────────────────────────── */
+
+.cost-paidby-row {
+  @apply flex gap-3 items-end;
+}
+
+.cost-paidby-cost {
+  @apply flex-1 min-w-0;
+}
+
+.cost-paidby-who {
+  @apply shrink-0;
+}
+
+/* ── Custom Paid By dropdown ──────────────────────────────── */
+
+.paidby-dropdown {
+  @apply relative;
+}
+
+.paidby-trigger {
+  @apply flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-2.5 shadow-sm text-sm text-gray-700 whitespace-nowrap;
+  transition: border-color 100ms, box-shadow 100ms;
+}
+
+.paidby-trigger:hover {
+  @apply border-gray-300 shadow;
+}
+
+.paidby-trigger-label {
+  @apply text-xs font-medium max-w-[80px] truncate;
+}
+
+.paidby-unknown-icon {
+  @apply flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-400;
+}
+
+.paidby-chevron {
+  @apply text-gray-400 shrink-0 transition-transform duration-150;
+}
+
+.paidby-chevron--open {
+  @apply rotate-180;
+}
+
+.paidby-options {
+  @apply absolute right-0 bottom-[calc(100%+6px)] z-10 bg-white border border-gray-100 rounded-2xl shadow-lg py-1.5 min-w-[240px] overflow-hidden;
+}
+
+.paidby-option {
+  @apply flex items-center gap-2.5 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors;
+}
+
+.paidby-option--selected {
+  @apply bg-green-50 text-primary font-medium;
+}
+
 .event-modal-submit-btn {
   @apply w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm mt-1;
 }

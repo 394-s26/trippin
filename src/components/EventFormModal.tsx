@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Event } from '../types/event';
+import { AppUser } from '../types/auth';
+import { UserIcon } from '../services/svgIcons';
+import UserAvatar from './UserAvatar';
 import './EventFormModal.css';
 
 interface EventFormModalProps {
@@ -9,6 +12,8 @@ interface EventFormModalProps {
   onSubmit: (event: Omit<Event, 'id' | 'tripId' | 'dayId'>) => void;
   // When provided, the date is fixed to this day and only time is collected.
   dayDate?: Date;
+  // All members of the trip (owner + shared) for assigning paidBy.
+  tripUsers?: AppUser[];
 }
 
 const EVENT_TYPES: Event['type'][] = ['Activity', 'Hotel', 'Restaurant', 'Food'];
@@ -23,13 +28,27 @@ const TIMEZONES = [
   'UTC',
 ];
 
-const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate }: EventFormModalProps) => {
+const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers }: EventFormModalProps) => {
   const [type, setType] = useState<Event['type']>('Activity');
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [dateValue, setDateValue] = useState('');
   const [timezone, setTimezone] = useState('America/Chicago');
   const [cost, setCost] = useState('');
+  const [paidBy, setPaidBy] = useState<string>('');
+  const [paidByOpen, setPaidByOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!paidByOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setPaidByOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [paidByOpen]);
 
   if (!isOpen) return null;
 
@@ -50,6 +69,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate }: EventFormModalPr
       date: eventDate,
       timezone,
       cost: cost !== '' ? parseFloat(cost) : null,
+      paidBy: paidBy || null,
     });
     // Reset form
     setType('Activity');
@@ -58,6 +78,8 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate }: EventFormModalPr
     setDateValue('');
     setTimezone('America/Chicago');
     setCost('');
+    setPaidBy('');
+    setPaidByOpen(false);
     onClose();
   };
 
@@ -149,24 +171,83 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate }: EventFormModalPr
             </select>
           </div>
 
-          {/* Cost */}
-          <div>
-            <label htmlFor="event-cost" className="form-label">
-              Cost <span className="normal-case font-normal text-gray-400">(optional)</span>
-            </label>
-            <div className="cost-input-wrapper">
-              <span className="cost-input-prefix">$</span>
-              <input
-                id="event-cost"
-                type="number"
-                value={cost}
-                onChange={(e) => setCost(e.target.value)}
-                placeholder="0.00"
-                min={0}
-                step="0.01"
-                className="cost-input"
-              />
+          {/* Cost & Paid By */}
+          <div className="cost-paidby-row">
+            <div className="cost-paidby-cost">
+              <label htmlFor="event-cost" className="form-label">
+                Cost <span className="normal-case font-normal text-gray-400">(optional)</span>
+              </label>
+              <div className="cost-input-wrapper">
+                <span className="cost-input-prefix">$</span>
+                <input
+                  id="event-cost"
+                  type="number"
+                  value={cost}
+                  onChange={(e) => setCost(e.target.value)}
+                  placeholder="0.00"
+                  min={0}
+                  step="0.01"
+                  className="cost-input"
+                />
+              </div>
             </div>
+
+            {tripUsers && tripUsers.length > 0 && (
+              <div className="cost-paidby-who">
+                <label className="form-label">Paid By</label>
+                <div className="paidby-dropdown" ref={dropdownRef}>
+                  <button
+                    type="button"
+                    className="paidby-trigger"
+                    onClick={() => setPaidByOpen(o => !o)}
+                    aria-haspopup="listbox"
+                    aria-expanded={paidByOpen}
+                  >
+                    {paidBy
+                      ? <UserAvatar user={tripUsers.find(u => u.uid === paidBy) ?? null} size="sm" />
+                      : <span className="paidby-unknown-icon"><UserIcon size={14} /></span>
+                    }
+                    <span className="paidby-trigger-label">
+                      {paidBy
+                        ? (() => { const u = tripUsers.find(x => x.uid === paidBy); return u ? u.firstName : ''; })()
+                        : 'Unknown'
+                      }
+                    </span>
+                    <svg className={`paidby-chevron${paidByOpen ? ' paidby-chevron--open' : ''}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+
+                  {paidByOpen && (
+                    <div className="paidby-options" role="listbox">
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={!paidBy}
+                        className={`paidby-option${!paidBy ? ' paidby-option--selected' : ''}`}
+                        onClick={() => { setPaidBy(''); setPaidByOpen(false); }}
+                      >
+                        <span className="paidby-unknown-icon"><UserIcon size={14} /></span>
+                        <span>Unknown</span>
+                      </button>
+                      {tripUsers.map(u => (
+                        <button
+                          key={u.uid}
+                          type="button"
+                          role="option"
+                          aria-selected={paidBy === u.uid}
+                          className={`paidby-option${paidBy === u.uid ? ' paidby-option--selected' : ''}`}
+                          onClick={() => { setPaidBy(u.uid); setPaidByOpen(false); }}
+                        >
+                          <UserAvatar user={u} size="sm" />
+                          <span>{u.firstName} {u.lastName}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <button type="submit" className="event-modal-submit-btn">

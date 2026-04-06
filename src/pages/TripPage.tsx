@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import AppHeader from '../components/AppHeader';
 import Navbar from '../components/Navbar';
 import TripBanner from '../components/TripBanner';
@@ -9,6 +11,7 @@ import BudgetModal from '../components/BudgetModal';
 import TripShareBar from '../components/TripShareBar';
 import { Event } from '../types/event';
 import { Day } from '../types/day';
+import { AppUser } from '../types/auth';
 import useTrip from '../hooks/useTrip';
 import useDays from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
@@ -35,6 +38,7 @@ const TripPage = () => {
   const [tripName, setTripName] = useState('New Trip');
   const [bannerImage, setBannerImage] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [tripUsers, setTripUsers] = useState<AppUser[]>([]);
 
   const handleDeleteConfirmed = async () => {
     await deleteTrip();
@@ -54,6 +58,16 @@ const TripPage = () => {
       setInitialized(true);
     }
   }, [trip, initialized]);
+
+  // Fetch AppUser records for all trip members (owner + shared).
+  const memberUidsKey = trip ? [trip.userId, ...trip.shared].join(',') : '';
+  useEffect(() => {
+    if (!trip) return;
+    const uids = [trip.userId, ...trip.shared.filter(uid => uid !== trip.userId)];
+    Promise.all(uids.map(uid => getDoc(doc(db, 'users', uid)))).then(docs => {
+      setTripUsers(docs.filter(d => d.exists()).map(d => d.data() as AppUser));
+    });
+  }, [memberUidsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChangeStartDate = (newStartDate: Date) => {
     changeStartDate(newStartDate);
@@ -169,7 +183,13 @@ const TripPage = () => {
               isOwner={appUser?.uid === trip.userId}
               variant="card"
             />
-            <BudgetModal tripId={id!} spent={events.reduce((sum, e) => sum + (e.cost ?? 0), 0)} />
+            <BudgetModal
+              tripId={id!}
+              spent={events.reduce((sum, e) => sum + (e.cost ?? 0), 0)}
+              events={events}
+              tripUsers={tripUsers}
+              currentUserId={appUser?.uid ?? ''}
+            />
             <ItineraryList
               days={daysWithEvents}
               onAddDay={handleAddDay}
@@ -188,6 +208,7 @@ const TripPage = () => {
           onClose={() => setActiveDay(null)}
           onSubmit={handleNewEvent}
           dayDate={activeDay?.date}
+          tripUsers={tripUsers}
         />
 
         {showDeleteConfirm && (

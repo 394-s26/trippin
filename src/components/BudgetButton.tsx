@@ -1,10 +1,20 @@
 import './BudgetButton.css';
 import BudgetModal from './BudgetModal';
+import { Event } from '../types/event';
+import { AppUser } from '../types/auth';
 
-const BudgetButton = ({ tripId, spent }: { tripId: string; spent: number }) => {
+interface BudgetButtonProps {
+  tripId: string;
+  spent: number;
+  events: Event[];
+  tripUsers: AppUser[];
+  currentUserId: string;
+}
+
+const BudgetButton = ({ tripId, spent, events, tripUsers, currentUserId }: BudgetButtonProps) => {
   return (
     <div className="budget-btn-wrapper">
-      <BudgetModal tripId={tripId} spent={spent} />
+      <BudgetModal tripId={tripId} spent={spent} events={events} tripUsers={tripUsers} currentUserId={currentUserId} />
     </div>
   );
 };

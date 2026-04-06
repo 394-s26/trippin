@@ -99,3 +99,89 @@
 .budget-cancel-btn {
   @apply text-gray-400 py-2 rounded-xl font-medium text-sm;
 }
+
+/* ── Split Method Popup (centered dialog) ──────────────────── */
+
+.split-modal-overlay {
+  @apply fixed inset-0 z-50 flex items-start justify-center px-4 pt-[12vh];
+}
+
+.split-modal-sheet {
+  @apply relative w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto;
+}
+
+.split-done-btn {
+  @apply w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm mt-2;
+}
+
+/* ── Split Method Selector ─────────────────────────────────── */
+
+.split-options {
+  @apply flex flex-col gap-3 mb-5;
+}
+
+.split-option-btn {
+  @apply flex flex-col items-start gap-1 w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-left transition-colors duration-100;
+}
+
+.split-option-btn:hover {
+  @apply border-primary/50 bg-green-50;
+}
+
+.split-option-btn--active {
+  @apply border-primary bg-green-50;
+}
+
+.split-option-title {
+  @apply text-sm font-semibold text-gray-800;
+}
+
+.split-option-btn--active .split-option-title {
+  @apply text-primary;
+}
+
+.split-option-desc {
+  @apply text-xs text-gray-400;
+}
+
+/* ── Even-split Breakdown Table ────────────────────────────── */
+
+.split-breakdown {
+  @apply mb-5 rounded-xl border border-gray-100 overflow-hidden;
+}
+
+.split-breakdown-title {
+  @apply text-xs font-semibold uppercase tracking-widest text-gray-500 px-4 pt-3 pb-2;
+}
+
+.split-breakdown-header {
+  @apply grid grid-cols-3 text-xs font-medium text-gray-400 uppercase tracking-wide bg-gray-50 px-4 py-2;
+}
+
+.split-breakdown-row {
+  @apply grid grid-cols-3 items-center px-4 py-2 border-t border-gray-100 text-sm;
+}
+
+.split-breakdown-user {
+  @apply flex items-center gap-2;
+}
+
+.split-breakdown-name {
+  @apply text-gray-700 font-medium text-xs;
+}
+
+.split-breakdown-paid {
+  @apply text-gray-600 text-xs;
+}
+
+.split-breakdown-owed {
+  @apply text-gray-400 text-xs;
+}
+
+.split-breakdown-owed--positive {
+  @apply text-amber-600 font-semibold;
+}
+
+.split-breakdown-footer {
+  @apply flex justify-between px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 font-medium;
+}

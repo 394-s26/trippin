@@ -25,14 +25,6 @@
   @apply flex items-center rounded-full bg-gray-500/60 p-1;
 }
 
-.trip-share-bar-avatar {
-  @apply w-9 h-9 rounded-full object-cover border-2 border-white flex-shrink-0;
-}
-
-.trip-share-bar-avatar-default {
-  @apply bg-gray-400 flex items-center justify-center text-white;
-}
-
 .trip-share-bar-empty-label {
   @apply text-gray-400 text-sm;
 }

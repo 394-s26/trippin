@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { AppUser } from '../types/auth';
-import { UserIcon } from '../services/svgIcons';
+import UserAvatar from './UserAvatar';
 import './TripShareBar.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -112,9 +112,7 @@ const TripShareBar = ({ shared, tripId, isOwner, variant = 'banner' }: TripShare
   };
 
   const renderAvatar = (user: AppUser, _i: number, style?: React.CSSProperties) => (
-    user.photoURL
-      ? <img src={user.photoURL} alt={user.firstName} className="trip-share-bar-avatar" style={style} />
-      : <div className="trip-share-bar-avatar trip-share-bar-avatar-default" style={style}><UserIcon size={14} /></div>
+    <UserAvatar user={user} size="md" bordered style={style} />
   );
 
   const renderAvatarBtn = (user: AppUser, i: number, style?: React.CSSProperties) => (
@@ -254,13 +252,7 @@ const TripShareBar = ({ shared, tripId, isOwner, variant = 'banner' }: TripShare
                   key={pill.id}
                   className={`share-modal-pill${!pill.isValidEmail ? ' share-modal-pill-invalid' : ''}`}
                 >
-                  {pill.user?.photoURL ? (
-                    <img src={pill.user.photoURL} alt={pill.user.firstName} className="share-modal-pill-avatar" />
-                  ) : (
-                    <div className="share-modal-pill-avatar share-modal-pill-avatar-default">
-                      <UserIcon size={12} />
-                    </div>
-                  )}
+                  <UserAvatar user={pill.user} size="sm" className="share-modal-pill-avatar" />
                   <span className="share-modal-pill-label">
                     {pill.resolving
                       ? pill.email

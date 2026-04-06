@@ -1,8 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { HomeIcon, SearchIcon, UserIcon } from '../services/svgIcons';
+import { HomeIcon } from '../services/svgIcons';
+import { useAuth } from '../contexts/AuthContext';
+import UserAvatar from './UserAvatar';
 import './Navbar.css';
 
 const Navbar = () => {
+  const { appUser } = useAuth();
+
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `navbar-link ${isActive ? 'navbar-link-active' : ''}`;
 
@@ -14,7 +18,7 @@ const Navbar = () => {
       </NavLink>
 
       <NavLink to="/profile" className={linkClass}>
-        <UserIcon />
+        <UserAvatar user={appUser} size="lg" />
         <span>Profile</span>
       </NavLink>
     </nav>

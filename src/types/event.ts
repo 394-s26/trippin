@@ -10,6 +10,7 @@ interface BaseEvent {
   date: Date;
   location?: string;
   timezone?: string;
+  paidBy?: string | null; // UID of the user responsible for paying; null = unassigned
 }
 
 export interface HotelEvent extends BaseEvent {
@@ -40,4 +41,5 @@ export interface EventUpdate {
   date?: Date;
   location?: string;
   timezone?: string;
+  paidBy?: string | null;
 }
