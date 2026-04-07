@@ -17,8 +17,20 @@
   @apply w-9 h-9 rounded-full bg-green-800 text-white text-sm font-semibold flex items-center justify-center flex-shrink-0 border-2 border-white;
 }
 
+.trip-share-bar-card-actions {
+  @apply flex items-center gap-3;
+}
+
 .trip-share-bar-card-invite-btn {
   @apply flex items-center gap-2 text-green-800 font-semibold text-base;
+}
+
+.trip-share-bar-card-copy-btn {
+  @apply flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors;
+}
+
+.trip-share-bar-card-copy-btn--copied {
+  @apply text-green-600;
 }
 
 .trip-share-bar-users {
@@ -38,7 +50,13 @@
 }
 
 .trip-share-bar-copy-btn {
-  @apply flex items-center justify-center rounded-full bg-gray-500/60 p-3 text-white/90 hover:text-white transition-colors;
+  @apply flex items-center justify-center rounded-full bg-gray-500/60 text-white/90 hover:text-white hover:bg-gray-600/80 transition-all flex-shrink-0;
+  width: 42px;
+  height: 42px;
+}
+
+.trip-share-bar-copy-btn--copied {
+  @apply bg-green-600/80 text-white;
 }
 
 .trip-share-bar-avatar-btn {

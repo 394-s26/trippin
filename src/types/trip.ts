@@ -12,6 +12,7 @@ export interface Trip {
   userId: string;        // UID of the Firebase Auth user who owns this trip
   name: string;
   startDate: Date;       // The calendar date the trip begins
+  endDate: Date;         // The calendar date the trip ends
   budget: Budget;        // Total trip budget in USD
   bannerImageUrl: string | null;  // null = use default green background
   shared: string[];     // UIDs of users this trip has been shared with

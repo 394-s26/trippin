@@ -21,9 +21,11 @@ import { createEvent, deleteEvent } from '../services/firestoreEventsService';
 import { useAuth } from '../contexts/AuthContext';
 import './Home.css';
 
-const formatDateRange = (days: Omit<Day, 'events'>[]): string => {
-  if (days.length === 0) return '';
+const formatDateRange = (days: Omit<Day, 'events'>[], fallbackStart?: Date): string => {
   const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (days.length === 0) {
+    return fallbackStart ? fmt(fallbackStart) : '';
+  }
   return `${fmt(days[0].date)} — ${fmt(days[days.length - 1].date)}`;
 };
 
@@ -31,7 +33,7 @@ const TripPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { appUser } = useAuth();
-  const { trip, loading, error, permissionDenied, can, updateTripName, updateBannerImage, deleteTrip } = useTrip(id!);
+  const { trip, loading, error, permissionDenied, can, updateTripName, updateBannerImage, updateEndDate, deleteTrip } = useTrip(id!);
   const { days, addDay, renameDayLabel, removeDay, changeStartDate } = useDays(id!);
   const { events } = useItinerary(id!);
   const { mySelectedIds, allSelections, toggleSelection, deselectAll } = useSessionSelections(id!, appUser?.uid);
@@ -76,9 +78,14 @@ const TripPage = () => {
     changeStartDate(newStartDate);
   };
 
-  const handleAddDay = () => {
+  const handleAddDay = async () => {
     const lastDate = days[days.length - 1]?.date ?? new Date();
-    addDay(lastDate);
+    await addDay(lastDate);
+    const newDayDate = new Date(lastDate);
+    newDayDate.setDate(newDayDate.getDate() + 1);
+    if (trip?.endDate && newDayDate > trip.endDate) {
+      await updateEndDate(newDayDate);
+    }
   };
 
   const handleUpdateDayLabel = (dayId: string, label: string) => {
@@ -180,7 +187,7 @@ const TripPage = () => {
             <TripBanner
               tripName={tripName}
               backgroundImage={bannerImage}
-              dateRange={formatDateRange(days)}
+              dateRange={formatDateRange(days, trip.startDate)}
               tripId={id!}
               shared={trip.shared}
               permissions={trip.permissions ?? {}}
@@ -248,6 +255,9 @@ const TripPage = () => {
           onSubmit={handleNewEvent}
           dayDate={activeDay?.date}
           tripUsers={tripUsers}
+          currentUserId={appUser?.uid}
+          tripBudget={trip.budget}
+          tripSpent={events.reduce((sum, e) => sum + (e.cost ?? 0), 0)}
         />
 
         {showDeleteConfirm && (

@@ -78,7 +78,7 @@
 
 .day-timeline {
   @apply absolute left-0 top-2 bottom-2 w-0.5 rounded-full;
-  background: linear-gradient(to bottom, var(--color-secondary), rgba(45, 90, 39, 0.2));
+  background: var(--color-secondary);
 }
 
 .day-no-events {

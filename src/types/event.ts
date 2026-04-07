@@ -7,7 +7,8 @@ interface BaseEvent {
   dayId: string;         // ID of the day this event belongs to
   name: string;
   cost?: number | null; // Optional — omit from card when null
-  date: Date;
+  startDate: Date;
+  endDate?: Date | null;
   location?: string;
   timezone?: string;
   paidBy?: string | null; // UID of the user responsible for paying; null = unassigned
@@ -38,7 +39,8 @@ export interface EventUpdate {
   type?: Event['type'];
   name?: string;
   cost?: number | null;
-  date?: Date;
+  startDate?: Date | null;
+  endDate?: Date | null;
   location?: string;
   timezone?: string;
   paidBy?: string | null;

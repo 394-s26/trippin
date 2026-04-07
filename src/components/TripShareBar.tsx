@@ -59,6 +59,7 @@ const TripShareBar = ({
   const [pendingRoles, setPendingRoles] = useState<Record<string, Role>>({});
   const [removeConfirmUid, setRemoveConfirmUid] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Banner variant — small remove popover
   const [removePopover, setRemovePopover] = useState<RemovePopover | null>(null);
@@ -228,13 +229,25 @@ const TripShareBar = ({
           </button>
         )}
       </div>
-      {shared.length !== 0 && (
-        <button className="trip-share-bar-copy-btn" aria-label="Copy link" onClick={() => navigator.clipboard.writeText(window.location.href)}>
+      <button
+        className={`trip-share-bar-copy-btn${copied ? ' trip-share-bar-copy-btn--copied' : ''}`}
+        aria-label="Copy link"
+        onClick={() => {
+          navigator.clipboard.writeText(window.location.href);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }}
+      >
+        {copied ? (
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        ) : (
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/>
           </svg>
-        </button>
-      )}
+        )}
+      </button>
     </div>
   );
 
@@ -257,14 +270,41 @@ const TripShareBar = ({
           <div className="trip-share-bar-card-overflow" style={{ marginLeft: -10 }}>+{overflowCount}</div>
         )}
       </div>
-      {canInvite && (
-        <button className="trip-share-bar-card-invite-btn" onClick={() => setShowModal(true)} aria-label="Invite friends">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 21a8 8 0 0 1 13.292-6"/><circle cx="10" cy="8" r="5"/><path d="M19 16v6"/><path d="M22 19h-6"/>
-          </svg>
-          <span>Invite</span>
+      <div className="trip-share-bar-card-actions">
+        {canInvite && (
+          <button className="trip-share-bar-card-invite-btn" onClick={() => setShowModal(true)} aria-label="Invite friends">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 21a8 8 0 0 1 13.292-6"/><circle cx="10" cy="8" r="5"/><path d="M19 16v6"/><path d="M22 19h-6"/>
+            </svg>
+            <span>Invite</span>
+          </button>
+        )}
+        <button
+          className={`trip-share-bar-card-copy-btn${copied ? ' trip-share-bar-card-copy-btn--copied' : ''}`}
+          aria-label="Copy link"
+          onClick={() => {
+            navigator.clipboard.writeText(window.location.href);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }}
+        >
+          {copied ? (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>Copied!</span>
+            </>
+          ) : (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/>
+              </svg>
+              <span>Copy Link</span>
+            </>
+          )}
         </button>
-      )}
+      </div>
     </div>
   );
 

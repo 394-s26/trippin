@@ -91,7 +91,8 @@ const TripBanner = ({
           aria-label="Delete trip"
           className="trip-banner-action-btn trip-banner-delete-btn"
         >
-          <TrashIcon size={18} />
+          <TrashIcon size={16} />
+          <span>Delete</span>
         </button>
       )}
 

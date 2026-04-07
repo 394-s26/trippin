@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import {
@@ -7,7 +7,7 @@ import {
   signInWithEmail,
   signUpWithEmail,
   signOutUser,
-  isSessionExpired,
+  setLoginTime,
   clearLoginTime,
 } from '../services/authService';
 import { User, AppUser } from '../types/auth';
@@ -36,21 +36,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        if (isSessionExpired()) {
-          await signOut(auth);
-          clearLoginTime();
-          setUser(null);
-          setAppUser(null);
-        } else {
-          setUser({
-            uid: firebaseUser.uid,
-            displayName: firebaseUser.displayName,
-            email: firebaseUser.email,
-            photoURL: firebaseUser.photoURL,
-          });
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          setAppUser(userDoc.exists() ? (userDoc.data() as AppUser) : null);
-        }
+        setLoginTime();
+        setUser({
+          uid: firebaseUser.uid,
+          displayName: firebaseUser.displayName,
+          email: firebaseUser.email,
+          photoURL: firebaseUser.photoURL,
+        });
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        setAppUser(userDoc.exists() ? (userDoc.data() as AppUser) : null);
       } else {
         clearLoginTime();
         setUser(null);

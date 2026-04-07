@@ -45,7 +45,7 @@ export const subscribeToEvents = (tripId: string, callback: (events: Event[]) =>
   const q = query(
     collectionGroup(db, 'events'),
     where('tripId', '==', tripId),
-    orderBy('date', 'asc')
+    orderBy('startDate', 'asc')
   );
   return onSnapshot(q, (snapshot) => {
     const events: Event[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));

@@ -24,11 +24,13 @@ const TYPE_ICONS: Record<Event['type'], ReactElement> = {
 };
 
 const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], currentUserId, tripUsers = [] }: EventCardProps) => {
-  const time = new Date(event.date).toLocaleTimeString('en-US', {
+  const timeFmt = (d: Date) => new Date(d).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
   });
+  const startTime = timeFmt(event.startDate);
+  const time = event.endDate ? `${startTime} – ${timeFmt(event.endDate)}` : startTime;
 
   const otherSelectors = allSelections.filter(
     s => s.uid !== currentUserId && s.selectedIds.includes(event.id),

@@ -27,6 +27,7 @@ const useTrip = (tripId: string) => {
                     setTrip({
                         ...data,
                         startDate: toDate(data.startDate as Date | Timestamp),
+                        endDate: data.endDate ? toDate(data.endDate as Date | Timestamp) : toDate(data.startDate as Date | Timestamp),
                     });
                 } else {
                     setError('Trip not found');
@@ -84,6 +85,14 @@ const useTrip = (tripId: string) => {
         }
     };
 
+    const updateEndDate = async (endDate: Date) => {
+        try {
+            await updateTrip(uid, tripId, { endDate }, 'change_start_date');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+        }
+    };
+
     const deleteTrip = async () => {
         try {
             await deleteTripDoc(uid, tripId);
@@ -92,7 +101,7 @@ const useTrip = (tripId: string) => {
         }
     };
 
-    return { trip, loading, error, permissionDenied, can, updateTripName, updateBudget, updateSplitMethod, updateBannerImage, deleteTrip };
+    return { trip, loading, error, permissionDenied, can, updateTripName, updateBudget, updateSplitMethod, updateBannerImage, updateEndDate, deleteTrip };
 };
 
 export default useTrip;

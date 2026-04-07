@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import TripScroller from '../components/TripScroller';
+import NewTripModal from '../components/NewTripModal';
 import { createTrip } from '../services/firestoreTripService';
 import useTrips  from '../hooks/useTrips';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,24 +13,27 @@ import './HomePage.css';
 const HomePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [showNewTrip, setShowNewTrip] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const { trips, loading } = useTrips(user!.uid);
   const myTrips = trips.filter(t => t.userId === user!.uid);
   const sharedTrips = trips.filter(t => t.shared?.includes(user!.uid));
 
-  const handleNewTrip = async () => {
+  const handleCreateTrip = async (name: string, startDate: Date, endDate: Date) => {
     setCreating(true);
     try {
       const id = await createTrip(user!.uid, {
         userId: user!.uid,
-        name: 'New Trip',
-        startDate: new Date(),
+        name,
+        startDate,
+        endDate,
         budget: 0,
         bannerImageUrl: null,
         shared: [],
         permissions: {},
       });
+      setShowNewTrip(false);
       navigate(`/trip/${id}`);
     } catch (err) {
       console.error('Failed to create trip:', err);
@@ -48,10 +52,9 @@ const HomePage = () => {
               {!loading && myTrips.length > 0 && (
                 <button
                   className="home-page-new-trip-btn"
-                  onClick={handleNewTrip}
-                  disabled={creating}
+                  onClick={() => setShowNewTrip(true)}
                 >
-                  {creating ? 'Creating…' : '+ New Trip'}
+                  + New Trip
                 </button>
               )}
             </div>
@@ -61,14 +64,19 @@ const HomePage = () => {
                 <p>No trips yet...</p>
                 <button
                   className="home-page-new-trip-btn"
-                  onClick={handleNewTrip}
-                  disabled={creating}
+                  onClick={() => setShowNewTrip(true)}
                 >
-                  {creating ? 'Creating…' : 'Create one to get started!'}
+                  Create one to get started!
                 </button>
               </div>
             )}
             <TripScroller trips={myTrips} onTripClick={(id) => navigate(`/trip/${id}`)} />
+          </div>
+
+          <div className="home-page-divider">
+            <span className="home-page-divider-dot" />
+            <span className="home-page-divider-dot" />
+            <span className="home-page-divider-dot" />
           </div>
 
           <div className="home-page-section">
@@ -82,6 +90,13 @@ const HomePage = () => {
             <TripScroller trips={sharedTrips} onTripClick={(id) => navigate(`/trip/${id}`)} />
           </div>
         </main>
+
+        <NewTripModal
+          isOpen={showNewTrip}
+          onClose={() => setShowNewTrip(false)}
+          onSubmit={handleCreateTrip}
+          submitting={creating}
+        />
       </div>
     </div>
   );

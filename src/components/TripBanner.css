@@ -17,7 +17,7 @@
 }
 
 .trip-banner-delete-btn {
-  @apply bottom-3 right-3 border-2 border-red-500 hover:bg-red-400 p-2;
+  @apply bottom-3 right-3 bg-red-500 hover:bg-red-600 text-white text-sm font-medium flex items-center gap-1.5 px-3 py-1.5;
 }
 
 .trip-banner-content {

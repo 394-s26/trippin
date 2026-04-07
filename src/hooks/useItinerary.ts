@@ -13,7 +13,7 @@ const useItinerary = (tripId: string) => {
     const unsubscribe = subscribeToEvents(tripId, (fetchedEvents) => {
       const converted = fetchedEvents.map(e => ({
         ...e,
-        date: toDate(e.date as Date | Timestamp),
+        startDate: toDate(e.startDate as Date | Timestamp),
       }));
       setEvents(converted);
       setLoading(false);

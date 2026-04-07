@@ -15,15 +15,15 @@ export default function TripCard({ trip, onClick }: TripCardProps) {
   const { days } = useDays(trip.id);
   const { events } = useItinerary(trip.id);
 
-  const startDate = toDate(trip.startDate as Date | Timestamp);
-  const endDate = days.length > 0
-    ? new Date(startDate.getTime() + (days.length - 1) * 86400000)
-    : null;
+  const fallbackStart = toDate(trip.startDate as Date | Timestamp);
+  const fallbackEnd = trip.endDate ? toDate(trip.endDate as Date | Timestamp) : null;
+  const displayStart = days.length > 0 ? days[0].date : fallbackStart;
+  const displayEnd = days.length > 1 ? days[days.length - 1].date : fallbackEnd;
 
   const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const dateRange = endDate
-    ? `${fmt(startDate)} – ${fmt(endDate)}`
-    : fmt(startDate);
+  const dateRange = displayEnd
+    ? `${fmt(displayStart)} – ${fmt(displayEnd)}`
+    : fmt(displayStart);
 
   return (
     <div

@@ -8,12 +8,12 @@ import './EventFormModal.css';
 interface EventFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  // tripId and dayId are added by the caller; the form only collects user-facing fields.
   onSubmit: (event: Omit<Event, 'id' | 'tripId' | 'dayId'>) => void;
-  // When provided, the date is fixed to this day and only time is collected.
   dayDate?: Date;
-  // All members of the trip (owner + shared) for assigning paidBy.
   tripUsers?: AppUser[];
+  currentUserId?: string;
+  tripBudget?: number;
+  tripSpent?: number;
 }
 
 const EVENT_TYPES: Event['type'][] = ['Activity', 'Hotel', 'Restaurant', 'Food'];
@@ -28,16 +28,24 @@ const TIMEZONES = [
   'UTC',
 ];
 
-const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers }: EventFormModalProps) => {
+const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, currentUserId, tripBudget, tripSpent }: EventFormModalProps) => {
   const [type, setType] = useState<Event['type']>('Activity');
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [dateValue, setDateValue] = useState('');
   const [timezone, setTimezone] = useState('America/Chicago');
   const [cost, setCost] = useState('');
-  const [paidBy, setPaidBy] = useState<string>('');
+  const [paidBy, setPaidBy] = useState<string>(currentUserId ?? '');
   const [paidByOpen, setPaidByOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen && currentUserId) {
+      setPaidBy(currentUserId);
+    }
+  }, [isOpen, currentUserId]);
 
   useEffect(() => {
     if (!paidByOpen) return;
@@ -52,33 +60,50 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers }: Event
 
   if (!isOpen) return null;
 
+  const costNum = cost !== '' ? parseFloat(cost) : 0;
+  const wouldExceedBudget = tripBudget != null && tripBudget > 0 && tripSpent != null && (tripSpent + costNum) > tripBudget;
+
   const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
+
     let eventDate: Date;
+    let eventEndDate: Date | null = null;
+
     if (dayDate) {
-      const [hours, minutes] = dateValue.split(':').map(Number);
       eventDate = new Date(dayDate);
-      eventDate.setHours(hours, minutes, 0, 0);
+      if (startTime) {
+        const [h, m] = startTime.split(':').map(Number);
+        eventDate.setHours(h, m, 0, 0);
+      }
+      if (endTime) {
+        eventEndDate = new Date(dayDate);
+        const [h, m] = endTime.split(':').map(Number);
+        eventEndDate.setHours(h, m, 0, 0);
+      }
     } else {
-      eventDate = new Date(dateValue);
+      eventDate = dateValue ? new Date(dateValue) : new Date();
     }
+
     onSubmit({
       type,
       name,
       location: location || undefined,
-      date: eventDate,
+      startDate: eventDate,
+      endDate: eventEndDate,
       timezone,
       cost: cost !== '' ? parseFloat(cost) : null,
       paidBy: paidBy || null,
     });
-    // Reset form
+
     setType('Activity');
     setName('');
     setLocation('');
+    setStartTime('');
+    setEndTime('');
     setDateValue('');
     setTimezone('America/Chicago');
     setCost('');
-    setPaidBy('');
+    setPaidBy(currentUserId ?? '');
     setPaidByOpen(false);
     onClose();
   };
@@ -141,20 +166,42 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers }: Event
             />
           </div>
 
-          {/* Date / Time */}
-          <div>
-            <label htmlFor="event-date" className="form-label">
-              {dayDate ? 'Time' : 'Date & Time'}
-            </label>
-            <input
-              id="event-date"
-              type={dayDate ? 'time' : 'datetime-local'}
-              value={dateValue}
-              onChange={(e) => setDateValue(e.target.value)}
-              className="form-input"
-              required
-            />
-          </div>
+          {/* Start / End Time */}
+          {dayDate ? (
+            <div className="time-row">
+              <div className="time-field">
+                <label htmlFor="event-start-time" className="form-label">Start Time</label>
+                <input
+                  id="event-start-time"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+              <div className="time-field">
+                <label htmlFor="event-end-time" className="form-label">End Time</label>
+                <input
+                  id="event-end-time"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label htmlFor="event-date" className="form-label">Date & Time</label>
+              <input
+                id="event-date"
+                type="datetime-local"
+                value={dateValue}
+                onChange={(e) => setDateValue(e.target.value)}
+                className="form-input"
+              />
+            </div>
+          )}
 
           {/* Timezone */}
           <div>
@@ -189,6 +236,14 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers }: Event
                   step="0.01"
                   className="cost-input"
                 />
+                {tripSpent != null && (
+                  <span
+                    className="cost-input-total"
+                    style={{ color: wouldExceedBudget ? 'var(--color-amber-600)' : 'var(--color-gray-400)' }}
+                  >
+                    Trip Total: ${(tripSpent + costNum).toFixed(2)}
+                  </span>
+                )}
               </div>
             </div>
 
