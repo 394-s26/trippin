@@ -3,7 +3,7 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { db } from '../services/firebase';
 import { AppUser } from '../types/auth';
 import UserAvatar from './UserAvatar';
-import { Role } from '../config/permissions';
+import { Role, ASSIGNABLE_ROLES } from '../config/permissions';
 import { inviteMembers, removeMember, changeMemberRole } from '../services/firestoreTripService';
 import { useAuth } from '../contexts/AuthContext';
 import { PlusIcon, SaveIcon } from '../services/svgIcons';
@@ -396,9 +396,9 @@ const TripShareBar = ({
                               value={displayRole}
                               onChange={e => handleExistingRoleChange(user.uid, e.target.value as Role)}
                             >
-                              <option value="admin">Admin</option>
-                              <option value="editor">Editor</option>
-                              <option value="viewer">Viewer</option>
+                              {ASSIGNABLE_ROLES.map(role => (
+                                <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
+                              ))}
                             </select>
                           ) : (
                             <span className="share-modal-member-role-badge">{currentRole}</span>
@@ -451,9 +451,11 @@ const TripShareBar = ({
                         value={pa.role}
                         onChange={e => handlePendingRoleChange(pa.pillId, e.target.value as Role)}
                       >
-                        {canChangeRole && <option value="admin">Admin</option>}
-                        <option value="editor">Editor</option>
-                        <option value="viewer">Viewer</option>
+                        {ASSIGNABLE_ROLES
+                          .filter(role => canChangeRole || role !== 'admin')
+                          .map(role => (
+                            <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
+                          ))}
                       </select>
                     </td>
                     <td className="share-modal-td-remove" />
@@ -502,9 +504,9 @@ const TripShareBar = ({
                 await changeMemberRole(uid, tripId, removePopover.uid, e.target.value as Role);
               }}
             >
-              <option value="admin">Admin</option>
-              <option value="editor">Editor</option>
-              <option value="viewer">Viewer</option>
+              {ASSIGNABLE_ROLES.map(role => (
+                <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
+              ))}
             </select>
           </div>
         )}
