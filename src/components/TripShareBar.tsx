@@ -3,7 +3,7 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { db } from '../services/firebase';
 import { AppUser } from '../types/auth';
 import UserAvatar from './UserAvatar';
-import { Role, ASSIGNABLE_ROLES } from '../config/permissions';
+import { Role, ASSIGNABLE_ROLES, ROLE_PERMISSIONS } from '../config/permissions';
 import { inviteMembers, removeMember, changeMemberRole } from '../services/firestoreTripService';
 import { useAuth } from '../contexts/AuthContext';
 import { PlusIcon, SaveIcon } from '../services/svgIcons';
@@ -94,7 +94,7 @@ const TripShareBar = ({
     }
 
     setPills(prev => [...prev, { id, email: trimmed, isValidEmail: true, user: null, resolving: true }]);
-    setPendingAdds(prev => [...prev, { pillId: id, email: trimmed, user: null, role: 'editor' }]);
+    setPendingAdds(prev => [...prev, { pillId: id, email: trimmed, user: null, role: ASSIGNABLE_ROLES[0] }]);
 
     const user = await lookupUserByEmail(trimmed);
     setPills(prev => prev.map(p => p.id === id ? { ...p, user, resolving: false } : p));
@@ -452,7 +452,7 @@ const TripShareBar = ({
                         onChange={e => handlePendingRoleChange(pa.pillId, e.target.value as Role)}
                       >
                         {ASSIGNABLE_ROLES
-                          .filter(role => canChangeRole || role !== 'admin')
+                          .filter(role => canChangeRole || !ROLE_PERMISSIONS[role].includes('change_member_role'))
                           .map(role => (
                             <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
                           ))}

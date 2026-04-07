@@ -7,18 +7,25 @@ const useTrips = (userId: string) => {
 
     const [trips, setTrips] = useState<Trip[]>([]);
     const [loading, setLoading] = useState(true);
-    // const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const unsubscribe = subscribeToTrips(userId, (trips) => {
-            setTrips(trips);
-            setLoading(false);
-        });
+        const unsubscribe = subscribeToTrips(
+            userId,
+            (trips) => {
+                setTrips(trips);
+                setLoading(false);
+            },
+            (err) => {
+                setError(err.message);
+                setLoading(false);
+            },
+        );
 
         return () => unsubscribe();
     }, [userId]);
 
-    return { trips, loading };
+    return { trips, loading, error };
 
 }
 

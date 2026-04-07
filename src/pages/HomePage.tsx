@@ -37,6 +37,7 @@ const HomePage = () => {
       navigate(`/trip/${id}`);
     } catch (err) {
       console.error('Failed to create trip:', err);
+    } finally {
       setCreating(false);
     }
   };

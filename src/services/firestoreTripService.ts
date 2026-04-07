@@ -94,15 +94,26 @@ export const changeMemberRole = async (actorUid: string, tripId: string, targetU
 };
 
 // Listens for trip updates in real-time.
-export const subscribeToTrips = (userId: string, callback: (trips: Trip[]) => void) => {
+export const subscribeToTrips = (
+    userId: string,
+    callback: (trips: Trip[]) => void,
+    onError?: (err: Error) => void,
+) => {
     const q = query(tripsCollection,
         or(
             where('userId', '==', userId),
             where('shared', 'array-contains', userId)
         )
     );
-    return onSnapshot(q, (snapshot) => {
-        const trips: Trip[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Trip));
-        callback(trips);
-    });
+    return onSnapshot(
+        q,
+        (snapshot) => {
+            const trips: Trip[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Trip));
+            callback(trips);
+        },
+        (err) => {
+            console.error('Trip subscription error:', err);
+            onError?.(err);
+        },
+    );
 };
