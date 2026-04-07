@@ -1,19 +1,19 @@
 import { ReactElement } from 'react';
 import { Event } from '../types/event';
-import { BedIcon, RestaurantIcon, ActivityIcon, FoodIcon, PencilIcon, TrashIcon } from '../services/svgIcons';
+import { AppUser } from '../types/auth';
+import { BedIcon, RestaurantIcon, ActivityIcon, FoodIcon } from '../services/svgIcons';
 import { UserSelection } from '../hooks/useSessionSelections';
+import { pickFirstSelector } from '../utilities/pickFirstSelector';
+import UserAvatar from './UserAvatar';
 import './EventCard.css';
 
 interface EventCardProps {
   event: Event;
-  onEdit: () => void;
-  onDelete: () => void;
   onSelect?: () => void;
   isSelected?: boolean;
   allSelections?: UserSelection[];
   currentUserId?: string;
-  canEdit?: boolean;
-  canDelete?: boolean;
+  tripUsers?: AppUser[];
 }
 
 const TYPE_ICONS: Record<Event['type'], ReactElement> = {
@@ -23,29 +23,40 @@ const TYPE_ICONS: Record<Event['type'], ReactElement> = {
   Food: <FoodIcon size={24} />,
 };
 
-const EventCard = ({ event, onEdit, onDelete, onSelect, isSelected = false, allSelections = [], currentUserId, canEdit = false, canDelete = false }: EventCardProps) => {
+const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], currentUserId, tripUsers = [] }: EventCardProps) => {
   const time = new Date(event.date).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
   });
 
-  const selectors = allSelections.filter(s => s.selectedIds.includes(event.id));
+  const otherSelectors = allSelections.filter(
+    s => s.uid !== currentUserId && s.selectedIds.includes(event.id),
+  );
+  const firstOther = pickFirstSelector(allSelections, event.id, currentUserId);
+
+  const useOtherBorder = !!firstOther && !isSelected;
+  const cardClass = isSelected
+    ? 'event-card event-card--selected'
+    : useOtherBorder
+      ? 'event-card event-card--selected-session'
+      : 'event-card';
+  const cardStyle = useOtherBorder ? { borderColor: firstOther.color } : undefined;
 
   return (
-    <div className={`event-card${isSelected ? ' event-card--selected' : ''}`} onClick={onSelect}>
+    <div className={cardClass} style={cardStyle} onClick={onSelect}>
       <div className="event-card-header">
         <div className="event-card-body">
           <div className="event-card-time-row">
             <span className="event-card-time">{time}</span>
-            {selectors.length > 0 && (
+            {otherSelectors.length > 0 && (
               <div className="event-card-selectors">
-                {selectors.map(s => (
-                  <span
+                {otherSelectors.map(s => (
+                  <UserAvatar
                     key={s.uid}
-                    className={`event-card-selector-dot${s.uid === currentUserId ? ' event-card-selector-dot--me' : ''}`}
-                    style={{ backgroundColor: s.color }}
-                    title={s.uid === currentUserId ? 'You' : undefined}
+                    user={tripUsers.find(u => u.uid === s.uid) ?? null}
+                    size="sm"
+                    borderColor={s.color}
                   />
                 ))}
               </div>
@@ -63,22 +74,6 @@ const EventCard = ({ event, onEdit, onDelete, onSelect, isSelected = false, allS
           {TYPE_ICONS[event.type]}
         </div>
       </div>
-      {(canEdit || canDelete) && (
-        <div className="event-card-actions">
-          {canEdit && (
-            <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="event-card-edit-btn">
-              <PencilIcon />
-              Edit
-            </button>
-          )}
-          {canDelete && (
-            <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="event-card-delete-btn">
-              <TrashIcon />
-              Delete
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 };

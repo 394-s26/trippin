@@ -56,18 +56,6 @@
   @apply text-base font-normal opacity-75;
 }
 
-.budget-modal-overlay {
-  @apply fixed inset-0 z-50 flex items-end justify-center;
-}
-
-.budget-modal-backdrop {
-  @apply absolute inset-0 bg-black/40;
-}
-
-.budget-modal-sheet {
-  @apply relative w-full max-w-sm bg-white rounded-t-2xl p-6 pb-8;
-}
-
 .budget-modal-title {
   @apply text-lg font-bold text-gray-900 mb-4;
 }
@@ -101,14 +89,6 @@
 }
 
 /* ── Split Method Popup (centered dialog) ──────────────────── */
-
-.split-modal-overlay {
-  @apply fixed inset-0 z-50 flex items-start justify-center px-4 pt-[12vh];
-}
-
-.split-modal-sheet {
-  @apply relative w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto;
-}
 
 .split-done-btn {
   @apply w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm mt-2;

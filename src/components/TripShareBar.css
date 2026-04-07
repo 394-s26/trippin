@@ -73,14 +73,6 @@
 
 /* Share modal */
 
-.share-modal-overlay {
-  @apply fixed inset-0 z-50 flex items-start justify-center px-4 pt-[10vh] bg-black/50;
-}
-
-.share-modal {
-  @apply bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl flex flex-col;
-}
-
 .share-modal-title {
   @apply text-xl font-bold text-gray-900 mb-1;
 }
@@ -154,15 +146,41 @@
   @apply flex items-start gap-2 w-full;
 }
 .share-modal-send-btn {
-  @apply flex-shrink-0 p-2 text-green-700 transition-colors mt-0.5 rounded-xl bg-gray-100 border border-transparent hover:border-green-600 hover:text-green-900 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent;
+  @apply flex-shrink-0 h-12 w-12 flex items-center justify-center text-green-700 transition-colors rounded-xl bg-gray-100 border border-transparent hover:border-green-600 hover:text-green-900 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-transparent;
 }
 .share-modal-divider {
   @apply h-px bg-gray-100 my-3;
 }
-.share-modal-members {
-  @apply w-full max-h-60 overflow-y-auto border-collapse;
-  display: table;
+
+/* Scroll lives on a wrapper — overflow on <table> breaks column sizing and clips avatars. */
+.share-modal-members-scroll {
+  @apply w-full max-h-60 overflow-y-auto overflow-x-hidden;
 }
+
+.share-modal-members {
+  @apply w-full border-collapse;
+  table-layout: fixed;
+}
+
+/* Pin column widths so the name cell’s ellipsis rules cannot collapse the avatar column to 0. */
+/* Status = pending dot (w-2) + right gap before avatar */
+.share-modal-col-status {
+  width: 1rem;
+}
+.share-modal-col-avatar {
+  width: 2rem;
+}
+.share-modal-col-name {
+  width: auto;
+  min-width: 0;
+}
+.share-modal-col-role {
+  width: 5.5rem;
+}
+.share-modal-col-remove {
+  width: 1.75rem;
+}
+
 .share-modal-members-body {
   display: table-row-group;
 }
@@ -173,18 +191,26 @@
   @apply py-1.5 align-middle border-0;
 }
 .share-modal-td-status {
-  @apply w-5 pr-1;
   display: table-cell;
+  vertical-align: middle;
+  width: 1rem;
+  max-width: 1rem;
+  padding-left: 0;
+  padding-right: 0.5rem;
+  box-sizing: border-box;
 }
 .share-modal-td-avatar {
-  @apply w-8 pr-2;
+  @apply pr-2;
   display: table-cell;
+  vertical-align: middle;
+  width: 2rem;
+  min-width: 2rem;
+  overflow: visible;
 }
 .share-modal-td-name {
   @apply text-sm text-gray-800;
   display: table-cell;
-  max-width: 0;
-  width: 100%;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -235,5 +261,5 @@
   @apply text-sm text-gray-400 text-center py-4;
 }
 .share-modal-save-btn {
-  @apply mt-4 w-full bg-amber-600 hover:bg-amber-700 text-white rounded-xl py-2.5 font-semibold transition-colors disabled:opacity-60;
+  @apply mt-4 w-1/2 mx-auto flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl py-2.5 font-semibold transition-colors disabled:opacity-60;
 }

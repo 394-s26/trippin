@@ -1,0 +1,41 @@
+@reference "../index.css";
+
+.selection-bar-wrapper {
+  @apply fixed inset-0 z-50 flex items-end justify-center pointer-events-none;
+}
+
+.selection-bar {
+  @apply pointer-events-auto flex items-center justify-center gap-4 px-6 py-4 shadow-lg border border-gray-200;
+}
+
+.selection-bar-btn {
+  @apply flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl transition-colors;
+}
+
+.selection-bar-btn:disabled {
+  @apply opacity-40 cursor-not-allowed;
+}
+
+.selection-bar-btn--edit {
+  @apply text-primary bg-green-50;
+}
+
+.selection-bar-btn--edit:not(:disabled):hover {
+  @apply bg-green-100;
+}
+
+.selection-bar-btn--delete {
+  @apply text-red-500 bg-red-50;
+}
+
+.selection-bar-btn--delete:not(:disabled):hover {
+  @apply bg-red-100;
+}
+
+.selection-bar-btn--deselect {
+  @apply text-gray-500 bg-gray-100;
+}
+
+.selection-bar-btn--deselect:hover {
+  @apply bg-gray-200 text-gray-700;
+}

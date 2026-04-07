@@ -68,5 +68,15 @@ export function useSessionSelections(tripId: string, userId: string | undefined)
     await setDoc(docRef, { uid: userId, color, selectedIds: newIds });
   };
 
-  return { mySelectedIds, allSelections, toggleSelection, myColor: colorRef.current };
+  const deselectAll = async () => {
+    if (!userId) return;
+
+    setMySelectedIds([]);
+
+    const color = colorRef.current;
+    const docRef = doc(db, 'sessions', tripId, 'selections', userId);
+    await setDoc(docRef, { uid: userId, color, selectedIds: [] });
+  };
+
+  return { mySelectedIds, allSelections, toggleSelection, deselectAll, myColor: colorRef.current };
 }

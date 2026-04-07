@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { AppUser } from '../types/auth';
@@ -6,7 +6,7 @@ import UserAvatar from './UserAvatar';
 import { Role } from '../config/permissions';
 import { inviteMembers, removeMember, changeMemberRole } from '../services/firestoreTripService';
 import { useAuth } from '../contexts/AuthContext';
-import { PlusIcon } from '../services/svgIcons';
+import { PlusIcon, SaveIcon } from '../services/svgIcons';
 import './TripShareBar.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -81,7 +81,7 @@ const TripShareBar = ({
   // ── Pill management ─────────────────────────────────────────────────────────
 
   const addPill = async (email: string) => {
-    const trimmed = email.trim();
+    const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
     if (pills.some(p => p.email === trimmed)) return;
     const isValidEmail = EMAIL_RE.test(trimmed);
@@ -270,8 +270,8 @@ const TripShareBar = ({
 
   // ── Modal ────────────────────────────────────────────────────────────────────
   const modal = showModal && (
-    <div className="share-modal-overlay" onClick={closeModal}>
-      <div className="share-modal" onClick={e => e.stopPropagation()}>
+    <div className="overlay-center" onClick={closeModal}>
+      <div className="overlay-panel overlay-panel--md rounded-2xl p-6 shadow-xl flex flex-col" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="share-modal-header">
@@ -338,8 +338,8 @@ const TripShareBar = ({
                   const isConfirming = removeConfirmUid === user.uid;
 
                   return (
-                    <>
-                      <tr key={user.uid} className="share-modal-member-row">
+                    <Fragment key={user.uid}>
+                      <tr className="share-modal-member-row">
                         <td className="share-modal-td-status">
                           {hasPending && <span className="share-modal-pending-dot" />}
                         </td>
@@ -387,7 +387,7 @@ const TripShareBar = ({
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
 
@@ -436,6 +436,7 @@ const TripShareBar = ({
             onClick={handleSave}
             disabled={saving}
           >
+            <SaveIcon size={16} />
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
         )}

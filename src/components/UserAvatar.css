@@ -8,6 +8,10 @@
   @apply border-2 border-white;
 }
 
+.user-avatar-border-custom {
+  @apply border-2;
+}
+
 .user-avatar-sm {
   @apply w-6 h-6;
 }

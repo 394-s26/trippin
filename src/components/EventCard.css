@@ -16,6 +16,14 @@
   @apply border-primary;
 }
 
+.event-card--selected-session {
+  @apply border-4;
+}
+
+.event-card--selected-session:hover {
+  @apply bg-green-50;
+}
+
 .event-card-header {
   @apply flex items-start justify-between gap-3;
 }
@@ -33,15 +41,7 @@
 }
 
 .event-card-selectors {
-  @apply flex items-center gap-0.5;
-}
-
-.event-card-selector-dot {
-  @apply w-2 h-2 rounded-full inline-block shrink-0;
-}
-
-.event-card-selector-dot--me {
-  @apply ring-1 ring-white ring-offset-1;
+  @apply flex items-center gap-1;
 }
 
 .event-card-name {
@@ -54,16 +54,4 @@
 
 .event-card-icon {
   @apply text-gray-300 shrink-0 mt-0.5;
-}
-
-.event-card-actions {
-  @apply flex gap-3 mt-3 pt-3 border-t border-gray-50;
-}
-
-.event-card-edit-btn {
-  @apply flex items-center gap-1 text-xs font-medium text-primary hover:text-primary-light transition-colors;
-}
-
-.event-card-delete-btn {
-  @apply flex items-center gap-1 text-xs font-medium text-red-400 hover:text-red-500 transition-colors;
 }

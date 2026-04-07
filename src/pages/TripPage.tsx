@@ -9,6 +9,7 @@ import ItineraryList from '../components/ItineraryList';
 import EventFormModal from '../components/EventFormModal';
 import BudgetModal from '../components/BudgetModal';
 import TripShareBar from '../components/TripShareBar';
+import { SelectionActionBar } from '../components/SelectionActionBar';
 import { Event } from '../types/event';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
@@ -33,7 +34,7 @@ const TripPage = () => {
   const { trip, loading, error, permissionDenied, can, updateTripName, updateBannerImage, deleteTrip } = useTrip(id!);
   const { days, addDay, renameDayLabel, removeDay, changeStartDate } = useDays(id!);
   const { events } = useItinerary(id!);
-  const { mySelectedIds, allSelections, toggleSelection } = useSessionSelections(id!, appUser?.uid);
+  const { mySelectedIds, allSelections, toggleSelection, deselectAll } = useSessionSelections(id!, appUser?.uid);
 
   const [activeDay, setActiveDay] = useState<{ id: string; date: Date } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -102,6 +103,15 @@ const TripPage = () => {
     const dayId = activeDay?.id;
     if (!dayId || !appUser) return;
     await createEvent(appUser.uid, { ...event, tripId: id!, dayId });
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!appUser) return;
+    const selected = events.filter(e => mySelectedIds.includes(e.id));
+    await Promise.all(
+      selected.map(e => deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)),
+    );
+    await deselectAll();
   };
 
   if (loading) {
@@ -210,22 +220,27 @@ const TripPage = () => {
               onUpdateDayLabel={handleUpdateDayLabel}
               onDeleteDay={handleDeleteDay}
               onAddEvent={(day) => setActiveDay({ id: day.id, date: day.date })}
-              onDeleteEvent={(tripId, dayId, eventId) => deleteEvent(appUser!.uid, tripId, dayId, eventId)}
               selectedEventIds={mySelectedIds}
               onSelectEvent={toggleSelection}
               allSelections={allSelections}
               currentUserId={appUser?.uid}
+              tripUsers={tripUsers}
               canAddEvent={can('add_event')}
               canAddDay={can('add_day')}
               canEditDay={can('edit_day')}
               canDeleteDay={can('delete_day')}
-              canEditEvent={can('edit_event')}
-              canDeleteEvent={can('delete_event')}
             />
           </div>
         </main>
 
         <Navbar />
+
+        <SelectionActionBar
+          selectedCount={mySelectedIds.length}
+          onDelete={handleDeleteSelected}
+          onDeselectAll={deselectAll}
+          canDelete={can('delete_event')}
+        />
 
         <EventFormModal
           isOpen={activeDay !== null}
@@ -236,9 +251,9 @@ const TripPage = () => {
         />
 
         {showDeleteConfirm && (
-          <div className="delete-confirm-overlay">
-            <div className="delete-confirm-backdrop" onClick={() => setShowDeleteConfirm(false)} />
-            <div className="delete-confirm-sheet">
+          <div className="overlay-bottom">
+            <div className="overlay-scrim" onClick={() => setShowDeleteConfirm(false)} />
+            <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 flex flex-col gap-3 animate-slide-up">
               <h2 className="delete-confirm-title">Delete Trip?</h2>
               <p className="delete-confirm-body">
                 "{tripName}" will be permanently deleted. This cannot be undone.

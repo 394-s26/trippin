@@ -2,6 +2,7 @@ import { useState } from 'react';
 import EventCard from './EventCard';
 import { PencilIcon, CheckIcon, PlusIcon, TrashIcon } from '../services/svgIcons';
 import { Day } from '../types/day';
+import { AppUser } from '../types/auth';
 import { UserSelection } from '../hooks/useSessionSelections';
 import './ItineraryList.css';
 
@@ -11,20 +12,18 @@ interface ItineraryListProps {
   onUpdateDayLabel: (dayId: string, label: string) => void;
   onDeleteDay: (dayId: string) => void;
   onAddEvent?: (day: Day) => void;
-  onDeleteEvent?: (tripId: string, dayId: string, eventId: string) => void;
   selectedEventIds?: string[];
   onSelectEvent?: (eventId: string) => void;
   allSelections?: UserSelection[];
   currentUserId?: string;
+  tripUsers?: AppUser[];
   canAddEvent?: boolean;
   canAddDay?: boolean;
   canEditDay?: boolean;
   canDeleteDay?: boolean;
-  canEditEvent?: boolean;
-  canDeleteEvent?: boolean;
 }
 
-const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEvent, onDeleteEvent, selectedEventIds = [], onSelectEvent, allSelections = [], currentUserId, canAddEvent = false, canAddDay = false, canEditDay = false, canDeleteDay = false, canEditEvent = false, canDeleteEvent = false }: ItineraryListProps) => {
+const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEvent, selectedEventIds = [], onSelectEvent, allSelections = [], currentUserId, tripUsers = [], canAddEvent = false, canAddDay = false, canEditDay = false, canDeleteDay = false }: ItineraryListProps) => {
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -151,14 +150,11 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
                   <EventCard
                     key={event.id}
                     event={event}
-                    onEdit={() => {}}
-                    onDelete={() => onDeleteEvent?.(event.tripId, event.dayId, event.id)}
                     onSelect={() => onSelectEvent?.(event.id)}
                     isSelected={selectedEventIds.includes(event.id)}
                     allSelections={allSelections}
                     currentUserId={currentUserId}
-                    canEdit={canEditEvent}
-                    canDelete={canDeleteEvent}
+                    tripUsers={tripUsers}
                   />
                 ))
               ) : (

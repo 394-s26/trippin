@@ -29,6 +29,12 @@ Additional conventions:
 - Let TypeScript infer return types of component functions
 - Use TypeScript interfaces and types in `/src/types/`; prefer `interface` for object shapes
 
+### Expected Patterns
+- All SVG icons should first be defined in `src/services/svgIcons.tsx` and imported to the relevant place they will be used.
+- This site has a permissions system. For each action that a user can perform on a trip (e.g. adding an event, editing a day) that will modify the firebase data, a new permission for that action should be defined as a string in `src/config/permissions.json` and assigned to at least the owner user. If you are creating a new button in the front-end, or creating a new firestore service in `/services`, keep this in mind in your implementation.
+- For all overlays, use the pre-defined classes in `src/styles/global.css` to create the overlay background and cards. Use the pre-defined sizing as well.
+- For all user avatar profile pictures, use the `src/components/UserAvatar.tsx` component, along with its predefined sizing.
+
 ---
 
 ## React Patterns
@@ -48,6 +54,7 @@ Additional conventions:
   /components    # React components, one per file
   /hooks         # Custom React hooks
   /services      # Firebase and external API calls (never in components)
+  /tests         # Test cases
   /types         # TypeScript types and interfaces
   /utilities     # Shared pure functions and helpers
 /docs            # API specs, user guides, architecture notes

@@ -84,9 +84,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers }: Event
   };
 
   return (
-    <div className="event-modal-overlay">
-      <div className="event-modal-backdrop" onClick={onClose} />
-      <div className="event-modal-sheet">
+    <div className="overlay-bottom">
+      <div className="overlay-scrim" onClick={onClose} />
+      <div className="overlay-panel overlay-panel--lg rounded-t-2xl p-6 pb-10 max-h-[90vh] overflow-y-auto animate-slide-up">
         <div className="event-modal-header">
           <h2 className="event-modal-title">New Event</h2>
           <button

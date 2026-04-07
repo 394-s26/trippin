@@ -1,17 +1,5 @@
 @reference "../index.css";
 
-.event-modal-overlay {
-  @apply fixed inset-0 z-50 flex items-end justify-center;
-}
-
-.event-modal-backdrop {
-  @apply absolute inset-0 bg-black/40;
-}
-
-.event-modal-sheet {
-  @apply relative w-full md:w-3/4 bg-white rounded-t-2xl p-6 pb-10 max-h-[90vh] overflow-y-auto animate-slide-up;
-}
-
 .event-modal-header {
   @apply flex justify-between items-center mb-5;
 }

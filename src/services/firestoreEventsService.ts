@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { Event } from '../types/event';
 import { hasActionPermission, PermissionError } from './permissionService';
 
@@ -42,7 +42,11 @@ export const deleteEvent = async (uid: string, tripId: string, dayId: string, id
 
 // Subscribes to all events for a specific trip across all its days.
 export const subscribeToEvents = (tripId: string, callback: (events: Event[]) => void) => {
-  const q = query(collectionGroup(db, 'events'), where('tripId', '==', tripId));
+  const q = query(
+    collectionGroup(db, 'events'),
+    where('tripId', '==', tripId),
+    orderBy('date', 'asc')
+  );
   return onSnapshot(q, (snapshot) => {
     const events: Event[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
     callback(events);

@@ -20,3 +20,33 @@ html, body, #root {
 @utility animate-slide-up {
   animation: slide-up 0.75s cubic-bezier(0.32, 0.72, 0, 1);
 }
+
+/* ── Overlay system ──────────────────────────────────────── */
+
+.overlay-bottom {
+  @apply fixed inset-0 z-50 flex items-end justify-center;
+}
+
+.overlay-center {
+  @apply fixed inset-0 z-50 flex items-start justify-center px-4 pt-[12vh] bg-black/40;
+}
+
+.overlay-scrim {
+  @apply absolute inset-0 bg-black/40;
+}
+
+.overlay-panel {
+  @apply relative bg-white;
+}
+
+.overlay-panel--lg {
+  @apply w-full md:w-1/2;
+}
+
+.overlay-panel--md {
+  @apply w-full max-w-lg;
+}
+
+.overlay-panel--sm {
+  @apply w-full max-w-sm;
+}

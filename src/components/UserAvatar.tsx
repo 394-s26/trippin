@@ -9,6 +9,7 @@ interface UserAvatarProps {
   user: AppUser | null;
   size?: AvatarSize;
   bordered?: boolean;
+  borderColor?: string;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -19,8 +20,15 @@ const iconSizeMap: Record<AvatarSize, number> = {
   lg: 18,
 };
 
-const UserAvatar = ({ user, size = 'md', bordered = false, className = '', style }: UserAvatarProps) => {
-  const sizeClass = `user-avatar user-avatar-${size}${bordered ? ' user-avatar-bordered' : ''}${className ? ' ' + className : ''}`;
+const UserAvatar = ({ user, size = 'md', bordered = false, borderColor, className = '', style }: UserAvatarProps) => {
+  const hasBorder = bordered || !!borderColor;
+  const borderClass = hasBorder
+    ? (borderColor ? ' user-avatar-border-custom' : ' user-avatar-bordered')
+    : '';
+  const sizeClass = `user-avatar user-avatar-${size}${borderClass}${className ? ' ' + className : ''}`;
+  const mergedStyle: React.CSSProperties = borderColor
+    ? { ...style, borderColor }
+    : { ...style };
 
   if (user?.photoURL) {
     return (
@@ -28,14 +36,14 @@ const UserAvatar = ({ user, size = 'md', bordered = false, className = '', style
         src={user.photoURL}
         alt={user.firstName || 'User'}
         className={sizeClass}
-        style={style}
+        style={mergedStyle}
         referrerPolicy="no-referrer"
       />
     );
   }
 
   return (
-    <div className={`${sizeClass} user-avatar-default`} style={style}>
+    <div className={`${sizeClass} user-avatar-default`} style={mergedStyle}>
       <UserIcon size={iconSizeMap[size]} />
     </div>
   );

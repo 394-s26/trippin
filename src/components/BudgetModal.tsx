@@ -96,9 +96,9 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
       </div>
 
       {isBudgetOpen && (
-        <div className="budget-modal-overlay">
-          <div className="budget-modal-backdrop" onClick={() => setIsBudgetOpen(false)} />
-          <div className="budget-modal-sheet">
+        <div className="overlay-bottom">
+          <div className="overlay-scrim" onClick={() => setIsBudgetOpen(false)} />
+          <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 animate-slide-up">
             <h2 className="budget-modal-title">Set Trip Budget</h2>
             <form onSubmit={handleBudgetSubmit} className="budget-modal-form">
               <label htmlFor="budget" className="budget-modal-label">
@@ -128,9 +128,8 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
       )}
 
       {isShareOpen && (
-        <div className="split-modal-overlay">
-          <div className="budget-modal-backdrop" onClick={() => setIsShareOpen(false)} />
-          <div className="split-modal-sheet">
+        <div className="overlay-center" onClick={() => setIsShareOpen(false)}>
+          <div className="overlay-panel overlay-panel--sm rounded-2xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h2 className="budget-modal-title">Split Method</h2>
 
             <div className="split-options">
