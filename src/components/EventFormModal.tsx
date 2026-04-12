@@ -126,7 +126,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
         <form onSubmit={handleSubmit} className="event-modal-form">
           {/* Type */}
           <div>
-            <label htmlFor="event-type" className="form-label">Type</label>
+            <label htmlFor="event-type" className="form-label">
+              Type <span className="form-label-required">(required)</span>
+            </label>
             <select
               id="event-type"
               value={type}
@@ -141,7 +143,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
           {/* Name */}
           <div>
-            <label htmlFor="event-name" className="form-label">Name</label>
+            <label htmlFor="event-name" className="form-label">
+              Name <span className="form-label-required">(required)</span>
+            </label>
             <input
               id="event-name"
               type="text"
@@ -155,7 +159,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
           {/* Location */}
           <div>
-            <label htmlFor="event-location" className="form-label">Location</label>
+            <label htmlFor="event-location" className="form-label">
+              Location <span className="form-label-optional">(optional)</span>
+            </label>
             <input
               id="event-location"
               type="text"
@@ -170,7 +176,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
           {dayDate ? (
             <div className="time-row">
               <div className="time-field">
-                <label htmlFor="event-start-time" className="form-label">Start Time</label>
+                <label htmlFor="event-start-time" className="form-label">
+                  Start Time <span className="form-label-optional">(optional)</span>
+                </label>
                 <input
                   id="event-start-time"
                   type="time"
@@ -180,7 +188,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
                 />
               </div>
               <div className="time-field">
-                <label htmlFor="event-end-time" className="form-label">End Time</label>
+                <label htmlFor="event-end-time" className="form-label">
+                  End Time <span className="form-label-optional">(optional)</span>
+                </label>
                 <input
                   id="event-end-time"
                   type="time"
@@ -192,7 +202,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
             </div>
           ) : (
             <div>
-              <label htmlFor="event-date" className="form-label">Date & Time</label>
+              <label htmlFor="event-date" className="form-label">
+                Date & Time <span className="form-label-optional">(optional)</span>
+              </label>
               <input
                 id="event-date"
                 type="datetime-local"
@@ -205,7 +217,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
           {/* Timezone */}
           <div>
-            <label htmlFor="event-timezone" className="form-label">Timezone</label>
+            <label htmlFor="event-timezone" className="form-label">
+              Timezone <span className="form-label-optional">(optional)</span>
+            </label>
             <select
               id="event-timezone"
               value={timezone}
@@ -222,7 +236,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
           <div className="cost-paidby-row">
             <div className="cost-paidby-cost">
               <label htmlFor="event-cost" className="form-label">
-                Cost <span className="normal-case font-normal text-gray-400">(optional)</span>
+                Cost <span className="form-label-optional">(optional)</span>
               </label>
               <div className="cost-input-wrapper">
                 <span className="cost-input-prefix">$</span>
@@ -249,7 +263,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
             {tripUsers && tripUsers.length > 0 && (
               <div className="cost-paidby-who">
-                <label className="form-label">Paid By</label>
+                <label className="form-label">
+                  Paid By <span className="form-label-optional">(optional)</span>
+                </label>
                 <div className="paidby-dropdown" ref={dropdownRef}>
                   <button
                     type="button"
