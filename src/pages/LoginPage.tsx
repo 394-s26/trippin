@@ -3,19 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import forestBg from '../images/aleesha-wood-forest-road.jpg';
 import TrippinLogo from '../components/TrippinLogo';
+import { MoveRightIcon, GoogleIcon, UserIcon } from '../services/svgIcons';
 import './LoginPage.css';
 
 type Tab = 'login' | 'signup';
 type SignupStep = 1 | 2;
 
-const GoogleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-    <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
-    <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
-    <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
-    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
-  </svg>
-);
 
 const LoginPage = () => {
   const [tab, setTab] = useState<Tab>('login');
@@ -141,18 +134,6 @@ const LoginPage = () => {
     setSignupStep(1);
   };
 
-  const headingText = tab === 'login'
-    ? 'Welcome back'
-    : signupStep === 1
-      ? 'Create your account'
-      : 'Finish your profile';
-
-  const subheadingText = tab === 'login'
-    ? 'Pick up where your last adventure left off.'
-    : signupStep === 1
-      ? 'Start with the essentials, then we will set up your public profile.'
-      : 'Add a username and optional profile photo before you jump in.';
-
   return (
     <div className="login-wrapper">
       <div className="login-bg" style={{ backgroundImage: `url(${forestBg})` }} />
@@ -165,10 +146,6 @@ const LoginPage = () => {
           <TrippinLogo size="lg" />
         </div>
         <p className="login-tagline">Plan your next adventure</p>
-        <div className="login-intro">
-          <h1 className="login-heading">{headingText}</h1>
-          <p className="login-subheading">{subheadingText}</p>
-        </div>
 
         <div className="login-tabs">
           <button
@@ -228,7 +205,7 @@ const LoginPage = () => {
                         className="login-input"
                         value={firstName}
                         onChange={e => setFirstName(e.target.value)}
-                        placeholder="Azan"
+                        placeholder="e.g. John"
                         required
                         autoComplete="given-name"
                       />
@@ -241,7 +218,7 @@ const LoginPage = () => {
                         className="login-input"
                         value={lastName}
                         onChange={e => setLastName(e.target.value)}
-                        placeholder="Malik"
+                        placeholder="e.g. Doe"
                         required
                         autoComplete="family-name"
                       />
@@ -277,8 +254,8 @@ const LoginPage = () => {
               ) : (
                 <>
                   <div className="signup-summary">
-                    <span>{email}</span>
-                    <span>{firstName.trim()} {lastName.trim()}</span>
+                    <span className="signup-summary--email">{email}</span>
+                    <span className="signup-summary--name">&quot;{firstName.trim()} {lastName.trim()}&quot;</span>
                   </div>
 
                   <div className="signup-avatar-card">
@@ -286,7 +263,7 @@ const LoginPage = () => {
                       {photoPreview ? (
                         <img src={photoPreview} alt="" className="signup-avatar-image" />
                       ) : (
-                        <span>{getInitials(firstName, lastName)}</span>
+                        <UserIcon size={24} />
                       )}
                     </div>
                     <div className="signup-avatar-copy">
@@ -363,7 +340,7 @@ const LoginPage = () => {
           {error && <p className="login-error">{error}</p>}
 
           <button type="submit" className="login-btn-primary" disabled={submitting}>
-            {submitting ? 'Please wait…' : tab === 'login' ? 'Log In' : signupStep === 1 ? 'Continue' : 'Create Account'}
+            {submitting ? 'Please wait…' : tab === 'login' ? 'Log In' : signupStep === 1 ? <>Finish Your Profile <MoveRightIcon size={18} /></> : 'Create Account'}
           </button>
         </form>
 
@@ -387,8 +364,6 @@ const LoginPage = () => {
 
 const normalizeUsername = (value: string) => value.trim().replace(/\s+/g, '').toLowerCase();
 
-const getInitials = (firstName: string, lastName: string) =>
-  `${firstName.trim().charAt(0)}${lastName.trim().charAt(0)}`.toUpperCase() || '?';
 
 const parseFirebaseError = (err: unknown): string => {
   if (err && typeof err === 'object' && 'code' in err) {
