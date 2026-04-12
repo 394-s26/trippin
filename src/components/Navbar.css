@@ -1,11 +1,19 @@
 @reference "../index.css";
 
 .navbar {
-  @apply fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full md:w-1/2 bg-white border-t border-gray-100 px-4 py-1.5 flex justify-between items-end;
+  @apply fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full md:w-1/2 bg-white border-t border-gray-100 px-4 py-3 flex justify-evenly items-end;
 }
 
 .navbar-link {
-  @apply flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors text-gray-400 no-underline;
+  @apply flex flex-col items-center gap-1 text-xs font-medium transition-colors text-gray-400 no-underline p-1;
+}
+
+.navbar-link:first-child {
+  @apply pl-0;
+}
+
+.navbar-link:last-child {
+  @apply pr-0;
 }
 
 .navbar-link-active {
@@ -15,7 +23,7 @@
 /* ── Trip group (Map / Current Trip / Misc) ── */
 
 .navbar-trip-group {
-  @apply flex items-end gap-3 bg-gray-50 rounded-xl px-3 py-1;
+  @apply flex items-end gap-7 bg-gray-50 rounded-4xl px-10 py-1.5;
 }
 
 /* ── Current Trip circle button ── */
@@ -25,15 +33,15 @@
 }
 
 .navbar-trip-circle-wrapper {
-  @apply flex flex-col items-center;
+  @apply relative flex flex-col items-center;
 }
 
 .navbar-trip-name {
-  @apply text-[9px] font-semibold text-gray-500 leading-tight max-w-[60px] text-center truncate mb-0.5;
+  @apply absolute top-full -mt-3 text-[10px] font-semibold text-gray-500 leading-tight max-w-[72px] text-center truncate z-10 bg-gray-100 rounded px-1;
 }
 
 .navbar-trip-circle {
-  @apply w-9 h-9 rounded-full bg-primary bg-cover bg-center border-2 border-white shadow-sm -mt-2;
+  @apply w-12 h-12 rounded-full bg-primary bg-cover bg-center border-4 border-primary shadow-sm;
 }
 
 .navbar-link-active .navbar-trip-name {

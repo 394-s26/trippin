@@ -39,7 +39,6 @@ const Navbar = () => {
             }
           >
             <div className="navbar-trip-circle-wrapper">
-              <span className="navbar-trip-name">{lastViewedTrip.tripName}</span>
               <div
                 className="navbar-trip-circle"
                 style={
@@ -48,6 +47,7 @@ const Navbar = () => {
                     : undefined
                 }
               />
+              <span className="navbar-trip-name">{lastViewedTrip.tripName}</span>
             </div>
           </NavLink>
         )}
