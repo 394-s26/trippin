@@ -10,7 +10,8 @@ import {
   setLoginTime,
   clearLoginTime,
 } from '../services/authService';
-import { User, AppUser } from '../types/auth';
+import { uploadUserAvatar } from '../services/storageService';
+import { User, AppUser, EmailRegistrationInput } from '../types/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -18,7 +19,7 @@ interface AuthContextType {
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  registerWithEmail: (email: string, password: string, username: string) => Promise<void>;
+  registerWithEmail: (input: EmailRegistrationInput) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -80,15 +81,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await signInWithEmail(email, password);
   };
 
-  const registerWithEmail = async (email: string, password: string, username: string) => {
+  const registerWithEmail = async ({
+    email,
+    password,
+    firstName,
+    lastName,
+    username,
+    photoFile,
+  }: EmailRegistrationInput) => {
     const firebaseUser = await signUpWithEmail(email, password);
+    let photoURL: string | null = null;
+
+    if (photoFile) {
+      try {
+        photoURL = await uploadUserAvatar(firebaseUser.uid, photoFile);
+      } catch (error) {
+        console.warn('Profile photo upload failed during signup. Continuing without photo.', error);
+      }
+    }
+
     const newAppUser: AppUser = {
       uid: firebaseUser.uid,
       email: firebaseUser.email,
-      firstName: '',
-      lastName: '',
-      username,
-      photoURL: null,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      username: username.trim(),
+      photoURL,
     };
     await createAppUser(newAppUser);
     setAppUser(newAppUser);
