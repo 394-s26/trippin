@@ -313,3 +313,20 @@
 .share-modal-pending-badge {
   @apply block text-[11px] leading-tight text-blue-500 font-semibold not-italic;
 }
+
+/* Role guide */
+.share-modal-role-guide {
+  @apply flex gap-3 mb-4;
+}
+
+.share-modal-role-guide-item {
+  @apply flex-1 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 flex flex-col gap-1;
+}
+
+.share-modal-role-guide-label {
+  @apply text-xs font-semibold text-gray-700 uppercase tracking-wide;
+}
+
+.share-modal-role-guide-desc {
+  @apply text-[11.5px] leading-snug text-gray-500;
+}

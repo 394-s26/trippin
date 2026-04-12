@@ -389,6 +389,22 @@ const TripShareBar = ({
           <button className="share-modal-close-btn" onClick={closeModal} aria-label="Close">×</button>
         </div>
 
+        {/* Role guide */}
+        <div className="share-modal-role-guide">
+        <div className="share-modal-role-guide-item">
+          <span className="share-modal-role-guide-label">Manager 🪂</span>
+          <span className="share-modal-role-guide-desc">
+            For the friend who needs control. Full access to plan and manage the trip.
+          </span>
+        </div>
+        <div className="share-modal-role-guide-item">
+          <span className="share-modal-role-guide-label">Explorer 🚣‍♂️</span>
+          <span className="share-modal-role-guide-desc">
+            Here for the vibes. Suggests trip ideas and lets the group decide.
+          </span>
+        </div>
+      </div>
+
         {/* Input row — only shown when canInvite */}
         {canInvite && (
           <div className="share-modal-input-row">

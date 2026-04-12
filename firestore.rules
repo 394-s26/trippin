@@ -30,19 +30,39 @@ service cloud.firestore {
       allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
 
       // Owner can update any field.
-      // Shared users can update other fields (e.g. budget edits if added later)
-      // but are NOT allowed to modify shared[] or userId.
-      // Self-enrollment: a user can add ONLY themselves to shared[] via invite
-      // acceptance (they must not already be a member and userId must stay the same).
+      // Manager: full trip control except transferring ownership.
+      // Any member: can add new members (shared[] may only grow) and update
+      //   permissions for newly added UIDs; cannot shrink shared[] or change userId.
+      // Self-removal: a member can remove only themselves (shared shrinks by exactly 1).
+      // Self-enrollment: a non-member can add only themselves via invite acceptance.
       allow update: if isAuthed() && (
+        // 1. Owner — unrestricted.
         isTripOwner(resource.data)
         ||
+        // 2. Manager — can do anything except change the owner (userId).
         (
           request.auth.uid in resource.data.shared &&
-          request.resource.data.shared == resource.data.shared &&
+          resource.data.permissions[request.auth.uid] == 'manager' &&
           request.resource.data.userId == resource.data.userId
         )
         ||
+        // 3. Any member — can invite new people (shared[] grows or stays same)
+        //    and update the permissions map. Cannot remove members or change owner.
+        (
+          request.auth.uid in resource.data.shared &&
+          request.resource.data.userId == resource.data.userId &&
+          request.resource.data.shared.hasAll(resource.data.shared)
+        )
+        ||
+        // 4. Self-removal — member removes only themselves (size drops by exactly 1).
+        (
+          request.auth.uid in resource.data.shared &&
+          !(request.auth.uid in request.resource.data.shared) &&
+          request.resource.data.userId == resource.data.userId &&
+          request.resource.data.shared.size() == resource.data.shared.size() - 1
+        )
+        ||
+        // 5. Self-enrollment — new user accepts a pending invite.
         (
           !(request.auth.uid in resource.data.shared) &&
           request.auth.uid in request.resource.data.shared &&

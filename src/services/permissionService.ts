@@ -7,7 +7,7 @@ import { TripAction, Role, ROLE_PERMISSIONS } from '../config/permissions';
 // Falls back gracefully for trips that predate the permissions field.
 export const canPerformAction = (uid: string, trip: Trip, action: TripAction): boolean => {
   const permissions = trip.permissions ?? {};
-  const role: Role = permissions[uid] ?? (uid === trip.userId ? 'owner' : 'viewer');
+  const role: Role = permissions[uid] ?? (uid === trip.userId ? 'owner' : 'explorer');
   return (ROLE_PERMISSIONS[role] as string[]).includes(action);
 };
 
