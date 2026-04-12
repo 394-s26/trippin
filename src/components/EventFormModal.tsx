@@ -263,9 +263,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
             {tripUsers && tripUsers.length > 0 && (
               <div className="cost-paidby-who">
-                <label className="form-label">
-                  Paid By <span className="form-label-optional">(optional)</span>
-                </label>
+                <label className="form-label">Paid By</label>
                 <div className="paidby-dropdown" ref={dropdownRef}>
                   <button
                     type="button"
