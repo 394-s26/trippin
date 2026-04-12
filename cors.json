@@ -1,6 +1,6 @@
 [
   {
-    "origin": ["http://localhost:5173"],
+    "origin": ["http://localhost:5173","https://trippin-project-20a74.web.app"],
     "method": ["GET", "POST", "PUT", "DELETE"],
     "maxAgeSeconds": 3600
   }

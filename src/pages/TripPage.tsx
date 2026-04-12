@@ -189,13 +189,14 @@ const TripPage = () => {
               backgroundImage={bannerImage}
               dateRange={formatDateRange(days, trip.startDate)}
               tripId={id!}
+              ownerId={trip.userId}
               shared={trip.shared}
               permissions={trip.permissions ?? {}}
               canChangeName={can('change_trip_name')}
               canChangeBanner={can('change_banner')}
               canChangeStartDate={can('change_start_date')}
               canDelete={can('delete_trip')}
-              canManageMembers={can('invite_member')}
+              canManageMembers={true}
               canRemoveMembers={can('remove_member')}
               canChangeRole={can('change_member_role')}
               onChangeName={handleChangeName}
@@ -206,9 +207,11 @@ const TripPage = () => {
             <TripShareBar
               shared={trip.shared}
               tripId={id!}
+              tripName={trip.name}
+              ownerId={trip.userId}
               variant="card"
               permissions={trip.permissions ?? {}}
-              canInvite={can('invite_member')}
+              canInvite={true}
               canRemove={can('remove_member')}
               canChangeRole={can('change_member_role')}
             />
