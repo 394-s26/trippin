@@ -281,3 +281,35 @@
 .share-modal-save-btn {
   @apply mt-4 w-1/2 mx-auto flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl py-2.5 font-semibold transition-colors disabled:opacity-60;
 }
+.share-modal-save-btn--invite {
+  @apply bg-green-700 hover:bg-green-800;
+}
+
+/* Invite-specific styles */
+.share-modal-pill-invite {
+  @apply bg-blue-50 text-blue-700;
+}
+.share-modal-pill-invite .share-modal-pill-remove {
+  @apply text-blue-400 hover:text-blue-600;
+}
+.share-modal-pill-envelope {
+  @apply w-5 h-5 flex items-center justify-center flex-shrink-0 text-blue-500;
+}
+.share-modal-invite-icon {
+  @apply w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0;
+}
+.share-modal-invite-badge {
+  @apply block text-[11px] leading-tight text-blue-500 font-normal not-italic;
+}
+.share-modal-sent-dot {
+  @apply w-2 h-2 rounded-full bg-green-500 block mx-auto;
+}
+.share-modal-error-dot {
+  @apply w-2 h-2 rounded-full bg-red-500 block mx-auto;
+}
+.share-modal-pending-invite-dot {
+  @apply w-2 h-2 rounded-full bg-blue-400 block mx-auto;
+}
+.share-modal-pending-badge {
+  @apply block text-[11px] leading-tight text-blue-500 font-semibold not-italic;
+}

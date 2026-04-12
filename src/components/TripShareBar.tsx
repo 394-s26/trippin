@@ -5,6 +5,7 @@ import { AppUser } from '../types/auth';
 import UserAvatar from './UserAvatar';
 import { Role, ASSIGNABLE_ROLES, ROLE_PERMISSIONS } from '../config/permissions';
 import { inviteMembers, removeMember, changeMemberRole } from '../services/firestoreTripService';
+import { sendInviteEmail, subscribeToPendingInvites, cancelInvite, PendingInvite } from '../services/inviteService';
 import { useAuth } from '../contexts/AuthContext';
 import { PlusIcon, SaveIcon } from '../services/svgIcons';
 import './TripShareBar.css';
@@ -18,6 +19,8 @@ interface EmailPill {
   isValidEmail: boolean;
   user: AppUser | null;
   resolving: boolean;
+  /** true when the email is valid but no account exists — eligible for email invite */
+  isUnregistered: boolean;
 }
 
 interface PendingAdd {
@@ -25,6 +28,8 @@ interface PendingAdd {
   email: string;
   user: AppUser | null;
   role: Role;
+  /** true when this add will be an email invite instead of a direct share */
+  isInvite: boolean;
 }
 
 interface RemovePopover {
@@ -36,6 +41,8 @@ interface RemovePopover {
 interface TripShareBarProps {
   shared: string[];
   tripId: string;
+  tripName?: string;
+  ownerId?: string;
   permissions?: Record<string, Role>;
   canInvite?: boolean;
   canRemove?: boolean;
@@ -44,7 +51,7 @@ interface TripShareBarProps {
 }
 
 const TripShareBar = ({
-  shared, tripId, permissions = {},
+  shared, tripId, tripName = '', ownerId,  permissions = {},
   canInvite = false, canRemove = false, canChangeRole = false,
   variant = 'banner',
 }: TripShareBarProps) => {
@@ -52,14 +59,20 @@ const TripShareBar = ({
   const uid = appUser?.uid ?? '';
 
   const [sharedUsers, setSharedUsers] = useState<AppUser[]>([]);
+  const [ownerUser, setOwnerUser] = useState<AppUser | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [pills, setPills] = useState<EmailPill[]>([]);
   const [pendingAdds, setPendingAdds] = useState<PendingAdd[]>([]);
   const [pendingRoles, setPendingRoles] = useState<Record<string, Role>>({});
   const [removeConfirmUid, setRemoveConfirmUid] = useState<string | null>(null);
+  const [removeConfirmInviteId, setRemoveConfirmInviteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState<Record<string, 'sending' | 'sent' | 'error'>>({});
+
+  // Persisted pending invites loaded from Firestore (invites that were already sent)
+  const [persistedInvites, setPersistedInvites] = useState<PendingInvite[]>([]);
 
   // Banner variant — small remove popover
   const [removePopover, setRemovePopover] = useState<RemovePopover | null>(null);
@@ -74,6 +87,19 @@ const TripShareBar = ({
     });
   }, [sharedKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (!ownerId) { setOwnerUser(null); return; }
+    getDoc(doc(db, 'users', ownerId)).then(d => {
+      setOwnerUser(d.exists() ? (d.data() as AppUser) : null);
+    });
+  }, [ownerId]);
+
+  // Real-time subscription to pending invites — auto-updates when a user signs up
+  useEffect(() => {
+    const unsubscribe = subscribeToPendingInvites(tripId, setPersistedInvites);
+    return () => unsubscribe();
+  }, [tripId]);
+
   const lookupUserByEmail = async (email: string): Promise<AppUser | null> => {
     const snap = await getDocs(query(collection(db, 'users'), where('email', '==', email)));
     return snap.empty ? null : (snap.docs[0].data() as AppUser);
@@ -85,20 +111,23 @@ const TripShareBar = ({
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
     if (pills.some(p => p.email === trimmed)) return;
+    // Don't allow re-adding an email that already has a pending invite
+    if (persistedInvites.some(inv => inv.email === trimmed)) return;
     const isValidEmail = EMAIL_RE.test(trimmed);
     const id = `${trimmed}-${Date.now()}`;
 
     if (!isValidEmail) {
-      setPills(prev => [...prev, { id, email: trimmed, isValidEmail: false, user: null, resolving: false }]);
+      setPills(prev => [...prev, { id, email: trimmed, isValidEmail: false, user: null, resolving: false, isUnregistered: false }]);
       return;
     }
 
-    setPills(prev => [...prev, { id, email: trimmed, isValidEmail: true, user: null, resolving: true }]);
-    setPendingAdds(prev => [...prev, { pillId: id, email: trimmed, user: null, role: ASSIGNABLE_ROLES[0] }]);
+    setPills(prev => [...prev, { id, email: trimmed, isValidEmail: true, user: null, resolving: true, isUnregistered: false }]);
+    setPendingAdds(prev => [...prev, { pillId: id, email: trimmed, user: null, role: ASSIGNABLE_ROLES[0], isInvite: false }]);
 
     const user = await lookupUserByEmail(trimmed);
-    setPills(prev => prev.map(p => p.id === id ? { ...p, user, resolving: false } : p));
-    setPendingAdds(prev => prev.map(pa => pa.pillId === id ? { ...pa, user } : pa));
+    const isUnregistered = !user;
+    setPills(prev => prev.map(p => p.id === id ? { ...p, user, resolving: false, isUnregistered } : p));
+    setPendingAdds(prev => prev.map(pa => pa.pillId === id ? { ...pa, user, isInvite: isUnregistered } : pa));
   };
 
   const removePillAndPending = (pillId: string) => {
@@ -147,6 +176,7 @@ const TripShareBar = ({
   const handleSave = async () => {
     setSaving(true);
     try {
+      // 1. Add existing users directly
       const validAdds = pendingAdds.filter(pa => pa.user && !shared.includes(pa.user.uid));
       const byRole = validAdds.reduce<Partial<Record<Role, string[]>>>((acc, pa) => {
         if (!acc[pa.role]) acc[pa.role] = [];
@@ -156,11 +186,39 @@ const TripShareBar = ({
       await Promise.all(
         Object.entries(byRole).map(([role, uids]) => inviteMembers(uid, tripId, uids!, role as Role))
       );
+
+      // 2. Send email invites for unregistered users
+      const emailInvites = pendingAdds.filter(pa => pa.isInvite);
+      for (const invite of emailInvites) {
+        setInviteStatus(prev => ({ ...prev, [invite.pillId]: 'sending' }));
+        try {
+          await sendInviteEmail({
+            email: invite.email,
+            tripId,
+            tripName: tripName || 'a trip',
+            role: invite.role,
+          });
+          setInviteStatus(prev => ({ ...prev, [invite.pillId]: 'sent' }));
+        } catch {
+          setInviteStatus(prev => ({ ...prev, [invite.pillId]: 'error' }));
+        }
+      }
+
+      // 3. Update roles for existing members
       await Promise.all(
         Object.entries(pendingRoles).map(([targetUid, newRole]) => changeMemberRole(uid, tripId, targetUid, newRole))
       );
-      setPendingAdds([]);
-      setPills([]);
+
+      // Real-time subscription auto-updates persisted invites — no manual refresh needed
+
+      // Clear successfully added members (keep failed invites visible)
+      const failedPillIds = new Set(
+        emailInvites
+          .filter(inv => inviteStatus[inv.pillId] === 'error')
+          .map(inv => inv.pillId)
+      );
+      setPendingAdds(prev => prev.filter(pa => failedPillIds.has(pa.pillId)));
+      setPills(prev => prev.filter(p => failedPillIds.has(p.id)));
       setPendingRoles({});
     } catch (err) {
       console.error('Failed to save changes:', err);
@@ -176,10 +234,12 @@ const TripShareBar = ({
     setPendingRoles({});
     setInputValue('');
     setRemoveConfirmUid(null);
+    setRemoveConfirmInviteId(null);
+    setInviteStatus({});
   };
 
   const hasPendingChanges =
-    pendingAdds.some(pa => pa.user && !shared.includes(pa.user.uid)) ||
+    pendingAdds.some(pa => (pa.user && !shared.includes(pa.user.uid)) || pa.isInvite) ||
     Object.keys(pendingRoles).length > 0;
 
   // ── Render helpers ───────────────────────────────────────────────────────────
@@ -213,10 +273,15 @@ const TripShareBar = ({
   const bannerContent = (
     <div className="trip-share-bar">
       <div className="trip-share-bar-users">
+        {ownerUser && (
+          <span key={ownerUser.uid} style={{ marginLeft: 0, zIndex: sharedUsers.length + 2, display: 'contents' }}>
+            {renderAvatar(ownerUser, -1)}
+          </span>
+        )}
         {sharedUsers.map((user, i) => (
-          canRemove
-            ? renderAvatarBtn(user, i, { marginLeft: i === 0 ? 0 : -10 })
-            : <span key={user.uid} style={{ marginLeft: i === 0 ? 0 : -10, zIndex: sharedUsers.length - i + 1, display: 'contents' }}>
+          canRemove || user.uid === uid
+            ? renderAvatarBtn(user, i, { marginLeft: -10 })
+            : <span key={user.uid} style={{ marginLeft: ownerUser || i > 0 ? -10 : 0, zIndex: sharedUsers.length - i + 1, display: 'contents' }}>
                 {renderAvatar(user, i)}
               </span>
         ))}
@@ -252,20 +317,22 @@ const TripShareBar = ({
   );
 
   // ── Card variant ─────────────────────────────────────────────────────────────
-  const visibleUsers = sharedUsers.slice(0, MAX_CARD_AVATARS);
-  const overflowCount = sharedUsers.length - visibleUsers.length;
+  const allCardUsers = ownerUser ? [ownerUser, ...sharedUsers] : sharedUsers;
+  const visibleUsers = allCardUsers.slice(0, MAX_CARD_AVATARS);
+  const overflowCount = allCardUsers.length - visibleUsers.length;
 
   const cardContent = (
     <div className="trip-share-bar-card">
-      {shared.length === 0 && <span className="trip-share-bar-empty-label">No friends invited yet...</span>}
+      {shared.length === 0 && !ownerUser && <span className="trip-share-bar-empty-label">No friends invited yet...</span>}
       <div className="trip-share-bar-card-avatars">
-        {visibleUsers.map((user, i) => (
-          canRemove
-            ? renderAvatarBtn(user, i, { marginLeft: i === 0 ? 0 : -10 })
-            : <span key={user.uid} style={{ marginLeft: i === 0 ? 0 : -10, zIndex: sharedUsers.length - i + 1, display: 'contents' }}>
+        {visibleUsers.map((user, i) => {
+          const isOwner = user.uid === ownerId;
+          return isOwner || (!canRemove && user.uid !== uid)
+            ? <span key={user.uid} style={{ marginLeft: i === 0 ? 0 : -10, zIndex: allCardUsers.length - i + 1, display: 'contents' }}>
                 {renderAvatar(user, i)}
               </span>
-        ))}
+            : renderAvatarBtn(user, i, { marginLeft: i === 0 ? 0 : -10 });
+        })}
         {overflowCount > 0 && (
           <div className="trip-share-bar-card-overflow" style={{ marginLeft: -10 }}>+{overflowCount}</div>
         )}
@@ -329,9 +396,17 @@ const TripShareBar = ({
               {pills.map(pill => (
                 <div
                   key={pill.id}
-                  className={`share-modal-pill${!pill.isValidEmail ? ' share-modal-pill-invalid' : ''}`}
+                  className={`share-modal-pill${!pill.isValidEmail ? ' share-modal-pill-invalid' : ''}${pill.isUnregistered ? ' share-modal-pill-invite' : ''}`}
                 >
-                  <UserAvatar user={pill.user} size="sm" className="share-modal-pill-avatar" />
+                  {pill.isUnregistered ? (
+                    <span className="share-modal-pill-envelope">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                      </svg>
+                    </span>
+                  ) : (
+                    <UserAvatar user={pill.user} size="sm" className="share-modal-pill-avatar" />
+                  )}
                   <span className="share-modal-pill-label">
                     {pill.resolving
                       ? pill.email
@@ -363,11 +438,28 @@ const TripShareBar = ({
         )}
 
         {/* Member list */}
-        {(sharedUsers.length > 0 || pendingAdds.length > 0) && (
+        {(ownerUser || sharedUsers.length > 0 || pendingAdds.length > 0 || persistedInvites.length > 0) && (
           <>
             <div className="share-modal-divider" />
             <table className="share-modal-members">
               <tbody className="share-modal-members-body">
+
+                {/* Owner row — no remove button, role shown as "Owner" */}
+                {ownerUser && (
+                  <tr className="share-modal-member-row">
+                    <td className="share-modal-td-status" />
+                    <td className="share-modal-td-avatar">
+                      <UserAvatar user={ownerUser} size="sm" />
+                    </td>
+                    <td className="share-modal-td-name">
+                      {ownerUser.firstName} {ownerUser.lastName}
+                    </td>
+                    <td className="share-modal-td-role">
+                      <span className="share-modal-member-role-badge">Owner</span>
+                    </td>
+                    <td className="share-modal-td-remove" />
+                  </tr>
+                )}
 
                 {/* Existing members */}
                 {sharedUsers.map(user => {
@@ -405,7 +497,7 @@ const TripShareBar = ({
                           )}
                         </td>
                         <td className="share-modal-td-remove">
-                          {canRemove && (
+                          {(canRemove || user.uid === uid) && (
                             <button
                               className="share-modal-member-remove-btn"
                               onClick={() => setRemoveConfirmUid(isConfirming ? null : user.uid)}
@@ -431,55 +523,144 @@ const TripShareBar = ({
                   );
                 })}
 
+                {/* Persisted pending invites (sent but user hasn't signed up yet) */}
+                {persistedInvites.map(inv => {
+                  const isConfirming = removeConfirmInviteId === inv.id;
+                  return (
+                    <Fragment key={inv.id}>
+                      <tr className="share-modal-member-row">
+                        <td className="share-modal-td-status">
+                          <span className="share-modal-pending-invite-dot" title="Awaiting signup" />
+                        </td>
+                        <td className="share-modal-td-avatar">
+                          <span className="share-modal-invite-icon" title="Not on Trippin yet">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                            </svg>
+                          </span>
+                        </td>
+                        <td className="share-modal-td-name share-modal-td-name--pending">
+                          <span>{inv.email}</span>
+                          <span className="share-modal-pending-badge">Pending</span>
+                        </td>
+                        <td className="share-modal-td-role">
+                          <span className="share-modal-member-role-badge">{inv.role.charAt(0).toUpperCase() + inv.role.slice(1)}</span>
+                        </td>
+                        <td className="share-modal-td-remove">
+                          {(canRemove || inv.invitedBy === uid) && (
+                            <button
+                              className="share-modal-member-remove-btn"
+                              onClick={() => setRemoveConfirmInviteId(isConfirming ? null : inv.id)}
+                              aria-label={`Cancel invite for ${inv.email}`}
+                            >×</button>
+                          )}
+                        </td>
+                      </tr>
+                      {isConfirming && (
+                        <tr className="share-modal-confirm-row">
+                          <td colSpan={5}>
+                            <div className="share-modal-remove-confirm">
+                              <p className="share-modal-remove-confirm-text">Cancel invite for {inv.email}?</p>
+                              <div className="share-modal-remove-confirm-actions">
+                                <button
+                                  className="share-modal-remove-confirm-btn"
+                                  onClick={async () => {
+                                    await cancelInvite(inv.id);
+                                    setPersistedInvites(prev => prev.filter(i => i.id !== inv.id));
+                                    setRemoveConfirmInviteId(null);
+                                  }}
+                                >Cancel Invite</button>
+                                <button
+                                  className="share-modal-remove-cancel-btn"
+                                  onClick={() => setRemoveConfirmInviteId(null)}
+                                >Keep</button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+
                 {/* Pending new users (from pills) */}
-                {pendingAdds.map(pa => (
-                  <tr key={pa.pillId} className="share-modal-member-row">
-                    <td className="share-modal-td-status">
-                      <span className="share-modal-pending-dot" />
-                    </td>
-                    <td className="share-modal-td-avatar">
-                      <UserAvatar user={pa.user} size="sm" />
-                    </td>
-                    <td className="share-modal-td-name share-modal-td-name--pending">
-                      {pa.user
-                        ? `${pa.user.firstName} ${pa.user.lastName}`.trim()
-                        : pa.email}
-                    </td>
-                    <td className="share-modal-td-role">
-                      <select
-                        className="share-modal-member-role-select"
-                        value={pa.role}
-                        onChange={e => handlePendingRoleChange(pa.pillId, e.target.value as Role)}
-                      >
-                        {ASSIGNABLE_ROLES
-                          .filter(role => canChangeRole || !ROLE_PERMISSIONS[role].includes('change_member_role'))
-                          .map(role => (
-                            <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
-                          ))}
-                      </select>
-                    </td>
-                    <td className="share-modal-td-remove" />
-                  </tr>
-                ))}
+                {pendingAdds.map(pa => {
+                  const status = inviteStatus[pa.pillId];
+                  return (
+                    <tr key={pa.pillId} className="share-modal-member-row">
+                      <td className="share-modal-td-status">
+                        {status === 'sent' ? (
+                          <span className="share-modal-sent-dot" title="Invite sent" />
+                        ) : status === 'error' ? (
+                          <span className="share-modal-error-dot" title="Failed to send" />
+                        ) : (
+                          <span className="share-modal-pending-dot" />
+                        )}
+                      </td>
+                      <td className="share-modal-td-avatar">
+                        {pa.isInvite ? (
+                          <span className="share-modal-invite-icon" title="Not on Trippin yet">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                            </svg>
+                          </span>
+                        ) : (
+                          <UserAvatar user={pa.user} size="sm" />
+                        )}
+                      </td>
+                      <td className="share-modal-td-name share-modal-td-name--pending">
+                        <span>
+                          {pa.user
+                            ? `${pa.user.firstName} ${pa.user.lastName}`.trim()
+                            : pa.email}
+                        </span>
+                        {pa.isInvite && (
+                          <span className="share-modal-invite-badge">
+                            {status === 'sent' ? 'Invite sent!' : status === 'error' ? 'Failed — retry' : 'Will receive invite email'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="share-modal-td-role">
+                        <select
+                          className="share-modal-member-role-select"
+                          value={pa.role}
+                          onChange={e => handlePendingRoleChange(pa.pillId, e.target.value as Role)}
+                          disabled={status === 'sent'}
+                        >
+                          {ASSIGNABLE_ROLES
+                            .filter(role => canChangeRole || !ROLE_PERMISSIONS[role].includes('change_member_role'))
+                            .map(role => (
+                              <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
+                            ))}
+                        </select>
+                      </td>
+                      <td className="share-modal-td-remove" />
+                    </tr>
+                  );
+                })}
 
               </tbody>
             </table>
           </>
         )}
 
-        {sharedUsers.length === 0 && pendingAdds.length === 0 && (
+        {!ownerUser && sharedUsers.length === 0 && pendingAdds.length === 0 && persistedInvites.length === 0 && (
           <p className="share-modal-empty">No members yet. Invite friends above!</p>
         )}
 
         {/* Save button */}
         {hasPendingChanges && (
           <button
-            className="share-modal-save-btn"
+            className={`share-modal-save-btn${pendingAdds.some(pa => pa.isInvite && inviteStatus[pa.pillId] !== 'sent') ? ' share-modal-save-btn--invite' : ''}`}
             onClick={handleSave}
             disabled={saving}
           >
             <SaveIcon size={16} />
-            {saving ? 'Saving…' : 'Save Changes'}
+            {saving
+              ? 'Saving…'
+              : pendingAdds.some(pa => pa.isInvite && inviteStatus[pa.pillId] !== 'sent')
+                ? 'Save & Send Invites'
+                : 'Save Changes'}
           </button>
         )}
       </div>
