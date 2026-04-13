@@ -19,6 +19,15 @@ export interface AppUser {
   photoURL?: string | null;
 }
 
+export interface EmailRegistrationInput {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  photoFile?: File | null;
+}
+
 export interface AuthContextType {
   user: User | null;
   loading: boolean;

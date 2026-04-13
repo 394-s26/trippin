@@ -14,7 +14,7 @@
 }
 
 .login-card {
-  @apply w-full max-w-sm px-8 pt-14 pb-10 flex flex-col relative z-10 shadow-2xl;
+  @apply w-full max-w-md px-8 pt-14 pb-10 flex flex-col relative z-10 shadow-2xl;
   background: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(24px);
   border-bottom-left-radius: 14px;
@@ -52,6 +52,10 @@
   @apply flex flex-col gap-4;
 }
 
+.login-field-grid {
+  @apply grid grid-cols-1 gap-4 sm:grid-cols-2;
+}
+
 .login-field {
   @apply flex flex-col gap-1;
 }
@@ -66,6 +70,10 @@
          transition-shadow;
 }
 
+.login-hint {
+  @apply text-xs text-gray-500 mt-1;
+}
+
 .login-error {
   @apply text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2;
 }
@@ -73,7 +81,81 @@
 .login-btn-primary {
   @apply w-full py-3 rounded-xl bg-primary text-white text-sm font-semibold
          hover:bg-primary-light active:scale-95 transition-all
+         disabled:opacity-60 disabled:cursor-not-allowed
+         inline-flex items-center justify-center gap-3;
+}
+
+.login-btn-secondary {
+  @apply w-full py-3 rounded-xl border border-gray-200 bg-white text-sm font-semibold
+         text-gray-700 hover:bg-gray-50 active:scale-95 transition-all
          disabled:opacity-60 disabled:cursor-not-allowed;
+}
+
+.signup-progress {
+  @apply flex items-center gap-3 mb-6;
+}
+
+.signup-progress-step {
+  @apply flex items-center gap-2 text-xs text-gray-400 font-medium;
+}
+
+.signup-progress-step span {
+  @apply flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 bg-white;
+}
+
+.signup-progress-step--active {
+  @apply text-primary;
+}
+
+.signup-progress-step--active span {
+  @apply border-primary bg-primary text-white;
+}
+
+.signup-progress-line {
+  @apply h-px flex-1 bg-gray-200;
+}
+
+.signup-summary {
+  @apply rounded-2xl border border-white/70 bg-white/70 px-4 py-3 text-sm text-gray-600 flex flex-col gap-1;
+}
+
+span.signup-summary--email {
+  @apply font-medium;
+}
+
+.signup-summary--name {
+  @apply italic;
+}
+
+.signup-avatar-card {
+  @apply rounded-3xl border border-white/70 bg-white/70 p-4 grid gap-4;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+}
+
+.signup-avatar-preview {
+  @apply h-16 w-16 rounded-full bg-gray-400 text-white flex items-center justify-center text-lg font-semibold overflow-hidden;
+}
+
+.signup-avatar-image {
+  @apply h-full w-full object-cover;
+}
+
+.signup-avatar-copy strong {
+  @apply block text-sm text-gray-900;
+}
+
+.signup-avatar-copy p {
+  @apply text-xs text-gray-500 mt-1;
+}
+
+.signup-avatar-upload {
+  @apply inline-flex items-center justify-center rounded-xl border border-primary/20 bg-primary/10
+         px-4 py-2 text-sm font-medium text-primary cursor-pointer hover:bg-primary/15 transition-colors;
+}
+
+.signup-avatar-input {
+  @apply sr-only;
 }
 
 /* Divider */
@@ -107,4 +189,15 @@
          text-gray-700 flex items-center justify-center gap-3
          hover:bg-gray-50 active:scale-95 transition-all
          disabled:opacity-60 disabled:cursor-not-allowed;
+}
+
+@media (max-width: 640px) {
+  .login-card {
+    @apply max-w-none min-h-screen justify-center rounded-none;
+  }
+
+  .signup-avatar-card {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
 }
