@@ -11,6 +11,7 @@ interface TripBannerProps {
   backgroundImage: string | null;
   dateRange: string;
   tripId: string;
+  ownerId?: string;
   shared?: string[];
   permissions?: Record<string, Role>;
   canChangeName?: boolean;
@@ -27,7 +28,7 @@ interface TripBannerProps {
 }
 
 const TripBanner = ({
-  tripName, backgroundImage, dateRange, tripId, shared = [],
+  tripName, backgroundImage, dateRange, tripId, ownerId, shared = [],
   permissions = {},
   canChangeName = false, canChangeBanner = false, canChangeStartDate = false,
   canDelete = false, canManageMembers = false, canRemoveMembers = false, canChangeRole = false,
@@ -46,7 +47,7 @@ const TripBanner = ({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && onChangeImage) {
-      const url = await uploadTripBanner(file);
+      const url = await uploadTripBanner(file, tripId);
       onChangeImage(url);
     }
   };
@@ -67,6 +68,8 @@ const TripBanner = ({
       <TripShareBar
         shared={shared}
         tripId={tripId}
+        tripName={tripName}
+        ownerId={ownerId}
         permissions={permissions}
         canInvite={canManageMembers}
         canRemove={canRemoveMembers}

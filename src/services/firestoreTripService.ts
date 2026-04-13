@@ -75,9 +75,13 @@ export const inviteMembers = async (actorUid: string, tripId: string, newUids: s
 };
 
 // Removes a member from the trip. Removes from both shared[] and permissions map.
+// Self-removal (actorUid === targetUid) skips the permission check so any member
+// can leave a trip regardless of their role.
 export const removeMember = async (actorUid: string, tripId: string, targetUid: string) => {
-    const allowed = await hasActionPermission(actorUid, tripId, 'remove_member');
-    if (!allowed) throw new PermissionError('remove_member');
+    if (actorUid !== targetUid) {
+        const allowed = await hasActionPermission(actorUid, tripId, 'remove_member');
+        if (!allowed) throw new PermissionError('remove_member');
+    }
     await updateDoc(doc(db, 'trips', tripId), {
         shared: arrayRemove(targetUid),
         [`permissions.${targetUid}`]: deleteField(),
