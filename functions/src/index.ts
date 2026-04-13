@@ -1,7 +1,8 @@
 import {setGlobalOptions} from "firebase-functions";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {onSchedule} from "firebase-functions/v2/scheduler";
 import {initializeApp} from "firebase-admin/app";
-import {getFirestore, FieldValue} from "firebase-admin/firestore";
+import {getFirestore, FieldValue, Timestamp} from "firebase-admin/firestore";
 import {defineSecret} from "firebase-functions/params";
 import * as nodemailer from "nodemailer";
 
@@ -114,7 +115,7 @@ export const sendInviteEmail = onCall(
             </p>
           </div>
 
-          <a href="${SIGNUP_URL}"
+          <a href="${SIGNUP_URL}" target="_blank"
              style="display: inline-block; background: #15803d; color: white; text-decoration: none;
                     padding: 12px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">
             Sign up &amp; join the trip
@@ -144,3 +145,26 @@ export const sendInviteEmail = onCall(
 // Note: invite acceptance is handled client-side (see inviteService.ts).
 // The client reads pending invites, updates the trip doc (self-enrollment),
 // and marks the invite as accepted — all via Firestore rules.
+
+/**
+ * Runs every 30 minutes and deletes selection session documents whose
+ * lastActive timestamp is older than 1 hour. This catches orphaned docs
+ * left behind when a browser tab closes without triggering React cleanup.
+ */
+export const cleanupStaleSessions = onSchedule("every 30 minutes", async () => {
+  const cutoff = Timestamp.fromMillis(Date.now() - 60 * 60 * 1000);
+
+  const stale = await db.collectionGroup("selections")
+    .where("lastActive", "<", cutoff)
+    .get();
+
+  if (stale.empty) return;
+
+  const batch = db.batch();
+  for (const doc of stale.docs) {
+    batch.delete(doc.ref);
+  }
+  await batch.commit();
+
+  console.log(`Cleaned up ${stale.size} stale selection session(s).`);
+});

@@ -3,10 +3,7 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     match /tripBanners/{tripId}/{filename} {
-      // Any authenticated user can read banner images (needed to display them).
       allow read: if request.auth != null;
-
-      // Only the trip owner or a manager can upload/replace the banner.
       allow write: if request.auth != null && (
         firestore.get(/databases/(default)/documents/trips/$(tripId)).data.userId == request.auth.uid
         ||
@@ -15,6 +12,11 @@ service firebase.storage {
           firestore.get(/databases/(default)/documents/trips/$(tripId)).data.permissions[request.auth.uid] == 'manager'
         )
       );
+    }
+
+    match /users/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

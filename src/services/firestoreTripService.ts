@@ -3,9 +3,9 @@
 // Events are stored in a separate 'events' collection and matched to days by date.
 
 import { db } from './firebase';
-import { Trip } from '../types/trip';
+import { Trip, LastViewedTrip } from '../types/trip';
 import { Role, TripAction } from '../config/permissions';
-import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, or, where, arrayUnion, arrayRemove, deleteField } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, or, where, arrayUnion, arrayRemove, deleteField, getDocs } from 'firebase/firestore';
 import { hasActionPermission, PermissionError } from './permissionService';
 
 export const firestoreTripService = {
@@ -49,11 +49,15 @@ export const updateTrip = async (uid: string, tripId: string, tripData: Partial<
     }
 };
 
-// Deletes a trip document.
+// Deletes a trip document and its associated session selection data.
 export const deleteTrip = async (uid: string, tripId: string) => {
     const allowed = await hasActionPermission(uid, tripId, 'delete_trip');
     if (!allowed) throw new PermissionError('delete_trip');
     try {
+        const selectionsSnap = await getDocs(collection(db, 'sessions', tripId, 'selections'));
+        const deletions = selectionsSnap.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(deletions);
+
         await deleteDoc(doc(db, 'trips', tripId));
     } catch (error) {
         console.error("Error deleting trip: ", error);
@@ -94,6 +98,36 @@ export const changeMemberRole = async (actorUid: string, tripId: string, targetU
     if (!allowed) throw new PermissionError('change_member_role');
     await updateDoc(doc(db, 'trips', tripId), {
         [`permissions.${targetUid}`]: newRole,
+    });
+};
+
+// Persists the last trip the user viewed to their Firestore profile.
+export const updateLastViewedTrip = async (uid: string, data: LastViewedTrip) => {
+    try {
+        await updateDoc(doc(db, 'users', uid), { lastViewedTrip: data });
+    } catch (error) {
+        console.error('Error updating last viewed trip:', error);
+        throw error;
+    }
+};
+
+// Removes the lastViewedTrip field from the user's profile when the trip no longer exists.
+export const clearLastViewedTrip = async (uid: string) => {
+    try {
+        await updateDoc(doc(db, 'users', uid), { lastViewedTrip: deleteField() });
+    } catch (error) {
+        console.error('Error clearing last viewed trip:', error);
+    }
+};
+
+// Subscribes to the user's profile doc to read lastViewedTrip in real-time.
+export const subscribeToLastViewedTrip = (
+    uid: string,
+    callback: (data: LastViewedTrip | null) => void,
+) => {
+    return onSnapshot(doc(db, 'users', uid), (snapshot) => {
+        const data = snapshot.data();
+        callback((data?.lastViewedTrip as LastViewedTrip) ?? null);
     });
 };
 

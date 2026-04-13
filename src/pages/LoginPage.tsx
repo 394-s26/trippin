@@ -1,27 +1,26 @@
-import { useState, FormEvent } from 'react';
+import { useEffect, useState, FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import forestBg from '../images/aleesha-wood-forest-road.jpg';
 import TrippinLogo from '../components/TrippinLogo';
+import { MoveRightIcon, GoogleIcon, UserIcon } from '../services/svgIcons';
 import './LoginPage.css';
 
 type Tab = 'login' | 'signup';
+type SignupStep = 1 | 2;
 
-const GoogleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-    <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
-    <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
-    <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
-    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
-  </svg>
-);
 
 const LoginPage = () => {
   const [tab, setTab] = useState<Tab>('login');
   const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [signupStep, setSignupStep] = useState<SignupStep>(1);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [settingUp, setSettingUp] = useState(false);
@@ -31,11 +30,28 @@ const LoginPage = () => {
 
   const clearForm = () => {
     setEmail('');
+    setFirstName('');
+    setLastName('');
     setPassword('');
     setConfirmPassword('');
     setUsername('');
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setSignupStep(1);
     setError('');
   };
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreview(null);
+      return;
+    }
+
+    const nextPreview = URL.createObjectURL(photoFile);
+    setPhotoPreview(nextPreview);
+
+    return () => URL.revokeObjectURL(nextPreview);
+  }, [photoFile]);
 
   const handleTabSwitch = (t: Tab) => {
     setTab(t);
@@ -46,15 +62,30 @@ const LoginPage = () => {
     e.preventDefault();
     setError('');
 
-    if (tab === 'signup' && !username.trim()) {
-      setError('Please choose a username.');
-      return;
-    }
-    if (tab === 'signup' && password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (password.length < 6) {
+    if (tab === 'signup') {
+      if (signupStep === 1) {
+        if (!firstName.trim() || !lastName.trim()) {
+          setError('Please enter your first and last name.');
+          return;
+        }
+        if (password.length < 6) {
+          setError('Password must be at least 6 characters.');
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError('Passwords do not match.');
+          return;
+        }
+
+        setSignupStep(2);
+        return;
+      }
+
+      if (!username.trim()) {
+        setError('Please choose a username.');
+        return;
+      }
+    } else if (password.length < 6) {
       setError('Password must be at least 6 characters.');
       return;
     }
@@ -66,7 +97,14 @@ const LoginPage = () => {
         navigate('/');
       } else {
         setSettingUp(true);
-        const tripId = await registerWithEmail(email, password, username.trim());
+        const tripId = await registerWithEmail({
+          email,
+          password,
+          firstName,
+          lastName,
+          username: normalizeUsername(username),
+          photoFile,
+        });
         navigate(tripId ? `/trip/${tripId}` : '/');
       }
     } catch (err: unknown) {
@@ -90,6 +128,16 @@ const LoginPage = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] ?? null;
+    setPhotoFile(nextFile);
+  };
+
+  const handleBackToBasics = () => {
+    setError('');
+    setSignupStep(1);
   };
 
   if (settingUp) {
@@ -140,61 +188,174 @@ const LoginPage = () => {
           </button>
         </div>
 
+        {tab === 'signup' && (
+          <div className="signup-progress" aria-label={`Signup step ${signupStep} of 2`}>
+            <div className={`signup-progress-step ${signupStep >= 1 ? 'signup-progress-step--active' : ''}`}>
+              <span>1</span>
+              <strong>Basics</strong>
+            </div>
+            <div className="signup-progress-line" />
+            <div className={`signup-progress-step ${signupStep >= 2 ? 'signup-progress-step--active' : ''}`}>
+              <span>2</span>
+              <strong>Profile</strong>
+            </div>
+          </div>
+        )}
+
         <form className="login-form" onSubmit={handleSubmit} noValidate>
-          <div className="login-field">
-            <label htmlFor="email" className="login-label">Email</label>
-            <input
-              id="email"
-              type="email"
-              className="login-input"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              autoComplete="email"
-            />
-          </div>
+          {tab === 'signup' ? (
+            <>
+              {signupStep === 1 ? (
+                <>
+                  <div className="login-field">
+                    <label htmlFor="email" className="login-label">Email</label>
+                    <input
+                      id="email"
+                      type="email"
+                      className="login-input"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                      autoComplete="email"
+                    />
+                  </div>
+                  <div className="login-field-grid">
+                    <div className="login-field">
+                      <label htmlFor="first-name" className="login-label">First Name</label>
+                      <input
+                        id="first-name"
+                        type="text"
+                        className="login-input"
+                        value={firstName}
+                        onChange={e => setFirstName(e.target.value)}
+                        placeholder="e.g. John"
+                        required
+                        autoComplete="given-name"
+                      />
+                    </div>
+                    <div className="login-field">
+                      <label htmlFor="last-name" className="login-label">Last Name</label>
+                      <input
+                        id="last-name"
+                        type="text"
+                        className="login-input"
+                        value={lastName}
+                        onChange={e => setLastName(e.target.value)}
+                        placeholder="e.g. Doe"
+                        required
+                        autoComplete="family-name"
+                      />
+                    </div>
+                  </div>
+                  <div className="login-field">
+                    <label htmlFor="password" className="login-label">Password</label>
+                    <input
+                      id="password"
+                      type="password"
+                      className="login-input"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="Create a secure password"
+                      required
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <div className="login-field">
+                    <label htmlFor="confirm-password" className="login-label">Confirm Password</label>
+                    <input
+                      id="confirm-password"
+                      type="password"
+                      className="login-input"
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter your password"
+                      required
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="signup-summary">
+                    <span className="signup-summary--email">{email}</span>
+                    <span className="signup-summary--name">&quot;{firstName.trim()} {lastName.trim()}&quot;</span>
+                  </div>
 
-          <div className="login-field">
-            <label htmlFor="password" className="login-label">Password</label>
-            <input
-              id="password"
-              type="password"
-              className="login-input"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
-            />
-          </div>
-
-          {tab === 'signup' && (
+                  <div className="signup-avatar-card">
+                    <div className="signup-avatar-preview" aria-hidden="true">
+                      {photoPreview ? (
+                        <img src={photoPreview} alt="" className="signup-avatar-image" />
+                      ) : (
+                        <UserIcon size={24} />
+                      )}
+                    </div>
+                    <div className="signup-avatar-copy">
+                      <strong>Profile photo</strong>
+                      <p>Optional, but it helps friends recognize you when trips get shared.</p>
+                    </div>
+                    <label htmlFor="profile-photo" className="signup-avatar-upload">
+                      {photoFile ? 'Change photo' : 'Upload photo'}
+                    </label>
+                    <input
+                      id="profile-photo"
+                      type="file"
+                      accept="image/*"
+                      className="signup-avatar-input"
+                      onChange={handlePhotoChange}
+                    />
+                  </div>
+                  <div className="login-field">
+                    <label htmlFor="username" className="login-label">Username</label>
+                    <input
+                      id="username"
+                      type="text"
+                      className="login-input"
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                      placeholder="yourhandle"
+                      required
+                      autoComplete="username"
+                    />
+                    <p className="login-hint">Your username will appear as @{normalizeUsername(username || 'yourhandle')}.</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="login-btn-secondary"
+                    onClick={handleBackToBasics}
+                    disabled={submitting}
+                  >
+                    Back
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
             <>
               <div className="login-field">
-                <label htmlFor="username" className="login-label">Username</label>
+                <label htmlFor="email" className="login-label">Email</label>
                 <input
-                  id="username"
-                  type="text"
+                  id="email"
+                  type="email"
                   className="login-input"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="yourhandle"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@example.com"
                   required
-                  autoComplete="username"
+                  autoComplete="email"
                 />
               </div>
               <div className="login-field">
-                <label htmlFor="confirm-password" className="login-label">Confirm Password</label>
+                <label htmlFor="password" className="login-label">Password</label>
                 <input
-                  id="confirm-password"
+                  id="password"
                   type="password"
                   className="login-input"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  autoComplete="new-password"
+                  autoComplete="current-password"
                 />
               </div>
             </>
@@ -203,7 +364,7 @@ const LoginPage = () => {
           {error && <p className="login-error">{error}</p>}
 
           <button type="submit" className="login-btn-primary" disabled={submitting}>
-            {submitting ? 'Please wait…' : tab === 'login' ? 'Log In' : 'Create Account'}
+            {submitting ? 'Please wait…' : tab === 'login' ? 'Log In' : signupStep === 1 ? <>Finish Your Profile <MoveRightIcon size={18} /></> : 'Create Account'}
           </button>
         </form>
 
@@ -224,6 +385,9 @@ const LoginPage = () => {
     </div>
   );
 };
+
+const normalizeUsername = (value: string) => value.trim().replace(/\s+/g, '').toLowerCase();
+
 
 const parseFirebaseError = (err: unknown): string => {
   if (err && typeof err === 'object' && 'code' in err) {

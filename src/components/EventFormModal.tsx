@@ -3,7 +3,6 @@ import { Event } from '../types/event';
 import { AppUser } from '../types/auth';
 import { UserIcon } from '../services/svgIcons';
 import UserAvatar from './UserAvatar';
-import { getPlacePredictions } from '../services/googleMapsService';
 import './EventFormModal.css';
 
 interface EventFormModalProps {
@@ -33,9 +32,6 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
   const [type, setType] = useState<Event['type']>('Activity');
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
-  const [placeSuggestions, setPlaceSuggestions] = useState<string[]>([]);
-  const [showPlaceSuggestions, setShowPlaceSuggestions] = useState(false);
-  const [placeError, setPlaceError] = useState<string | null>(null);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [dateValue, setDateValue] = useState('');
@@ -44,8 +40,6 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
   const [paidBy, setPaidBy] = useState<string>(currentUserId ?? '');
   const [paidByOpen, setPaidByOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const locationInputRef = useRef<HTMLInputElement>(null);
-  const placeSuggestionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen && currentUserId) {
@@ -63,45 +57,6 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [paidByOpen]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (
-        placeSuggestionsRef.current &&
-        !placeSuggestionsRef.current.contains(e.target as Node) &&
-        locationInputRef.current !== e.target
-      ) {
-        setShowPlaceSuggestions(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  useEffect(() => {
-    const shouldAutocomplete = (type === 'Restaurant' || type === 'Activity') && location.trim().length >= 2;
-    if (!shouldAutocomplete) {
-      setPlaceSuggestions([]);
-      setPlaceError(null);
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      getPlacePredictions(location.trim())
-        .then((predictions) => {
-          setPlaceSuggestions(predictions);
-          setPlaceError(null);
-          setShowPlaceSuggestions(predictions.length > 0);
-        })
-        .catch((error) => {
-          setPlaceSuggestions([]);
-          setPlaceError(error.message || 'Could not load place suggestions.');
-        });
-    }, 300);
-
-    return () => window.clearTimeout(timer);
-  }, [location, type]);
 
   if (!isOpen) return null;
 
@@ -171,7 +126,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
         <form onSubmit={handleSubmit} className="event-modal-form">
           {/* Type */}
           <div>
-            <label htmlFor="event-type" className="form-label">Type</label>
+            <label htmlFor="event-type" className="form-label">
+              Type <span className="form-label-required">(required)</span>
+            </label>
             <select
               id="event-type"
               value={type}
@@ -186,7 +143,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
           {/* Name */}
           <div>
-            <label htmlFor="event-name" className="form-label">Name</label>
+            <label htmlFor="event-name" className="form-label">
+              Name <span className="form-label-required">(required)</span>
+            </label>
             <input
               id="event-name"
               type="text"
@@ -199,53 +158,27 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
           </div>
 
           {/* Location */}
-          <div className="location-field-wrapper">
-            <label htmlFor="event-location" className="form-label">Location</label>
+          <div>
+            <label htmlFor="event-location" className="form-label">
+              Location <span className="form-label-optional">(optional)</span>
+            </label>
             <input
               id="event-location"
               type="text"
               value={location}
-              onChange={(e) => {
-                setLocation(e.target.value);
-                setShowPlaceSuggestions(true);
-              }}
+              onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g. Main Geyser Loop"
               className="form-input"
-              ref={locationInputRef}
-              autoComplete="off"
             />
-            {(type === 'Restaurant' || type === 'Activity') && (
-              <p className="location-hint">
-                {placeError
-                  ? 'Google Maps lookup unavailable. Enter location manually.'
-                  : 'Search restaurants and places with Google Maps autocomplete.'}
-              </p>
-            )}
-            {showPlaceSuggestions && placeSuggestions.length > 0 && (
-              <div className="place-suggestions" ref={placeSuggestionsRef}>
-                {placeSuggestions.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    className="place-suggestion"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      setLocation(suggestion);
-                      setShowPlaceSuggestions(false);
-                    }}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Start / End Time */}
           {dayDate ? (
             <div className="time-row">
               <div className="time-field">
-                <label htmlFor="event-start-time" className="form-label">Start Time</label>
+                <label htmlFor="event-start-time" className="form-label">
+                  Start Time <span className="form-label-optional">(optional)</span>
+                </label>
                 <input
                   id="event-start-time"
                   type="time"
@@ -255,7 +188,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
                 />
               </div>
               <div className="time-field">
-                <label htmlFor="event-end-time" className="form-label">End Time</label>
+                <label htmlFor="event-end-time" className="form-label">
+                  End Time <span className="form-label-optional">(optional)</span>
+                </label>
                 <input
                   id="event-end-time"
                   type="time"
@@ -267,7 +202,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
             </div>
           ) : (
             <div>
-              <label htmlFor="event-date" className="form-label">Date & Time</label>
+              <label htmlFor="event-date" className="form-label">
+                Date & Time <span className="form-label-optional">(optional)</span>
+              </label>
               <input
                 id="event-date"
                 type="datetime-local"
@@ -280,7 +217,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
           {/* Timezone */}
           <div>
-            <label htmlFor="event-timezone" className="form-label">Timezone</label>
+            <label htmlFor="event-timezone" className="form-label">
+              Timezone <span className="form-label-optional">(optional)</span>
+            </label>
             <select
               id="event-timezone"
               value={timezone}
@@ -297,7 +236,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
           <div className="cost-paidby-row">
             <div className="cost-paidby-cost">
               <label htmlFor="event-cost" className="form-label">
-                Cost <span className="normal-case font-normal text-gray-400">(optional)</span>
+                Cost <span className="form-label-optional">(optional)</span>
               </label>
               <div className="cost-input-wrapper">
                 <span className="cost-input-prefix">$</span>

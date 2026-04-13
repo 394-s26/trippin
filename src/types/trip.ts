@@ -7,6 +7,12 @@ export type Budget = number;
 
 export type SplitMethod = 'even' | 'byEvent';
 
+export interface LastViewedTrip {
+  tripId: string;
+  tripName: string;
+  bannerImageUrl: string | null;
+}
+
 export interface Trip {
   id: string;
   userId: string;        // UID of the Firebase Auth user who owns this trip
