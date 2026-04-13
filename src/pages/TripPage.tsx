@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -38,6 +38,8 @@ const TripPage = () => {
   const { events } = useItinerary(id!);
   const { mySelectedIds, allSelections, toggleSelection, deselectAll } = useSessionSelections(id!, appUser?.uid);
   const { setLastViewedTrip } = useLastViewedTrip();
+
+  const scrollRef = useRef<HTMLElement>(null);
 
   const [activeDay, setActiveDay] = useState<{ id: string; date: Date } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -190,7 +192,7 @@ const TripPage = () => {
     <div className="home-wrapper">
       <div className="home-container">
         <AppHeader />
-        <main className="home-main">
+        <main className="home-main" ref={scrollRef}>
           <div className="home-content">
             <TripBanner
               tripName={tripName}
@@ -251,14 +253,7 @@ const TripPage = () => {
           </div>
         </main>
 
-        <SelectionActionBar
-          selectedCount={mySelectedIds.length}
-          onDelete={handleDeleteSelected}
-          onDeselectAll={deselectAll}
-          canDelete={can('delete_event')}
-        />
-
-        <EventFormModal
+          <EventFormModal
           isOpen={activeDay !== null}
           onClose={() => setActiveDay(null)}
           onSubmit={handleNewEvent}
@@ -287,6 +282,13 @@ const TripPage = () => {
           </div>
         )}
       </div>
+      <SelectionActionBar
+        selectedEventIds={mySelectedIds}
+        onDelete={handleDeleteSelected}
+        onDeselectAll={deselectAll}
+        canDelete={can('delete_event')}
+        scrollContainer={scrollRef.current}
+      />
     </div>
   );
 };

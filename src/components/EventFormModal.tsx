@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Event } from '../types/event';
+import { Event, EVENT_CATEGORY, EventCategory } from '../types/event';
 import { AppUser } from '../types/auth';
+import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
 import { UserIcon } from '../services/svgIcons';
 import UserAvatar from './UserAvatar';
 import './EventFormModal.css';
@@ -16,7 +17,8 @@ interface EventFormModalProps {
   tripSpent?: number;
 }
 
-const EVENT_TYPES: Event['type'][] = ['Activity', 'Hotel', 'Restaurant', 'Food'];
+const ALL_EVENT_TYPES = Object.keys(EVENT_CATEGORY) as Event['type'][];
+const CATEGORIES: EventCategory[] = ['Transportation', 'Lodging', 'Activity', 'Attraction', 'Food & Drink'];
 
 const TIMEZONES = [
   'America/New_York',
@@ -29,8 +31,19 @@ const TIMEZONES = [
 ];
 
 const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, currentUserId, tripBudget, tripSpent }: EventFormModalProps) => {
-  const [type, setType] = useState<Event['type']>('Activity');
+  const [category, setCategory] = useState<EventCategory>('Activity');
+  const [type, setType] = useState<Event['type']>('Hiking');
   const [name, setName] = useState('');
+
+  const filteredTypes = ALL_EVENT_TYPES.filter(t => EVENT_CATEGORY[t] === category);
+
+  const handleCategoryChange = (cat: EventCategory) => {
+    setCategory(cat);
+    const typesInCat = ALL_EVENT_TYPES.filter(t => EVENT_CATEGORY[t] === cat);
+    if (typesInCat.length > 0 && !typesInCat.includes(type)) {
+      setType(typesInCat[0]);
+    }
+  };
   const [location, setLocation] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -95,7 +108,8 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       paidBy: paidBy || null,
     });
 
-    setType('Activity');
+    setCategory('Lodging');
+    setType('Hotel');
     setName('');
     setLocation('');
     setStartTime('');
@@ -124,28 +138,49 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
         </div>
 
         <form onSubmit={handleSubmit} className="event-modal-form">
-          {/* Type */}
+          {/* Category tabs */}
           <div>
-            <label htmlFor="event-type" className="form-label">
-              Type <span className="form-label-required">(required)</span>
-            </label>
-            <select
-              id="event-type"
-              value={type}
-              onChange={(e) => setType(e.target.value as Event['type'])}
-              className="form-input"
-            >
-              {EVENT_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+            <label className="form-label">Category</label>
+            <div className="category-tabs">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  className={`category-tab${category === cat ? ' category-tab--active' : ''}`}
+                  onClick={() => handleCategoryChange(cat)}
+                >
+                  {cat}
+                </button>
               ))}
-            </select>
+            </div>
+          </div>
+
+          {/* Type icon grid */}
+          <div>
+            <label className="form-label">Type</label>
+            <div className="type-grid">
+              {filteredTypes.map((t) => {
+                const IconComponent = EVENT_TYPE_ICONS[t];
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`type-grid-item${type === t ? ' type-grid-item--selected' : ''}`}
+                    onClick={() => setType(t)}
+                  >
+                    <span className="type-grid-icon">
+                      {IconComponent && <IconComponent size={28} />}
+                    </span>
+                    <span className="type-grid-label">{t}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Name */}
           <div>
-            <label htmlFor="event-name" className="form-label">
-              Name <span className="form-label-required">(required)</span>
-            </label>
+            <label htmlFor="event-name" className="form-label">Name</label>
             <input
               id="event-name"
               type="text"
@@ -159,9 +194,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
           {/* Location */}
           <div>
-            <label htmlFor="event-location" className="form-label">
-              Location <span className="form-label-optional">(optional)</span>
-            </label>
+            <label htmlFor="event-location" className="form-label">Location</label>
             <input
               id="event-location"
               type="text"
@@ -176,9 +209,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
           {dayDate ? (
             <div className="time-row">
               <div className="time-field">
-                <label htmlFor="event-start-time" className="form-label">
-                  Start Time <span className="form-label-optional">(optional)</span>
-                </label>
+                <label htmlFor="event-start-time" className="form-label">Start Time</label>
                 <input
                   id="event-start-time"
                   type="time"
@@ -188,9 +219,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
                 />
               </div>
               <div className="time-field">
-                <label htmlFor="event-end-time" className="form-label">
-                  End Time <span className="form-label-optional">(optional)</span>
-                </label>
+                <label htmlFor="event-end-time" className="form-label">End Time</label>
                 <input
                   id="event-end-time"
                   type="time"
@@ -202,9 +231,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
             </div>
           ) : (
             <div>
-              <label htmlFor="event-date" className="form-label">
-                Date & Time <span className="form-label-optional">(optional)</span>
-              </label>
+              <label htmlFor="event-date" className="form-label">Date & Time</label>
               <input
                 id="event-date"
                 type="datetime-local"
@@ -217,9 +244,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
           {/* Timezone */}
           <div>
-            <label htmlFor="event-timezone" className="form-label">
-              Timezone <span className="form-label-optional">(optional)</span>
-            </label>
+            <label htmlFor="event-timezone" className="form-label">Timezone</label>
             <select
               id="event-timezone"
               value={timezone}
@@ -236,7 +261,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
           <div className="cost-paidby-row">
             <div className="cost-paidby-cost">
               <label htmlFor="event-cost" className="form-label">
-                Cost <span className="form-label-optional">(optional)</span>
+                Cost <span className="normal-case font-normal text-gray-400">(optional)</span>
               </label>
               <div className="cost-input-wrapper">
                 <span className="cost-input-prefix">$</span>

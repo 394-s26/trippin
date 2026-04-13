@@ -1,15 +1,25 @@
 @reference "../index.css";
 
+/* ===== Base wrapper — fixed to viewport, positioned via JS inline top ===== */
+
+/* High z-index on all breakpoints so fixed bar stays above main content (do not lower in desktop mq). */
 .selection-bar-wrapper {
-  @apply fixed inset-0 z-50 flex items-end justify-center pointer-events-none;
+  @apply fixed z-40 flex justify-center pointer-events-none;
 }
 
 .selection-bar {
-  @apply pointer-events-auto flex items-center justify-center gap-4 px-6 py-4 shadow-lg border border-gray-200;
+  @apply pointer-events-auto flex items-center gap-4 px-6 py-4 shadow-lg border border-gray-200 rounded-2xl bg-white;
+  animation: slide-up 0.75s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .selection-bar-btn {
   @apply flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl transition-colors;
+}
+
+.selection-bar-btn-icon {
+  @apply inline-flex items-center justify-center;
+  width: 1.25rem;
+  min-width: 1.25rem;
 }
 
 .selection-bar-btn:disabled {
@@ -18,10 +28,6 @@
 
 .selection-bar-btn--edit {
   @apply text-primary bg-green-50;
-}
-
-.selection-bar-btn--edit:not(:disabled):hover {
-  @apply bg-green-100;
 }
 
 .selection-bar-btn--delete {
@@ -38,4 +44,51 @@
 
 .selection-bar-btn--deselect:hover {
   @apply bg-gray-200 text-gray-700;
+}
+
+/* ===== Desktop: right-side slide-out ===== */
+
+@media (min-width: 768px) {
+  .selection-bar-wrapper {
+    justify-content: flex-end;
+    z-index: 10;
+  }
+
+  .selection-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0 1rem 1rem 0;
+    border: 2px solid var(--color-primary);
+    width: 10rem;
+    transform: translateX(40%);
+    transition: transform 220ms ease;
+    animation: none;
+  }
+
+  .selection-bar:hover {
+    transform: translateX(99%);
+  }
+
+  .selection-bar-btn {
+    justify-content: flex-end;
+    padding: 0.625rem 0.75rem;
+    gap: 0;
+  }
+
+  .selection-bar-btn-label {
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 0;
+    opacity: 0;
+    margin-right: 0;
+    transition: max-width 220ms ease, opacity 160ms ease, margin-right 220ms ease;
+  }
+
+  .selection-bar:hover .selection-bar-btn-label {
+    max-width: 8rem;
+    opacity: 1;
+    margin-right: 0.5rem;
+  }
 }
