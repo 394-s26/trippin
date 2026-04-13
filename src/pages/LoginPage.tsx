@@ -2,7 +2,7 @@ import { useEffect, useState, FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import forestBg from '../images/aleesha-wood-forest-road.jpg';
-import TrippinLogo from '../components/TrippinLogo';
+import trippinBird from '../images/trippinBird.png';
 import { MoveRightIcon, GoogleIcon, UserIcon } from '../services/svgIcons';
 import './LoginPage.css';
 
@@ -166,8 +166,9 @@ const LoginPage = () => {
         Photo by <a href="https://unsplash.com/@toxilicity?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" target="_blank">Aleesha Wood</a> on <a href="https://unsplash.com/photos/empty-asphalt-road-between-tress-O3pQYVd2Bc0?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Unsplash</a>
       </p>
       <div className="login-card">
-        <div className="flex justify-center mb-1">
-          <TrippinLogo size="lg" />
+        <div className="login-logo-wrapper">
+          <img src={trippinBird} alt="" className="login-logo-bird" />
+          <span className="login-logo-text">Trippin'</span>
         </div>
         <p className="login-tagline">Plan your next adventure</p>
 
