@@ -315,6 +315,10 @@
 }
 
 /* Role guide */
+.share-modal-roles-heading {
+  @apply text-sm font-bold text-black mb-2;
+}
+
 .share-modal-role-guide {
   @apply flex gap-3 mb-4;
 }
@@ -329,4 +333,21 @@
 
 .share-modal-role-guide-desc {
   @apply text-[11.5px] leading-snug text-gray-500;
+}
+
+/* Duplicate email error */
+.share-modal-duplicate-error {
+  @apply text-xs text-red-400 mt-1 ml-1;
+}
+
+/* Row highlight pulse when a duplicate is detected */
+@keyframes member-row-flash {
+  0%   { background-color: transparent; }
+  25%  { background-color: #fef9c3; }
+  75%  { background-color: #fef9c3; }
+  100% { background-color: transparent; }
+}
+
+.share-modal-member-row--highlight {
+  animation: member-row-flash 1.5s ease-in-out;
 }
