@@ -24,6 +24,7 @@ const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [settingUp, setSettingUp] = useState(false);
 
   const { loginWithEmail, registerWithEmail, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
@@ -62,11 +63,14 @@ const LoginPage = () => {
     try {
       if (tab === 'login') {
         await loginWithEmail(email, password);
+        navigate('/');
       } else {
-        await registerWithEmail(email, password, username.trim());
+        setSettingUp(true);
+        const tripId = await registerWithEmail(email, password, username.trim());
+        navigate(tripId ? `/trip/${tripId}` : '/');
       }
-      navigate('/');
     } catch (err: unknown) {
+      setSettingUp(false);
       setError(parseFirebaseError(err));
     } finally {
       setSubmitting(false);
@@ -77,14 +81,34 @@ const LoginPage = () => {
     setError('');
     setSubmitting(true);
     try {
-      await loginWithGoogle();
-      navigate('/');
+      setSettingUp(true);
+      const tripId = await loginWithGoogle();
+      navigate(tripId ? `/trip/${tripId}` : '/');
     } catch (err: unknown) {
+      setSettingUp(false);
       setError(parseFirebaseError(err));
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (settingUp) {
+    return (
+      <div className="login-wrapper">
+        <div className="login-bg" style={{ backgroundImage: `url(${forestBg})` }} />
+        <div className="login-bg-overlay" />
+        <div className="login-card" style={{ alignItems: 'center', paddingTop: '3rem', paddingBottom: '3rem' }}>
+          <div className="login-spinner" />
+          <p style={{ color: '#374151', fontWeight: 600, fontSize: '1rem', marginTop: '1.25rem' }}>
+            Setting up your account...
+          </p>
+          <p style={{ color: '#6b7280', fontSize: '0.8rem', marginTop: '0.4rem' }}>
+            Checking for trip invites
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login-wrapper">

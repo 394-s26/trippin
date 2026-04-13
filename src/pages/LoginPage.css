@@ -87,6 +87,20 @@
   @apply flex-1 h-px bg-gray-200;
 }
 
+/* Loading spinner */
+.login-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #15803d;
+  border-radius: 50%;
+  animation: login-spin 0.7s linear infinite;
+}
+
+@keyframes login-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Google button */
 .login-btn-google {
   @apply w-full py-3 rounded-xl border border-gray-200 bg-white text-sm font-medium

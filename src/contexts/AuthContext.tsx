@@ -10,15 +10,18 @@ import {
   setLoginTime,
   clearLoginTime,
 } from '../services/authService';
+import { acceptPendingInvites } from '../services/inviteService';
 import { User, AppUser } from '../types/auth';
 
 interface AuthContextType {
   user: User | null;
   appUser: AppUser | null;
   loading: boolean;
-  loginWithGoogle: () => Promise<void>;
+  /** Returns the first accepted trip ID if the user had pending invites, otherwise null. */
+  loginWithGoogle: () => Promise<string | null>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  registerWithEmail: (email: string, password: string, username: string) => Promise<void>;
+  /** Returns the first accepted trip ID if the user had pending invites, otherwise null. */
+  registerWithEmail: (email: string, password: string, username: string) => Promise<string | null>;
   logout: () => Promise<void>;
 }
 
@@ -56,10 +59,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = async (): Promise<string | null> => {
     const firebaseUser = await signInWithGoogle();
     const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+    let isNewUser = false;
     if (!userDoc.exists()) {
+      isNewUser = true;
       const [firstName, ...rest] = (firebaseUser.displayName ?? '').split(' ');
       const lastName = rest.join(' ');
       const username = (firebaseUser.displayName ?? '').replace(/\s+/g, '').toLowerCase();
@@ -74,13 +79,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await createAppUser(newAppUser);
       setAppUser(newAppUser);
     }
+    // Accept pending invites — for new users, redirect to the first trip
+    if (firebaseUser.email) {
+      const tripIds = await acceptPendingInvites(firebaseUser.uid, firebaseUser.email);
+      if (isNewUser && tripIds.length > 0) return tripIds[0];
+    }
+    return null;
   };
 
-  const loginWithEmail = async (email: string, password: string) => {
-    await signInWithEmail(email, password);
+  const loginWithEmail = async (email: string, password: string): Promise<void> => {
+    const firebaseUser = await signInWithEmail(email, password);
+    // Accept any pending invites in the background — existing users land on home
+    if (firebaseUser.email) {
+      acceptPendingInvites(firebaseUser.uid, firebaseUser.email).catch(console.error);
+    }
   };
 
-  const registerWithEmail = async (email: string, password: string, username: string) => {
+  const registerWithEmail = async (email: string, password: string, username: string): Promise<string | null> => {
     const firebaseUser = await signUpWithEmail(email, password);
     const newAppUser: AppUser = {
       uid: firebaseUser.uid,
@@ -92,6 +107,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     await createAppUser(newAppUser);
     setAppUser(newAppUser);
+    // Await so we can redirect new users directly to their invited trip
+    if (firebaseUser.email) {
+      const tripIds = await acceptPendingInvites(firebaseUser.uid, firebaseUser.email);
+      return tripIds[0] ?? null;
+    }
+    return null;
   };
 
   const logout = async () => {

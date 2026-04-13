@@ -3,8 +3,8 @@ import { app } from "./firebase"; // Ensure firebase is initialized in this file
 
 const storage = getStorage(app);
 
-export const uploadTripBanner = async (file: File): Promise<string> => {
-  const storageRef = ref(storage, `tripBanners/${file.name}`);
+export const uploadTripBanner = async (file: File, tripId: string): Promise<string> => {
+  const storageRef = ref(storage, `tripBanners/${tripId}/${file.name}`);
   
   try {
     await uploadBytes(storageRef, file);
