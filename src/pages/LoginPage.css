@@ -31,17 +31,15 @@
 }
 
 .login-logo-wrapper {
-  @apply flex items-center justify-center gap-1.5 mb-1;
+  @apply flex items-center justify-center gap-0 mb-1;
 }
 
 .login-logo-bird {
-  @apply h-16 w-auto;
+  @apply h-20 w-auto;
 }
 
 .login-logo-text {
-  @apply text-4xl font-bold tracking-tight;
-  color: #178F96;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  @apply text-4xl brand-logo-text;
 }
 
 .login-tagline {

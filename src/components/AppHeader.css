@@ -5,17 +5,15 @@
 }
 
 .app-header-logo {
-  @apply flex items-center gap-1 no-underline;
+  @apply flex items-center gap-0 no-underline;
 }
 
 .app-header-logo-img {
-  @apply h-10 w-auto;
+  @apply h-12 w-auto;
 }
 
 .app-header-logo-text {
-  @apply text-2xl font-bold tracking-tight;
-  color: #178F96;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  @apply text-2xl brand-logo-text;
 }
 
 .app-header-profile-wrapper {
