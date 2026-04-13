@@ -107,6 +107,15 @@ export const updateLastViewedTrip = async (uid: string, data: LastViewedTrip) =>
     }
 };
 
+// Removes the lastViewedTrip field from the user's profile when the trip no longer exists.
+export const clearLastViewedTrip = async (uid: string) => {
+    try {
+        await updateDoc(doc(db, 'users', uid), { lastViewedTrip: deleteField() });
+    } catch (error) {
+        console.error('Error clearing last viewed trip:', error);
+    }
+};
+
 // Subscribes to the user's profile doc to read lastViewedTrip in real-time.
 export const subscribeToLastViewedTrip = (
     uid: string,
