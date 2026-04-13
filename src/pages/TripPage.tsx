@@ -19,6 +19,7 @@ import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
 import { createEvent, deleteEvent } from '../services/firestoreEventsService';
 import { useAuth } from '../contexts/AuthContext';
+import { buildItineraryDays, findDayIdForDate } from '../utilities/itinerary';
 import './Home.css';
 
 const formatDateRange = (days: Omit<Day, 'events'>[], fallbackStart?: Date): string => {
@@ -50,11 +51,7 @@ const TripPage = () => {
     navigate('/');
   };
 
-  // Merge Firestore events into their matching days by dayId.
-  const daysWithEvents: Day[] = days.map(day => ({
-    ...day,
-    events: events.filter(e => e.dayId === day.id),
-  }));
+  const daysWithEvents = buildItineraryDays(days, events);
 
   useEffect(() => {
     if (trip && !initialized) {
@@ -107,7 +104,7 @@ const TripPage = () => {
   };
 
   const handleNewEvent = async (event: Omit<Event, 'id' | 'tripId' | 'dayId'>) => {
-    const dayId = activeDay?.id;
+    const dayId = findDayIdForDate(days, event.startDate) ?? activeDay?.id ?? null;
     if (!dayId || !appUser) return;
     await createEvent(appUser.uid, { ...event, tripId: id!, dayId });
   };
@@ -257,6 +254,8 @@ const TripPage = () => {
           onClose={() => setActiveDay(null)}
           onSubmit={handleNewEvent}
           dayDate={activeDay?.date}
+          tripStartDate={days[0]?.date}
+          tripEndDate={days[days.length - 1]?.date}
           tripUsers={tripUsers}
           currentUserId={appUser?.uid}
           tripBudget={trip.budget}

@@ -10,6 +10,8 @@ interface EventFormModalProps {
   onClose: () => void;
   onSubmit: (event: Omit<Event, 'id' | 'tripId' | 'dayId'>) => void;
   dayDate?: Date;
+  tripStartDate?: Date;
+  tripEndDate?: Date;
   tripUsers?: AppUser[];
   currentUserId?: string;
   tripBudget?: number;
@@ -28,24 +30,50 @@ const TIMEZONES = [
   'UTC',
 ];
 
-const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, currentUserId, tripBudget, tripSpent }: EventFormModalProps) => {
+const toDateInputValue = (date?: Date): string => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateInputValue = (value: string): Date => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0, 0);
+};
+
+const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripStartDate, tripEndDate, tripUsers, currentUserId, tripBudget, tripSpent }: EventFormModalProps) => {
   const [type, setType] = useState<Event['type']>('Activity');
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [hotelStartDate, setHotelStartDate] = useState('');
+  const [hotelEndDate, setHotelEndDate] = useState('');
   const [dateValue, setDateValue] = useState('');
   const [timezone, setTimezone] = useState('America/Chicago');
   const [cost, setCost] = useState('');
   const [paidBy, setPaidBy] = useState<string>(currentUserId ?? '');
   const [paidByOpen, setPaidByOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isHotel = type === 'Hotel';
+  const tripStartValue = toDateInputValue(tripStartDate);
+  const tripEndValue = toDateInputValue(tripEndDate);
 
   useEffect(() => {
     if (isOpen && currentUserId) {
       setPaidBy(currentUserId);
     }
   }, [isOpen, currentUserId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const defaultDate = toDateInputValue(dayDate ?? tripStartDate);
+    setHotelStartDate(defaultDate);
+    setHotelEndDate(defaultDate);
+  }, [isOpen, dayDate, tripStartDate]);
 
   useEffect(() => {
     if (!paidByOpen) return;
@@ -69,7 +97,10 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
     let eventDate: Date;
     let eventEndDate: Date | null = null;
 
-    if (dayDate) {
+    if (isHotel) {
+      eventDate = parseDateInputValue(hotelStartDate);
+      eventEndDate = parseDateInputValue(hotelEndDate || hotelStartDate);
+    } else if (dayDate) {
       eventDate = new Date(dayDate);
       if (startTime) {
         const [h, m] = startTime.split(':').map(Number);
@@ -100,6 +131,8 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
     setLocation('');
     setStartTime('');
     setEndTime('');
+    setHotelStartDate('');
+    setHotelEndDate('');
     setDateValue('');
     setTimezone('America/Chicago');
     setCost('');
@@ -166,8 +199,43 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
             />
           </div>
 
-          {/* Start / End Time */}
-          {dayDate ? (
+          {/* Start / End inputs */}
+          {isHotel ? (
+            <div className="time-row">
+              <div className="time-field">
+                <label htmlFor="hotel-start-date" className="form-label">Start Date</label>
+                <input
+                  id="hotel-start-date"
+                  type="date"
+                  value={hotelStartDate}
+                  onChange={(e) => {
+                    const nextStart = e.target.value;
+                    setHotelStartDate(nextStart);
+                    if (!hotelEndDate || hotelEndDate < nextStart) {
+                      setHotelEndDate(nextStart);
+                    }
+                  }}
+                  min={tripStartValue || undefined}
+                  max={tripEndValue || undefined}
+                  className="form-input"
+                  required
+                />
+              </div>
+              <div className="time-field">
+                <label htmlFor="hotel-end-date" className="form-label">End Date</label>
+                <input
+                  id="hotel-end-date"
+                  type="date"
+                  value={hotelEndDate}
+                  onChange={(e) => setHotelEndDate(e.target.value)}
+                  min={hotelStartDate || tripStartValue || undefined}
+                  max={tripEndValue || undefined}
+                  className="form-input"
+                  required
+                />
+              </div>
+            </div>
+          ) : dayDate ? (
             <div className="time-row">
               <div className="time-field">
                 <label htmlFor="event-start-time" className="form-label">Start Time</label>

@@ -2,16 +2,17 @@ import { useState } from 'react';
 import EventCard from './EventCard';
 import { PencilIcon, CheckIcon, PlusIcon, TrashIcon } from '../services/svgIcons';
 import { Day } from '../types/day';
+import { ItineraryDay } from '../types/itinerary';
 import { AppUser } from '../types/auth';
 import { UserSelection } from '../hooks/useSessionSelections';
 import './ItineraryList.css';
 
 interface ItineraryListProps {
-  days: Day[];
+  days: ItineraryDay[];
   onAddDay: () => void;
   onUpdateDayLabel: (dayId: string, label: string) => void;
   onDeleteDay: (dayId: string) => void;
-  onAddEvent?: (day: Day) => void;
+  onAddEvent?: (day: Omit<Day, 'events'>) => void;
   selectedEventIds?: string[];
   onSelectEvent?: (eventId: string) => void;
   allSelections?: UserSelection[];
@@ -28,7 +29,7 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
   const [editValue, setEditValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const startEdit = (day: Day) => {
+  const startEdit = (day: Omit<Day, 'events'>) => {
     setEditingDay(day.id);
     setEditValue(day.label);
   };
@@ -148,10 +149,11 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
               {dayEvents.length > 0 ? (
                 dayEvents.map((event) => (
                   <EventCard
-                    key={event.id}
-                    event={event}
-                    onSelect={() => onSelectEvent?.(event.id)}
-                    isSelected={selectedEventIds.includes(event.id)}
+                    key={`${event.event.id}-${event.variant}-${day.id}`}
+                    event={event.event}
+                    variant={event.variant}
+                    onSelect={() => onSelectEvent?.(event.event.id)}
+                    isSelected={selectedEventIds.includes(event.event.id)}
                     allSelections={allSelections}
                     currentUserId={currentUserId}
                     tripUsers={tripUsers}
