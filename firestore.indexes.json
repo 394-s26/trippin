@@ -7,13 +7,6 @@
         { "fieldPath": "tripId", "order": "ASCENDING" },
         { "fieldPath": "date", "order": "ASCENDING" }
       ]
-    },
-    {
-      "collectionGroup": "selections",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "lastActive", "order": "ASCENDING" }
-      ]
     }
   ],
   "fieldOverrides": []
