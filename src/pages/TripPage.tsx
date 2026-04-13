@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import AppHeader from '../components/AppHeader';
-import Navbar from '../components/Navbar';
 import TripBanner from '../components/TripBanner';
 import ItineraryList from '../components/ItineraryList';
 import EventFormModal from '../components/EventFormModal';
@@ -19,6 +18,7 @@ import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
 import { createEvent, deleteEvent } from '../services/firestoreEventsService';
 import { useAuth } from '../contexts/AuthContext';
+import { useLastViewedTrip } from '../contexts/LastViewedTripContext';
 import './Home.css';
 
 const formatDateRange = (days: Omit<Day, 'events'>[], fallbackStart?: Date): string => {
@@ -37,6 +37,7 @@ const TripPage = () => {
   const { days, addDay, renameDayLabel, removeDay, changeStartDate } = useDays(id!);
   const { events } = useItinerary(id!);
   const { mySelectedIds, allSelections, toggleSelection, deselectAll } = useSessionSelections(id!, appUser?.uid);
+  const { setLastViewedTrip } = useLastViewedTrip();
 
   const [activeDay, setActiveDay] = useState<{ id: string; date: Date } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -61,8 +62,13 @@ const TripPage = () => {
       setTripName(trip.name);
       if (trip.bannerImageUrl !== undefined) setBannerImage(trip.bannerImageUrl);
       setInitialized(true);
+      setLastViewedTrip({
+        tripId: trip.id,
+        tripName: trip.name,
+        bannerImageUrl: trip.bannerImageUrl,
+      });
     }
-  }, [trip, initialized]);
+  }, [trip, initialized]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch AppUser records for all trip members (owner + shared).
   const memberUidsKey = trip ? [trip.userId, ...trip.shared].join(',') : '';
@@ -96,14 +102,16 @@ const TripPage = () => {
     removeDay(dayId);
   };
 
-  const handleChangeName = (tripName: string) => {
-    setTripName(tripName);
-    updateTripName(tripName);
+  const handleChangeName = (newName: string) => {
+    setTripName(newName);
+    updateTripName(newName);
+    setLastViewedTrip({ tripId: id!, tripName: newName, bannerImageUrl: bannerImage });
   };
 
   const handleChangeBannerImage = (url: string) => {
     setBannerImage(url);
     updateBannerImage(url);
+    setLastViewedTrip({ tripId: id!, tripName: tripName, bannerImageUrl: url });
   };
 
   const handleNewEvent = async (event: Omit<Event, 'id' | 'tripId' | 'dayId'>) => {
@@ -242,8 +250,6 @@ const TripPage = () => {
             />
           </div>
         </main>
-
-        <Navbar />
 
         <SelectionActionBar
           selectedCount={mySelectedIds.length}

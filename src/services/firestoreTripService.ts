@@ -3,7 +3,7 @@
 // Events are stored in a separate 'events' collection and matched to days by date.
 
 import { db } from './firebase';
-import { Trip } from '../types/trip';
+import { Trip, LastViewedTrip } from '../types/trip';
 import { Role, TripAction } from '../config/permissions';
 import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, or, where, arrayUnion, arrayRemove, deleteField } from 'firebase/firestore';
 import { hasActionPermission, PermissionError } from './permissionService';
@@ -94,6 +94,27 @@ export const changeMemberRole = async (actorUid: string, tripId: string, targetU
     if (!allowed) throw new PermissionError('change_member_role');
     await updateDoc(doc(db, 'trips', tripId), {
         [`permissions.${targetUid}`]: newRole,
+    });
+};
+
+// Persists the last trip the user viewed to their Firestore profile.
+export const updateLastViewedTrip = async (uid: string, data: LastViewedTrip) => {
+    try {
+        await updateDoc(doc(db, 'users', uid), { lastViewedTrip: data });
+    } catch (error) {
+        console.error('Error updating last viewed trip:', error);
+        throw error;
+    }
+};
+
+// Subscribes to the user's profile doc to read lastViewedTrip in real-time.
+export const subscribeToLastViewedTrip = (
+    uid: string,
+    callback: (data: LastViewedTrip | null) => void,
+) => {
+    return onSnapshot(doc(db, 'users', uid), (snapshot) => {
+        const data = snapshot.data();
+        callback((data?.lastViewedTrip as LastViewedTrip) ?? null);
     });
 };
 

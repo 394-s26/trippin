@@ -1,12 +1,25 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { LastViewedTripProvider } from './contexts/LastViewedTripContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import TripPage from './pages/TripPage';
+import MapPage from './pages/MapPage';
+import MiscPage from './pages/MiscPage';
 import LoginPage from './pages/LoginPage';
 import './index.css';
+
+const AppLayout = () => (
+  <ProtectedRoute>
+    <LastViewedTripProvider>
+      <Outlet />
+      <Navbar />
+    </LastViewedTripProvider>
+  </ProtectedRoute>
+);
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 
@@ -16,22 +29,12 @@ root.render(
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/trip/:id"
-            element={
-              <ProtectedRoute>
-                <TripPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/trip/:id" element={<TripPage />} />
+            <Route path="/trip/:id/map" element={<MapPage />} />
+            <Route path="/trip/:id/misc" element={<MiscPage />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
