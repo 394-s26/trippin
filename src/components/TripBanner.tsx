@@ -47,7 +47,7 @@ const TripBanner = ({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && onChangeImage) {
-      const url = await uploadTripBanner(file);
+      const url = await uploadTripBanner(file, tripId);
       onChangeImage(url);
     }
   };
