@@ -111,41 +111,10 @@
   @apply flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg py-1.5 transition-colors;
 }
 
-/* Share modal — animated tech border */
-
-@property --glow-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
-@keyframes manage-members-spin {
-  from { --glow-angle: 0deg; }
-  to   { --glow-angle: 360deg; }
-}
-
-.share-modal-glow-border {
+.share-modal {
   position: relative;
   border-radius: 1rem; /* matches rounded-2xl */
   padding: 2px;
-  background: conic-gradient(
-    from var(--glow-angle),
-    #c084fc,
-    #818cf8,
-    #38bdf8,
-    #34d399,
-    #818cf8,
-    #c084fc
-  );
-  animation: manage-members-spin 3s linear infinite;
-  box-shadow:
-    0 0 18px rgba(192, 132, 252, 0.55),
-    0 0 40px rgba(56, 189, 248, 0.25),
-    0 24px 60px rgba(0, 0, 0, 0.28);
-}
-
-.share-modal-glow-border > .overlay-panel {
-  border-radius: calc(1rem - 2px);
 }
 
 /* Share modal */
