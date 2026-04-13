@@ -10,8 +10,9 @@ import {
   setLoginTime,
   clearLoginTime,
 } from '../services/authService';
+import { uploadUserAvatar } from '../services/storageService';
 import { acceptPendingInvites } from '../services/inviteService';
-import { User, AppUser } from '../types/auth';
+import { User, AppUser, EmailRegistrationInput } from '../types/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -21,7 +22,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<string | null>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   /** Returns the first accepted trip ID if the user had pending invites, otherwise null. */
-  registerWithEmail: (email: string, password: string, username: string) => Promise<string | null>;
+  registerWithEmail: (input: EmailRegistrationInput) => Promise<string | null>;
   logout: () => Promise<void>;
 }
 
@@ -95,15 +96,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const registerWithEmail = async (email: string, password: string, username: string): Promise<string | null> => {
+  const registerWithEmail = async ({
+    email,
+    password,
+    firstName,
+    lastName,
+    username,
+    photoFile,
+  }: EmailRegistrationInput): Promise<string | null> => {
     const firebaseUser = await signUpWithEmail(email, password);
+    let photoURL: string | null = null;
+
+    if (photoFile) {
+      try {
+        photoURL = await uploadUserAvatar(firebaseUser.uid, photoFile);
+      } catch (error) {
+        console.warn('Profile photo upload failed during signup. Continuing without photo.', error);
+      }
+    }
+
     const newAppUser: AppUser = {
       uid: firebaseUser.uid,
       email: firebaseUser.email,
-      firstName: '',
-      lastName: '',
-      username,
-      photoURL: null,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      username: username.trim(),
+      photoURL,
     };
     await createAppUser(newAppUser);
     setAppUser(newAppUser);
