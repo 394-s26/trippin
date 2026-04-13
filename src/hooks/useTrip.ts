@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { onSnapshot, DocumentSnapshot, FirestoreError, Timestamp } from 'firebase/firestore';
 import { firestoreTripService, updateTrip, deleteTrip as deleteTripDoc } from '../services/firestoreTripService';
-import { Trip, SplitMethod } from '../types/trip';
+import { Trip, SplitMethod, SplitConfig } from '../types/trip';
 import { toDate } from '../utilities/timestamps';
 import { useAuth } from '../contexts/AuthContext';
 import { canPerformAction } from '../services/permissionService';
@@ -77,9 +77,11 @@ const useTrip = (tripId: string) => {
         }
     };
 
-    const updateSplitMethod = async (splitMethod: SplitMethod) => {
+    const updateSplitMethod = async (splitMethod: SplitMethod, splitConfig?: SplitConfig) => {
         try {
-            await updateTrip(uid, tripId, { splitMethod }, 'change_split_method');
+            const update: Partial<Trip> = { splitMethod };
+            if (splitConfig !== undefined) update.splitConfig = splitConfig;
+            await updateTrip(uid, tripId, update, 'change_split_method');
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         }
