@@ -5,7 +5,7 @@
 import { db } from './firebase';
 import { Trip, LastViewedTrip } from '../types/trip';
 import { Role, TripAction } from '../config/permissions';
-import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, or, where, arrayUnion, arrayRemove, deleteField } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, or, where, arrayUnion, arrayRemove, deleteField, getDocs } from 'firebase/firestore';
 import { hasActionPermission, PermissionError } from './permissionService';
 
 export const firestoreTripService = {
@@ -49,11 +49,15 @@ export const updateTrip = async (uid: string, tripId: string, tripData: Partial<
     }
 };
 
-// Deletes a trip document.
+// Deletes a trip document and its associated session selection data.
 export const deleteTrip = async (uid: string, tripId: string) => {
     const allowed = await hasActionPermission(uid, tripId, 'delete_trip');
     if (!allowed) throw new PermissionError('delete_trip');
     try {
+        const selectionsSnap = await getDocs(collection(db, 'sessions', tripId, 'selections'));
+        const deletions = selectionsSnap.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(deletions);
+
         await deleteDoc(doc(db, 'trips', tripId));
     } catch (error) {
         console.error("Error deleting trip: ", error);

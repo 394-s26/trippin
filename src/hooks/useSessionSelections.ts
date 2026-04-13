@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
 const SESSION_COLORS = [
@@ -38,7 +38,7 @@ export function useSessionSelections(tripId: string, userId: string | undefined)
     const color = colorRef.current;
     const docRef = doc(db, 'sessions', tripId, 'selections', userId);
 
-    setDoc(docRef, { uid: userId, color, selectedIds: [] });
+    setDoc(docRef, { uid: userId, color, selectedIds: [], lastActive: serverTimestamp() });
 
     const colRef = collection(db, 'sessions', tripId, 'selections');
     const unsub = onSnapshot(colRef, (snap) => {
@@ -65,7 +65,7 @@ export function useSessionSelections(tripId: string, userId: string | undefined)
 
     const color = colorRef.current;
     const docRef = doc(db, 'sessions', tripId, 'selections', userId);
-    await setDoc(docRef, { uid: userId, color, selectedIds: newIds });
+    await setDoc(docRef, { uid: userId, color, selectedIds: newIds, lastActive: serverTimestamp() });
   };
 
   const deselectAll = async () => {
@@ -75,7 +75,7 @@ export function useSessionSelections(tripId: string, userId: string | undefined)
 
     const color = colorRef.current;
     const docRef = doc(db, 'sessions', tripId, 'selections', userId);
-    await setDoc(docRef, { uid: userId, color, selectedIds: [] });
+    await setDoc(docRef, { uid: userId, color, selectedIds: [], lastActive: serverTimestamp() });
   };
 
   return { mySelectedIds, allSelections, toggleSelection, deselectAll, myColor: colorRef.current };
