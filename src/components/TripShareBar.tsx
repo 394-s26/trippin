@@ -70,6 +70,8 @@ const TripShareBar = ({
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [inviteStatus, setInviteStatus] = useState<Record<string, 'sending' | 'sent' | 'error'>>({});
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const [highlightedMember, setHighlightedMember] = useState<string | null>(null);
 
   // Persisted pending invites loaded from Firestore (invites that were already sent)
   const [persistedInvites, setPersistedInvites] = useState<PendingInvite[]>([]);
@@ -110,9 +112,34 @@ const TripShareBar = ({
   const addPill = async (email: string) => {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
-    if (pills.some(p => p.email === trimmed)) return;
-    // Don't allow re-adding an email that already has a pending invite
-    if (persistedInvites.some(inv => inv.email === trimmed)) return;
+
+    // Duplicate checks — highlight the existing row and show a brief note
+    const flashMember = (key: string) => {
+      setDuplicateError('Already added ↓');
+      setHighlightedMember(key);
+      setTimeout(() => setHighlightedMember(null), 1500);
+    };
+
+    if (ownerUser?.email?.toLowerCase() === trimmed) {
+      flashMember(ownerUser.uid);
+      return;
+    }
+    const existingMember = sharedUsers.find(u => u.email?.toLowerCase() === trimmed);
+    if (existingMember) {
+      flashMember(existingMember.uid);
+      return;
+    }
+    if (pills.some(p => p.email === trimmed)) {
+      setDuplicateError('Already added above');
+      return;
+    }
+    const existingInvite = persistedInvites.find(inv => inv.email === trimmed);
+    if (existingInvite) {
+      flashMember(existingInvite.id);
+      return;
+    }
+
+    setDuplicateError(null);
     const isValidEmail = EMAIL_RE.test(trimmed);
     const id = `${trimmed}-${Date.now()}`;
 
@@ -236,6 +263,8 @@ const TripShareBar = ({
     setRemoveConfirmUid(null);
     setRemoveConfirmInviteId(null);
     setInviteStatus({});
+    setDuplicateError(null);
+    setHighlightedMember(null);
   };
 
   const hasPendingChanges =
@@ -388,8 +417,8 @@ const TripShareBar = ({
           </div>
           <button className="share-modal-close-btn" onClick={closeModal} aria-label="Close">×</button>
         </div>
-
         {/* Role guide */}
+        <p className="share-modal-roles-heading">Trip Roles</p>
         <div className="share-modal-role-guide">
         <div className="share-modal-role-guide-item">
           <span className="share-modal-role-guide-label">Manager 🪂</span>
@@ -407,6 +436,7 @@ const TripShareBar = ({
 
         {/* Input row — only shown when canInvite */}
         {canInvite && (
+          <>
           <div className="share-modal-input-row">
             <div className="share-modal-input-area" onClick={() => inputRef.current?.focus()}>
               {pills.map(pill => (
@@ -441,7 +471,7 @@ const TripShareBar = ({
                 ref={inputRef}
                 className="share-modal-input"
                 value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
+                onChange={e => { setInputValue(e.target.value); setDuplicateError(null); }}
                 onKeyDown={handleKeyDown}
                 placeholder={pills.length === 0 ? 'Enter email address...' : ''}
                 autoFocus
@@ -451,6 +481,10 @@ const TripShareBar = ({
               <PlusIcon size={18} />
             </button>
           </div>
+          {duplicateError && (
+            <p className="share-modal-duplicate-error">{duplicateError}</p>
+          )}
+          </>
         )}
 
         {/* Member list */}
@@ -462,7 +496,7 @@ const TripShareBar = ({
 
                 {/* Owner row — no remove button, role shown as "Owner" */}
                 {ownerUser && (
-                  <tr className="share-modal-member-row">
+                  <tr className={`share-modal-member-row${highlightedMember === ownerUser.uid ? ' share-modal-member-row--highlight' : ''}`}>
                     <td className="share-modal-td-status" />
                     <td className="share-modal-td-avatar">
                       <UserAvatar user={ownerUser} size="sm" />
@@ -487,7 +521,7 @@ const TripShareBar = ({
 
                   return (
                     <Fragment key={user.uid}>
-                      <tr className="share-modal-member-row">
+                      <tr className={`share-modal-member-row${highlightedMember === user.uid ? ' share-modal-member-row--highlight' : ''}`}>
                         <td className="share-modal-td-status">
                           {hasPending && <span className="share-modal-pending-dot" />}
                         </td>
@@ -544,7 +578,7 @@ const TripShareBar = ({
                   const isConfirming = removeConfirmInviteId === inv.id;
                   return (
                     <Fragment key={inv.id}>
-                      <tr className="share-modal-member-row">
+                      <tr className={`share-modal-member-row${highlightedMember === inv.id ? ' share-modal-member-row--highlight' : ''}`}>
                         <td className="share-modal-td-status">
                           <span className="share-modal-pending-invite-dot" title="Awaiting signup" />
                         </td>
