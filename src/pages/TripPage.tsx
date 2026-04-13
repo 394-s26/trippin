@@ -9,14 +9,14 @@ import EventFormModal from '../components/EventFormModal';
 import BudgetModal from '../components/BudgetModal';
 import TripShareBar from '../components/TripShareBar';
 import { SelectionActionBar } from '../components/SelectionActionBar';
-import { Event } from '../types/event';
+import { Event, EventDraft, SuggestionVote } from '../types/event';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
 import useTrip from '../hooks/useTrip';
 import useDays from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
-import { createEvent, deleteEvent } from '../services/firestoreEventsService';
+import { createEvent, deleteEvent, suggestEventDeletion, voteOnSuggestion } from '../services/firestoreEventsService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLastViewedTrip } from '../contexts/LastViewedTripContext';
 import './Home.css';
@@ -45,6 +45,11 @@ const TripPage = () => {
   const [bannerImage, setBannerImage] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [tripUsers, setTripUsers] = useState<AppUser[]>([]);
+  const canCreateEvent = can('add_event');
+  const canProposeCreateEvent = can('propose_create_event');
+  const canDeleteEvent = can('delete_event');
+  const canProposeDeleteEvent = can('propose_delete_event');
+  const totalTripUsers = trip ? new Set([trip.userId, ...trip.shared]).size : 0;
 
   const handleDeleteConfirmed = async () => {
     await deleteTrip();
@@ -114,7 +119,7 @@ const TripPage = () => {
     setLastViewedTrip({ tripId: id!, tripName: tripName, bannerImageUrl: url });
   };
 
-  const handleNewEvent = async (event: Omit<Event, 'id' | 'tripId' | 'dayId'>) => {
+  const handleNewEvent = async (event: EventDraft) => {
     const dayId = activeDay?.id;
     if (!dayId || !appUser) return;
     await createEvent(appUser.uid, { ...event, tripId: id!, dayId });
@@ -123,10 +128,28 @@ const TripPage = () => {
   const handleDeleteSelected = async () => {
     if (!appUser) return;
     const selected = events.filter(e => mySelectedIds.includes(e.id));
-    await Promise.all(
-      selected.map(e => deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)),
-    );
+
+    if (canDeleteEvent) {
+      await Promise.all(
+        selected.map(e => deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)),
+      );
+      await deselectAll();
+      return;
+    }
+
+    if (canProposeDeleteEvent) {
+      const suggestionTargets = selected.filter(e => !e.suggestion);
+      await Promise.all(
+        suggestionTargets.map(e => suggestEventDeletion(appUser.uid, e)),
+      );
+    }
+
     await deselectAll();
+  };
+
+  const handleVoteSuggestion = async (event: Event, vote: SuggestionVote) => {
+    if (!appUser || !event.suggestion) return;
+    await voteOnSuggestion(appUser.uid, event.tripId, event.dayId, event.id, vote);
   };
 
   if (loading) {
@@ -243,10 +266,13 @@ const TripPage = () => {
               allSelections={allSelections}
               currentUserId={appUser?.uid}
               tripUsers={tripUsers}
-              canAddEvent={can('add_event')}
+              totalTripUsers={totalTripUsers}
+              canAddEvent={canCreateEvent || canProposeCreateEvent}
               canAddDay={can('add_day')}
               canEditDay={can('edit_day')}
               canDeleteDay={can('delete_day')}
+              addEventLabel={canCreateEvent ? 'Event' : 'Suggest Event'}
+              onVoteSuggestion={handleVoteSuggestion}
             />
           </div>
         </main>
@@ -255,7 +281,8 @@ const TripPage = () => {
           selectedCount={mySelectedIds.length}
           onDelete={handleDeleteSelected}
           onDeselectAll={deselectAll}
-          canDelete={can('delete_event')}
+          canDelete={canDeleteEvent}
+          canSuggestDelete={canProposeDeleteEvent}
         />
 
         <EventFormModal
@@ -267,6 +294,8 @@ const TripPage = () => {
           currentUserId={appUser?.uid}
           tripBudget={trip.budget}
           tripSpent={events.reduce((sum, e) => sum + (e.cost ?? 0), 0)}
+          canCreateEvent={canCreateEvent}
+          canProposeEvent={canProposeCreateEvent}
         />
 
         {showDeleteConfirm && (

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Event } from '../types/event';
+import { Event, EventDraft } from '../types/event';
 import { AppUser } from '../types/auth';
 import { UserIcon } from '../services/svgIcons';
 import UserAvatar from './UserAvatar';
@@ -8,12 +8,14 @@ import './EventFormModal.css';
 interface EventFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (event: Omit<Event, 'id' | 'tripId' | 'dayId'>) => void;
+  onSubmit: (event: EventDraft) => void;
   dayDate?: Date;
   tripUsers?: AppUser[];
   currentUserId?: string;
   tripBudget?: number;
   tripSpent?: number;
+  canCreateEvent?: boolean;
+  canProposeEvent?: boolean;
 }
 
 const EVENT_TYPES: Event['type'][] = ['Activity', 'Hotel', 'Restaurant', 'Food'];
@@ -28,7 +30,18 @@ const TIMEZONES = [
   'UTC',
 ];
 
-const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, currentUserId, tripBudget, tripSpent }: EventFormModalProps) => {
+const EventFormModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  dayDate,
+  tripUsers,
+  currentUserId,
+  tripBudget,
+  tripSpent,
+  canCreateEvent = false,
+  canProposeEvent = false,
+}: EventFormModalProps) => {
   const [type, setType] = useState<Event['type']>('Activity');
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
@@ -39,13 +52,20 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
   const [cost, setCost] = useState('');
   const [paidBy, setPaidBy] = useState<string>(currentUserId ?? '');
   const [paidByOpen, setPaidByOpen] = useState(false);
+  const [isSuggestion, setIsSuggestion] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const suggestionOnly = !canCreateEvent && canProposeEvent;
 
   useEffect(() => {
     if (isOpen && currentUserId) {
       setPaidBy(currentUserId);
     }
   }, [isOpen, currentUserId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setIsSuggestion(suggestionOnly);
+  }, [isOpen, suggestionOnly]);
 
   useEffect(() => {
     if (!paidByOpen) return;
@@ -62,6 +82,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
   const costNum = cost !== '' ? parseFloat(cost) : 0;
   const wouldExceedBudget = tripBudget != null && tripBudget > 0 && tripSpent != null && (tripSpent + costNum) > tripBudget;
+  const showSuggestionToggle = canCreateEvent || canProposeEvent;
+  const submitLabel = isSuggestion ? 'Submit Suggestion' : 'Add Event';
+  const title = isSuggestion ? 'New Event Suggestion' : 'New Event';
 
   const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
@@ -93,6 +116,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       timezone,
       cost: cost !== '' ? parseFloat(cost) : null,
       paidBy: paidBy || null,
+      isSuggestion,
     });
 
     setType('Activity');
@@ -105,6 +129,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
     setCost('');
     setPaidBy(currentUserId ?? '');
     setPaidByOpen(false);
+    setIsSuggestion(suggestionOnly);
     onClose();
   };
 
@@ -113,7 +138,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       <div className="overlay-scrim" onClick={onClose} />
       <div className="overlay-panel overlay-panel--lg rounded-t-2xl p-6 pb-10 max-h-[90vh] overflow-y-auto animate-slide-up">
         <div className="event-modal-header">
-          <h2 className="event-modal-title">New Event</h2>
+          <h2 className="event-modal-title">{title}</h2>
           <button
             onClick={onClose}
             className="event-modal-close-btn"
@@ -124,6 +149,29 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
         </div>
 
         <form onSubmit={handleSubmit} className="event-modal-form">
+          {showSuggestionToggle && (
+            <div className={`suggestion-toggle-card${suggestionOnly ? ' suggestion-toggle-card--locked' : ''}`}>
+              <div>
+                <p className="suggestion-toggle-title">Suggestion mode</p>
+                <p className="suggestion-toggle-copy">
+                  {suggestionOnly
+                    ? 'Your role can only propose events, so this will go out for a vote automatically.'
+                    : 'Turn this on to let the group vote before the event becomes part of the plan.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                className={`suggestion-toggle-switch${isSuggestion ? ' suggestion-toggle-switch--on' : ''}`}
+                aria-pressed={isSuggestion}
+                aria-label="Toggle suggestion mode"
+                disabled={suggestionOnly}
+                onClick={() => setIsSuggestion((current) => !current)}
+              >
+                <span className="suggestion-toggle-knob" />
+              </button>
+            </div>
+          )}
+
           {/* Type */}
           <div>
             <label htmlFor="event-type" className="form-label">
@@ -320,7 +368,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
           </div>
 
           <button type="submit" className="event-modal-submit-btn">
-            Add Event
+            {submitLabel}
           </button>
         </form>
       </div>

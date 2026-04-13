@@ -6,10 +6,13 @@ interface SelectionActionBarProps {
   onDelete: () => void;
   onDeselectAll: () => void;
   canDelete: boolean;
+  canSuggestDelete?: boolean;
 }
 
-const SelectionActionBar = ({ selectedCount, onDelete, onDeselectAll, canDelete }: SelectionActionBarProps) => {
+const SelectionActionBar = ({ selectedCount, onDelete, onDeselectAll, canDelete, canSuggestDelete = false }: SelectionActionBarProps) => {
   if (selectedCount === 0) return null;
+  const canDeleteSelection = canDelete || canSuggestDelete;
+  const deleteLabel = canDelete ? 'Delete' : 'Suggest Delete';
 
   return (
     <div className="selection-bar-wrapper">
@@ -25,12 +28,12 @@ const SelectionActionBar = ({ selectedCount, onDelete, onDeselectAll, canDelete 
 
         <button
           onClick={onDelete}
-          disabled={!canDelete}
+          disabled={!canDeleteSelection}
           className="selection-bar-btn selection-bar-btn--delete"
-          aria-label="Delete selected events"
+          aria-label={deleteLabel}
         >
           <TrashIcon size={16} />
-          Delete
+          {deleteLabel}
         </button>
 
         <button

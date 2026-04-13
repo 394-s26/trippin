@@ -1,10 +1,26 @@
 // This file defines TypeScript interfaces for event data structures.
-// Each event kind is its own interface extending BaseEvent, forming a discriminated union on `type`.
 
-interface BaseEvent {
+export type EventType = 'Hotel' | 'Restaurant' | 'Activity' | 'Food';
+export type SuggestionType = 'create' | 'delete';
+export type SuggestionVote = 'yes' | 'no';
+
+export interface EventSuggestionVotes {
+  yes: string[];
+  no: string[];
+}
+
+export interface EventSuggestion {
+  type: SuggestionType;
+  createdBy: string;
+  votes: EventSuggestionVotes;
+  targetEventId?: string;
+}
+
+export interface Event {
   id: string;
   tripId: string;        // ID of the trip this event belongs to
   dayId: string;         // ID of the day this event belongs to
+  type: EventType;
   name: string;
   cost?: number | null; // Optional — omit from card when null
   startDate: Date;
@@ -12,31 +28,30 @@ interface BaseEvent {
   location?: string;
   timezone?: string;
   paidBy?: string | null; // UID of the user responsible for paying; null = unassigned
+  suggestion?: EventSuggestion | null;
 }
 
-export interface HotelEvent extends BaseEvent {
-  type: 'Hotel';
+export interface EventDraft {
+  type: EventType;
+  name: string;
+  cost?: number | null;
+  startDate: Date;
+  endDate?: Date | null;
+  location?: string;
+  timezone?: string;
+  paidBy?: string | null;
+  isSuggestion?: boolean;
 }
 
-export interface RestaurantEvent extends BaseEvent {
-  type: 'Restaurant';
+export interface EventCreateInput extends EventDraft {
+  tripId: string;
+  dayId: string;
 }
-
-export interface ActivityEvent extends BaseEvent {
-  type: 'Activity';
-}
-
-export interface FoodEvent extends BaseEvent {
-  type: 'Food';
-}
-
-// Union of all event kinds. Use `event.type` to narrow to a specific kind.
-export type Event = HotelEvent | RestaurantEvent | ActivityEvent | FoodEvent;
 
 // Partial update type used for Firestore updateDoc calls.
 export interface EventUpdate {
   id: string;
-  type?: Event['type'];
+  type?: EventType;
   name?: string;
   cost?: number | null;
   startDate?: Date | null;
@@ -44,4 +59,5 @@ export interface EventUpdate {
   location?: string;
   timezone?: string;
   paidBy?: string | null;
+  suggestion?: EventSuggestion | null;
 }

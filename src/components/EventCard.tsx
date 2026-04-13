@@ -1,9 +1,10 @@
-import { ReactElement } from 'react';
-import { Event } from '../types/event';
+import { CSSProperties, ReactElement } from 'react';
+import { Event, SuggestionVote } from '../types/event';
 import { AppUser } from '../types/auth';
-import { BedIcon, RestaurantIcon, ActivityIcon, FoodIcon } from '../services/svgIcons';
+import { ActivityIcon, BedIcon, CheckIcon, FoodIcon, RestaurantIcon, XIcon } from '../services/svgIcons';
 import { UserSelection } from '../hooks/useSessionSelections';
 import { pickFirstSelector } from '../utilities/pickFirstSelector';
+import { getSuggestionVoteSummary } from '../utilities/eventSuggestions';
 import UserAvatar from './UserAvatar';
 import './EventCard.css';
 
@@ -14,6 +15,8 @@ interface EventCardProps {
   allSelections?: UserSelection[];
   currentUserId?: string;
   tripUsers?: AppUser[];
+  totalTripUsers?: number;
+  onVoteSuggestion?: (event: Event, vote: SuggestionVote) => void;
 }
 
 const TYPE_ICONS: Record<Event['type'], ReactElement> = {
@@ -23,7 +26,16 @@ const TYPE_ICONS: Record<Event['type'], ReactElement> = {
   Food: <FoodIcon size={24} />,
 };
 
-const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], currentUserId, tripUsers = [] }: EventCardProps) => {
+const EventCard = ({
+  event,
+  onSelect,
+  isSelected = false,
+  allSelections = [],
+  currentUserId,
+  tripUsers = [],
+  totalTripUsers = 0,
+  onVoteSuggestion,
+}: EventCardProps) => {
   const timeFmt = (d: Date) => new Date(d).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
@@ -36,14 +48,36 @@ const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], cu
     s => s.uid !== currentUserId && s.selectedIds.includes(event.id),
   );
   const firstOther = pickFirstSelector(allSelections, event.id, currentUserId);
+  const isSuggestion = !!event.suggestion;
+  const suggestionType = event.suggestion?.type;
+  const myVote = currentUserId && event.suggestion
+    ? (event.suggestion.votes.yes.includes(currentUserId) ? 'yes' : event.suggestion.votes.no.includes(currentUserId) ? 'no' : null)
+    : null;
+  const {
+    yesVotes,
+    noVotes,
+    yesRatio,
+    noRatio,
+    consensusRatio,
+    leadingVote,
+    totalUsers,
+  } = getSuggestionVoteSummary(event, totalTripUsers);
 
   const useOtherBorder = !!firstOther && !isSelected;
   const cardClass = isSelected
-    ? 'event-card event-card--selected'
+    ? `event-card${isSuggestion ? ' event-card--suggestion' : ''} event-card--selected`
     : useOtherBorder
-      ? 'event-card event-card--selected-session'
-      : 'event-card';
-  const cardStyle = useOtherBorder ? { borderColor: firstOther.color } : undefined;
+      ? `event-card${isSuggestion ? ' event-card--suggestion' : ''} event-card--selected-session`
+      : `event-card${isSuggestion ? ' event-card--suggestion' : ''}`;
+  const cardStyle = (useOtherBorder ? { borderColor: firstOther.color } : undefined) as CSSProperties | undefined;
+  const consensusFillStyle = {
+    width: `${consensusRatio * 100}%`,
+    backgroundColor: leadingVote === 'yes' ? '#2d5a27' : '#b42318',
+  };
+  const yesStyle = { ['--vote-fill' as string]: `${yesRatio * 100}%` } as CSSProperties;
+  const noStyle = { ['--vote-fill' as string]: `${noRatio * 100}%` } as CSSProperties;
+  const voteTitle = suggestionType === 'delete' ? 'Vote: should we remove this?' : 'Vote: should we do this?';
+  const proposalBadge = suggestionType === 'delete' ? 'Delete Proposal' : 'Proposed';
 
   return (
     <div className={cardClass} style={cardStyle} onClick={onSelect}>
@@ -51,6 +85,9 @@ const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], cu
         <div className="event-card-body">
           <div className="event-card-time-row">
             <span className="event-card-time">{time}</span>
+            {isSuggestion && (
+              <span className="event-card-proposed-badge">{proposalBadge}</span>
+            )}
             {otherSelectors.length > 0 && (
               <div className="event-card-selectors">
                 {otherSelectors.map(s => (
@@ -76,6 +113,49 @@ const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], cu
           {TYPE_ICONS[event.type]}
         </div>
       </div>
+
+      {isSuggestion && (
+        <div className="event-card-vote" onClick={(e) => e.stopPropagation()}>
+          <p className="event-card-vote-title">{voteTitle}</p>
+
+          <div className="event-card-vote-actions">
+            <button
+              type="button"
+              className={`event-card-vote-btn event-card-vote-btn--yes${myVote === 'yes' ? ' event-card-vote-btn--active' : ''}`}
+              style={yesStyle}
+              onClick={() => onVoteSuggestion?.(event, 'yes')}
+            >
+              <span className="event-card-vote-btn-icon">
+                <CheckIcon size={18} />
+              </span>
+              <span className="event-card-vote-btn-label">
+                {suggestionType === 'delete' ? 'Do it' : 'Count me in'}
+              </span>
+              <span className="event-card-vote-btn-count">{yesVotes}/{totalUsers}</span>
+            </button>
+
+            <button
+              type="button"
+              className={`event-card-vote-btn event-card-vote-btn--no${myVote === 'no' ? ' event-card-vote-btn--active' : ''}`}
+              style={noStyle}
+              onClick={() => onVoteSuggestion?.(event, 'no')}
+            >
+              <span className="event-card-vote-btn-icon">
+                <XIcon size={18} />
+              </span>
+              <span className="event-card-vote-btn-label">
+                {suggestionType === 'delete' ? 'Keep it' : 'Not worth it'}
+              </span>
+              <span className="event-card-vote-btn-count">{noVotes}/{totalUsers}</span>
+            </button>
+          </div>
+
+          <div className="event-card-consensus-track">
+            <span className="event-card-consensus-fill" style={consensusFillStyle} />
+          </div>
+          <p className="event-card-consensus-text">{Math.round(consensusRatio * 100)}% consensus</p>
+        </div>
+      )}
     </div>
   );
 };
