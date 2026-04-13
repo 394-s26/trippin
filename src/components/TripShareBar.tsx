@@ -427,7 +427,8 @@ const TripShareBar = ({
   // ── Modal ────────────────────────────────────────────────────────────────────
   const modal = showModal && (
     <div className="overlay-center" onClick={closeModal}>
-      <div className="overlay-panel overlay-panel--md rounded-2xl p-6 shadow-xl flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="share-modal-glow-border" onClick={e => e.stopPropagation()}>
+      <div className="overlay-panel overlay-panel--md rounded-2xl p-6 shadow-xl flex flex-col">
 
         {/* Header */}
         <div className="share-modal-header">
@@ -735,6 +736,7 @@ const TripShareBar = ({
                 : 'Save Changes'}
           </button>
         )}
+      </div>
       </div>
     </div>
   );
