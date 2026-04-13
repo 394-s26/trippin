@@ -66,7 +66,16 @@ const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], cu
           </div>
           <h3 className="event-card-name">{event.name}</h3>
           {event.location && (
-            <p className="event-card-meta">{event.location}</p>
+            <p className="event-card-meta">
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="event-card-location-link"
+              >
+                {event.location}
+              </a>
+            </p>
           )}
           {event.cost != null && (
             <p className="event-card-meta">${event.cost.toFixed(2)}</p>

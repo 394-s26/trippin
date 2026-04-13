@@ -52,6 +52,10 @@
   @apply text-gray-400 text-xs mt-0.5;
 }
 
+.event-card-location-link {
+  @apply text-gray-500 hover:text-primary transition-colors;
+}
+
 .event-card-icon {
   @apply text-gray-300 shrink-0 mt-0.5;
 }
