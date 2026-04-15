@@ -171,10 +171,24 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
         </div>
 
         {readOnly && (
-          <div className="event-modal-readonly-banner">
-            {lockHolderName
-              ? `${lockHolderName} is editing this event. Read-only view.`
-              : 'Another user is editing this event. Read-only view.'}
+          <div className="event-modal-readonly-banner" role="status">
+            <span className="event-modal-readonly-banner-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </span>
+            <div className="event-modal-readonly-banner-text">
+              <span className="event-modal-readonly-banner-title">
+                <span className="event-modal-readonly-banner-pulse" aria-hidden="true" />
+                {lockHolderName ?? 'Another user'}
+                <span className="event-modal-readonly-banner-separator"> · </span>
+                <span className="event-modal-readonly-banner-live">editing now</span>
+              </span>
+              <span className="event-modal-readonly-banner-subtitle">
+                You're viewing this event in read-only mode.
+              </span>
+            </div>
           </div>
         )}
 
@@ -311,7 +325,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
                     className="cost-input-total"
                     style={{ color: wouldExceedBudget ? 'var(--color-amber-600)' : 'var(--color-gray-400)' }}
                   >
-                    Trip Total: ${(tripSpent + costNum).toFixed(2)}
+                    Trip Expenses: {tripSpent.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
                   </span>
                 )}
               </div>

@@ -25,7 +25,88 @@
 }
 
 .event-modal-readonly-banner {
-  @apply mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem 0.75rem 1.25rem;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #fffaf0 0%, #fef3c7 100%);
+  border: 1px solid rgba(217, 119, 6, 0.25);
+  box-shadow: 0 1px 2px rgba(120, 53, 15, 0.04), 0 4px 12px -6px rgba(217, 119, 6, 0.25);
+}
+
+.event-modal-readonly-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+}
+
+.event-modal-readonly-banner-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+
+.event-modal-readonly-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.event-modal-readonly-banner-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #78350f;
+  letter-spacing: -0.01em;
+}
+
+.event-modal-readonly-banner-separator {
+  color: rgba(120, 53, 15, 0.4);
+  font-weight: 400;
+}
+
+.event-modal-readonly-banner-live {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #b45309;
+}
+
+.event-modal-readonly-banner-subtitle {
+  font-size: 0.8125rem;
+  color: rgba(120, 53, 15, 0.75);
+}
+
+.event-modal-readonly-banner-pulse {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: #f59e0b;
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
+  animation: readonly-banner-pulse 1.8s ease-out infinite;
+}
+
+@keyframes readonly-banner-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
 }
 
 .form-label {

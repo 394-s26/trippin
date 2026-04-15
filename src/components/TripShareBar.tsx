@@ -287,6 +287,7 @@ const TripShareBar = ({
       className="trip-share-bar-avatar-btn"
       style={{ ...style, zIndex: removePopover?.uid === user.uid ? 999 : sharedUsers.length - i + 1 }}
       onClick={e => {
+        onBeforeOpen?.();
         if (removePopover?.uid === user.uid) { setRemovePopover(null); return; }
         const rect = e.currentTarget.getBoundingClientRect();
         setRemovePopover({ uid: user.uid, top: rect.bottom + 8, left: rect.left + rect.width / 2 });
@@ -332,6 +333,7 @@ const TripShareBar = ({
         className={`trip-share-bar-copy-btn${copied ? ' trip-share-bar-copy-btn--copied' : ''}`}
         aria-label="Copy link"
         onClick={() => {
+          onBeforeOpen?.();
           navigator.clipboard.writeText(window.location.href);
           if (copyBtnRef.current) {
             const rect = copyBtnRef.current.getBoundingClientRect();
@@ -389,7 +391,7 @@ const TripShareBar = ({
       </div>
       <div className="trip-share-bar-card-actions">
         {canInvite && (
-          <button className="trip-share-bar-card-invite-btn" onClick={() => setShowModal(true)} aria-label="Invite friends">
+          <button className="trip-share-bar-card-invite-btn" onClick={() => { onBeforeOpen?.(); setShowModal(true); }} aria-label="Invite friends">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2 21a8 8 0 0 1 13.292-6"/><circle cx="10" cy="8" r="5"/><path d="M19 16v6"/><path d="M22 19h-6"/>
             </svg>
@@ -400,6 +402,7 @@ const TripShareBar = ({
           className={`trip-share-bar-card-copy-btn${copied ? ' trip-share-bar-card-copy-btn--copied' : ''}`}
           aria-label="Copy link"
           onClick={() => {
+            onBeforeOpen?.();
             navigator.clipboard.writeText(window.location.href);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
