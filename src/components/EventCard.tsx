@@ -38,7 +38,7 @@ const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], cu
   const cardStyle = useOtherBorder ? { borderColor: firstOther.color } : undefined;
 
   return (
-    <div className={cardClass} style={cardStyle} data-event-id={event.id} onClick={onSelect}>
+    <div className={cardClass} style={cardStyle} data-event-id={event.id} onClick={(e) => { e.stopPropagation(); onSelect?.(); }}>
       <div className="event-card-header">
         <div className="event-card-body">
           <div className="event-card-time-row">

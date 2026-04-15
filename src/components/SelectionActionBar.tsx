@@ -99,6 +99,7 @@ const SelectionActionBar = ({
     <div
       ref={wrapperRef}
       className="selection-bar-wrapper"
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="selection-bar">
         <button

@@ -189,7 +189,7 @@ const TripPage = () => {
   }
 
   return (
-    <div className="home-wrapper">
+    <div className="home-wrapper" onClick={() => { if (mySelectedIds.length > 0) deselectAll(); }}>
       <div className="home-container">
         <AppHeader />
         <main className="home-main" ref={scrollRef}>
