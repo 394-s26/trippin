@@ -1,7 +1,6 @@
-import { ReactElement } from 'react';
 import { Event } from '../types/event';
 import { AppUser } from '../types/auth';
-import { BedIcon, RestaurantIcon, ActivityIcon, FoodIcon } from '../services/svgIcons';
+import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
 import { UserSelection } from '../hooks/useSessionSelections';
 import { pickFirstSelector } from '../utilities/pickFirstSelector';
 import UserAvatar from './UserAvatar';
@@ -15,13 +14,6 @@ interface EventCardProps {
   currentUserId?: string;
   tripUsers?: AppUser[];
 }
-
-const TYPE_ICONS: Record<Event['type'], ReactElement> = {
-  Hotel: <BedIcon size={24} />,
-  Restaurant: <RestaurantIcon size={24} />,
-  Activity: <ActivityIcon size={24} />,
-  Food: <FoodIcon size={24} />,
-};
 
 const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], currentUserId, tripUsers = [] }: EventCardProps) => {
   const timeFmt = (d: Date) => new Date(d).toLocaleTimeString('en-US', {
@@ -46,7 +38,7 @@ const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], cu
   const cardStyle = useOtherBorder ? { borderColor: firstOther.color } : undefined;
 
   return (
-    <div className={cardClass} style={cardStyle} onClick={onSelect}>
+    <div className={cardClass} style={cardStyle} data-event-id={event.id} onClick={(e) => { e.stopPropagation(); onSelect?.(); }}>
       <div className="event-card-header">
         <div className="event-card-body">
           <div className="event-card-time-row">
@@ -73,7 +65,7 @@ const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], cu
           )}
         </div>
         <div className="event-card-icon">
-          {TYPE_ICONS[event.type]}
+          {EVENT_TYPE_ICONS[event.type]?.({ size: 24 })}
         </div>
       </div>
     </div>

@@ -33,7 +33,7 @@ export const createEvent = async (uid: string, event: Omit<Event, 'id'>): Promis
   }
 };
 
-export const updateEvent = async (uid: string, tripId: string, dayId: string, id: string, updatedEvent: Partial<Event>) => {
+export const updateEvent = async (uid: string, tripId: string, dayId: string, id: string, updatedEvent: Omit<Event, 'id' | 'tripId' | 'dayId'>) => {
   const allowed = await hasActionPermission(uid, tripId, 'edit_event');
   if (!allowed) throw new PermissionError('edit_event');
   try {

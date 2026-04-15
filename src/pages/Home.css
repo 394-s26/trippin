@@ -5,7 +5,7 @@
 }
 
 .home-container {
-  @apply w-full md:w-1/2 bg-neutral min-h-screen flex flex-col relative shadow-2xl;
+  @apply w-full md:w-1/2 bg-neutral min-h-screen flex flex-col relative shadow-2xl md:z-20;
 }
 
 .home-main {

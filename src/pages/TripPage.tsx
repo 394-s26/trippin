@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -39,6 +40,8 @@ const TripPage = () => {
   const { events } = useItinerary(id!);
   const { mySelectedIds, allSelections, toggleSelection, deselectAll } = useSessionSelections(id!, appUser?.uid);
   const { setLastViewedTrip } = useLastViewedTrip();
+
+  const scrollRef = useRef<HTMLElement>(null);
 
   const [activeDay, setActiveDay] = useState<{ id: string; date: Date } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -245,10 +248,10 @@ const TripPage = () => {
   }
 
   return (
-    <div className="home-wrapper">
+    <div className="home-wrapper" onClick={() => { if (mySelectedIds.length > 0) deselectAll(); }}>
       <div className="home-container">
         <AppHeader />
-        <main className="home-main">
+        <main className="home-main" ref={scrollRef}>
           <div className="home-content">
             <TripBanner
               tripName={tripName}
@@ -310,18 +313,7 @@ const TripPage = () => {
           </div>
         </main>
 
-        {editingEvent === null && (
-          <SelectionActionBar
-            selectedCount={mySelectedIds.length}
-            onEdit={handleEditSelected}
-            onDelete={handleRequestDeleteSelected}
-            onDeselectAll={deselectAll}
-            canEdit={can('edit_event')}
-            canDelete={can('delete_event')}
-          />
-        )}
-
-        {deleteConfirmIds && (
+        {deleteConfirmIds && createPortal(
           <div className="overlay-bottom">
             <div className="overlay-scrim" onClick={() => setDeleteConfirmIds(null)} />
             <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 flex flex-col gap-3 animate-slide-up">
@@ -340,7 +332,8 @@ const TripPage = () => {
                 Cancel
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         <EventFormModal
@@ -372,7 +365,7 @@ const TripPage = () => {
           lockHolderName={editingEvent?.holderName}
         />
 
-        {showDeleteConfirm && (
+        {showDeleteConfirm && createPortal(
           <div className="overlay-bottom">
             <div className="overlay-scrim" onClick={() => setShowDeleteConfirm(false)} />
             <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 flex flex-col gap-3 animate-slide-up">
@@ -387,9 +380,20 @@ const TripPage = () => {
                 Cancel
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
+      <SelectionActionBar
+        selectedCount={mySelectedIds.length}
+        onEdit={handleEditSelected}
+        selectedEventIds={mySelectedIds}
+        onDelete={handleRequestDeleteSelected}
+        onDeselectAll={deselectAll}
+        canEdit={can('edit_event')}
+        canDelete={can('delete_event')}
+        scrollContainer={scrollRef.current}
+      />
     </div>
   );
 };
