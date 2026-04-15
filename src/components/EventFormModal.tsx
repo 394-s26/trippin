@@ -98,8 +98,8 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       ? toDate(initialEvent.endDate as Parameters<typeof toDate>[0])
       : null;
     if (dayDate) {
-      setStartTime(toTimeString(start));
-      setEndTime(end ? toTimeString(end) : '');
+      setStartTime(initialEvent.hasTime !== false ? toTimeString(start) : '');
+      setEndTime(end && initialEvent.hasTime !== false ? toTimeString(end) : '');
     } else {
       setDateValue(toDateTimeLocal(start));
     }
@@ -125,11 +125,16 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
     let eventDate: Date;
     let eventEndDate: Date | null = null;
 
+    let hasTime: boolean;
     if (dayDate) {
       eventDate = new Date(dayDate);
       if (startTime) {
         const [h, m] = startTime.split(':').map(Number);
         eventDate.setHours(h, m, 0, 0);
+        hasTime = true;
+      } else {
+        eventDate.setHours(0, 0, 0, 0);
+        hasTime = false;
       }
       if (endTime) {
         eventEndDate = new Date(dayDate);
@@ -138,6 +143,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       }
     } else {
       eventDate = dateValue ? new Date(dateValue) : new Date();
+      hasTime = true;
     }
 
     onSubmit({
@@ -146,6 +152,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       location: location || undefined,
       startDate: eventDate,
       endDate: eventEndDate,
+      hasTime,
       timezone,
       cost: cost !== '' ? parseFloat(cost) : null,
       paidBy: paidBy || null,

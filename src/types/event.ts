@@ -9,6 +9,7 @@ interface BaseEvent {
   cost?: number | null; // Optional — omit from card when null
   startDate: Date;
   endDate?: Date | null;
+  hasTime?: boolean;     // false = all-day event with no specific time; absent/true = time is set
   location?: string;
   timezone?: string;
   paidBy?: string | null; // UID of the user responsible for paying; null = unassigned
@@ -105,6 +106,7 @@ export interface EventUpdate {
   cost?: number | null;
   startDate?: Date | null;
   endDate?: Date | null;
+  hasTime?: boolean;
   location?: string;
   timezone?: string;
   paidBy?: string | null;

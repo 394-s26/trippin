@@ -16,13 +16,16 @@ interface EventCardProps {
 }
 
 const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], currentUserId, tripUsers = [] }: EventCardProps) => {
+  const showTime = event.hasTime !== false;
   const timeFmt = (d: Date) => new Date(d).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
   });
-  const startTime = timeFmt(event.startDate);
-  const time = event.endDate ? `${startTime} – ${timeFmt(event.endDate)}` : startTime;
+  const startTime = showTime ? timeFmt(event.startDate) : null;
+  const time = showTime
+    ? (event.endDate ? `${startTime} – ${timeFmt(event.endDate)}` : startTime)
+    : null;
 
   const otherSelectors = allSelections.filter(
     s => s.uid !== currentUserId && s.selectedIds.includes(event.id),
@@ -42,7 +45,7 @@ const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], cu
       <div className="event-card-header">
         <div className="event-card-body">
           <div className="event-card-time-row">
-            <span className="event-card-time">{time}</span>
+            {time && <span className="event-card-time">{time}</span>}
             {otherSelectors.length > 0 && (
               <div className="event-card-selectors">
                 {otherSelectors.map(s => (

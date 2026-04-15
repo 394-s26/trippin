@@ -1,7 +1,15 @@
 import { db } from './firebase';
-import { collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, where, runTransaction, Timestamp } from 'firebase/firestore';
+import { collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, where, runTransaction, Timestamp, deleteField } from 'firebase/firestore';
 import { Event } from '../types/event';
 import { hasActionPermission, PermissionError } from './permissionService';
+
+// Strips undefined values from an object so Firestore doesn't reject them.
+// For updates, undefined optional fields become deleteField() to clear them.
+const stripUndefined = (obj: Record<string, unknown>) =>
+  Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
+
+const toFirestoreUpdate = (obj: Record<string, unknown>) =>
+  Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === undefined ? deleteField() : v]));
 
 const eventsCol = (tripId: string, dayId: string) =>
   collection(db, 'trips', tripId, 'days', dayId, 'events');
@@ -25,7 +33,7 @@ export const createEvent = async (uid: string, event: Omit<Event, 'id'>): Promis
   const allowed = await hasActionPermission(uid, event.tripId, 'add_event');
   if (!allowed) throw new PermissionError('add_event');
   try {
-    const docRef = await addDoc(eventsCol(event.tripId, event.dayId), event);
+    const docRef = await addDoc(eventsCol(event.tripId, event.dayId), stripUndefined(event as Record<string, unknown>));
     return { ...event, id: docRef.id } as Event;
   } catch (error) {
     console.error('Error adding event: ', error);
@@ -37,7 +45,7 @@ export const updateEvent = async (uid: string, tripId: string, dayId: string, id
   const allowed = await hasActionPermission(uid, tripId, 'edit_event');
   if (!allowed) throw new PermissionError('edit_event');
   try {
-    await updateDoc(doc(eventsCol(tripId, dayId), id), updatedEvent);
+    await updateDoc(doc(eventsCol(tripId, dayId), id), toFirestoreUpdate(updatedEvent as Record<string, unknown>));
   } catch (error) {
     console.error('Error updating event: ', error);
     throw error;
