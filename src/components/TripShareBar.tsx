@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
+import { createPortal } from 'react-dom';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { AppUser } from '../types/auth';
@@ -80,6 +81,8 @@ const TripShareBar = ({
   const [removePopover, setRemovePopover] = useState<RemovePopover | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const copyBtnRef = useRef<HTMLButtonElement>(null);
+  const [copiedPos, setCopiedPos] = useState<{ top: number; left: number } | null>(null);
 
   const sharedKey = shared.join(',');
   useEffect(() => {
@@ -324,12 +327,17 @@ const TripShareBar = ({
         )}
       </div>
       <button
+        ref={copyBtnRef}
         className={`trip-share-bar-copy-btn${copied ? ' trip-share-bar-copy-btn--copied' : ''}`}
         aria-label="Copy link"
         onClick={() => {
           navigator.clipboard.writeText(window.location.href);
+          if (copyBtnRef.current) {
+            const rect = copyBtnRef.current.getBoundingClientRect();
+            setCopiedPos({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
+          }
           setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
+          setTimeout(() => { setCopied(false); setCopiedPos(null); }, 2000);
         }}
       >
         {copied ? (
@@ -344,6 +352,18 @@ const TripShareBar = ({
       </button>
     </div>
   );
+
+  const copiedPortal = copiedPos
+    ? createPortal(
+        <span
+          className="trip-share-bar-copied-text"
+          style={{ top: copiedPos.top, left: copiedPos.left }}
+        >
+          Copied!
+        </span>,
+        document.body
+      )
+    : null;
 
   // ── Card variant ─────────────────────────────────────────────────────────────
   const allCardUsers = ownerUser ? [ownerUser, ...sharedUsers] : sharedUsers;
@@ -407,7 +427,8 @@ const TripShareBar = ({
   // ── Modal ────────────────────────────────────────────────────────────────────
   const modal = showModal && (
     <div className="overlay-center" onClick={closeModal}>
-      <div className="overlay-panel overlay-panel--md rounded-2xl p-6 shadow-xl flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="share-modal" onClick={e => e.stopPropagation()}>
+      <div className="overlay-panel overlay-panel--md rounded-2xl p-6 shadow-xl flex flex-col">
 
         {/* Header */}
         <div className="share-modal-header">
@@ -421,13 +442,15 @@ const TripShareBar = ({
         <p className="share-modal-roles-heading">Trip Roles</p>
         <div className="share-modal-role-guide">
         <div className="share-modal-role-guide-item">
-          <span className="share-modal-role-guide-label">Manager 🪂</span>
+          <span className="share-modal-role-guide-emoji">🪂</span>
+          <span className="share-modal-role-guide-label">Manager</span>
           <span className="share-modal-role-guide-desc">
             For the friend who needs control. Full access to plan and manage the trip.
           </span>
         </div>
         <div className="share-modal-role-guide-item">
-          <span className="share-modal-role-guide-label">Explorer 🚣‍♂️</span>
+          <span className="share-modal-role-guide-emoji">🚣‍♂️</span>
+          <span className="share-modal-role-guide-label">Explorer</span>
           <span className="share-modal-role-guide-desc">
             Here for the vibes. Suggests trip ideas and lets the group decide.
           </span>
@@ -714,6 +737,7 @@ const TripShareBar = ({
           </button>
         )}
       </div>
+      </div>
     </div>
   );
 
@@ -765,6 +789,7 @@ const TripShareBar = ({
       {variant === 'banner' ? bannerContent : cardContent}
       {bannerPopover}
       {modal}
+      {copiedPortal}
     </>
   );
 };

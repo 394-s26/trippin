@@ -82,7 +82,7 @@ const Navbar = () => {
                       : undefined
                   }
                 />
-                <span className="navbar-trip-name">{lastViewedTrip.tripName}</span>
+                <span className="navbar-trip-name">{"Recent"}</span>
               </div>
             </NavLink>
           ) : (

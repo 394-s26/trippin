@@ -28,12 +28,9 @@
   @apply bg-primary-light;
 }
 
-.budget-card--over {
-  @apply bg-red-400 text-white;
-}
-
-.budget-card--over:hover {
-  @apply bg-red-300;
+.budget-card--spent {
+  @apply bg-gray-100 text-gray-800;
+  cursor: default;
 }
 
 .budget-card--light {
@@ -50,10 +47,6 @@
 
 .budget-card-value {
   @apply text-2xl font-bold;
-}
-
-.budget-card-budget {
-  @apply text-base font-normal opacity-75;
 }
 
 .budget-modal-title {
@@ -104,8 +97,12 @@
   @apply flex flex-col items-start gap-1 w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-left transition-colors duration-100;
 }
 
-.split-option-btn:hover {
+.split-option-btn:hover:not(:disabled) {
   @apply border-primary/50 bg-green-50;
+}
+
+.split-option-btn:disabled {
+  @apply cursor-default;
 }
 
 .split-option-btn--active {
@@ -124,7 +121,61 @@
   @apply text-xs text-gray-400;
 }
 
-/* ── Even-split Breakdown Table ────────────────────────────── */
+/* ── Split Config Editor ─────────────────────────────────────── */
+
+.split-config {
+  @apply mb-5 rounded-xl border border-gray-100 p-4;
+}
+
+.split-config-title {
+  @apply text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3;
+}
+
+.split-config-row {
+  @apply flex items-center gap-3 py-2;
+}
+
+.split-config-user {
+  @apply flex items-center gap-2 flex-1 min-w-0;
+}
+
+.split-config-name {
+  @apply text-sm text-gray-700 font-medium truncate;
+}
+
+.split-config-input-wrap {
+  @apply flex items-center gap-1;
+}
+
+.split-config-input {
+  @apply w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-primary;
+}
+
+.split-config-suffix {
+  @apply text-xs text-gray-400 w-12;
+}
+
+.split-config-pct {
+  @apply text-xs text-gray-400 w-12 text-right;
+}
+
+.split-config-total {
+  @apply text-sm font-medium text-gray-600 mt-3 pt-3 border-t border-gray-100;
+}
+
+.split-config-total--invalid {
+  @apply text-red-500;
+}
+
+.split-config-warning {
+  @apply text-xs font-normal;
+}
+
+.split-config-save {
+  @apply w-full mt-3 bg-primary text-white py-2 rounded-xl font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* ── Breakdown Table ─────────────────────────────────────────── */
 
 .split-breakdown {
   @apply mb-5 rounded-xl border border-gray-100 overflow-hidden;
@@ -138,8 +189,24 @@
   @apply grid grid-cols-3 text-xs font-medium text-gray-400 uppercase tracking-wide bg-gray-50 px-4 py-2;
 }
 
+.split-breakdown-header--2col {
+  @apply grid-cols-2;
+}
+
+.split-breakdown-header--4col {
+  @apply grid-cols-4;
+}
+
 .split-breakdown-row {
   @apply grid grid-cols-3 items-center px-4 py-2 border-t border-gray-100 text-sm;
+}
+
+.split-breakdown-row--2col {
+  @apply grid-cols-2;
+}
+
+.split-breakdown-row--4col {
+  @apply grid-cols-4;
 }
 
 .split-breakdown-user {
@@ -160,6 +227,10 @@
 
 .split-breakdown-owed--positive {
   @apply text-amber-600 font-semibold;
+}
+
+.split-breakdown-owed--negative {
+  @apply text-red-500 font-semibold;
 }
 
 .split-breakdown-footer {
