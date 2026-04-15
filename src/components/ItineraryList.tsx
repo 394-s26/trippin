@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import EventCard from './EventCard';
-import { PencilIcon, CheckIcon, PlusIcon, TrashIcon } from '../services/svgIcons';
+import { PencilIcon, CheckIcon, PlusIcon, TrashIcon, GearIcon } from '../services/svgIcons';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
 import { UserSelection } from '../hooks/useSessionSelections';
@@ -27,6 +27,18 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [openMenuDayId, setOpenMenuDayId] = useState<string | null>(null);
+  const menuRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+
+  useEffect(() => {
+    if (!openMenuDayId) return;
+    const handler = (e: MouseEvent) => {
+      const node = menuRefs.current.get(openMenuDayId);
+      if (node && !node.contains(e.target as Node)) setOpenMenuDayId(null);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openMenuDayId]);
 
   const startEdit = (day: Day) => {
     setEditingDay(day.id);
@@ -93,23 +105,46 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
                           Event
                         </button>
                       )}
-                      {canEditDay && (
-                        <button
-                          onClick={() => startEdit(day)}
-                          aria-label={`Edit label for day ${index + 1}`}
-                          className="day-edit-btn"
+                      {(canEditDay || canDeleteDay) && (
+                        <div
+                          className="day-menu-wrapper"
+                          ref={(el) => { menuRefs.current.set(day.id, el); }}
                         >
-                          <PencilIcon size={20} />
-                        </button>
-                      )}
-                      {canDeleteDay && (
-                        <button
-                          onClick={() => setConfirmDeleteId(day.id)}
-                          aria-label={`Delete day ${index + 1}`}
-                          className="day-delete-btn"
-                        >
-                          <TrashIcon size={20} />
-                        </button>
+                          <button
+                            onClick={() => setOpenMenuDayId(openMenuDayId === day.id ? null : day.id)}
+                            aria-label={`Day ${index + 1} options`}
+                            aria-expanded={openMenuDayId === day.id}
+                            aria-haspopup="menu"
+                            className={`day-gear-btn${openMenuDayId === day.id ? ' day-gear-btn--open' : ''}`}
+                          >
+                            <GearIcon size={20} />
+                          </button>
+
+                          {openMenuDayId === day.id && (
+                            <div className="day-menu" role="menu">
+                              {canEditDay && (
+                                <button
+                                  role="menuitem"
+                                  onClick={() => { setOpenMenuDayId(null); startEdit(day); }}
+                                  className="day-menu-item"
+                                >
+                                  <PencilIcon size={16} />
+                                  <span>Rename</span>
+                                </button>
+                              )}
+                              {canDeleteDay && (
+                                <button
+                                  role="menuitem"
+                                  onClick={() => { setOpenMenuDayId(null); setConfirmDeleteId(day.id); }}
+                                  className="day-menu-item day-menu-item--danger"
+                                >
+                                  <TrashIcon size={16} />
+                                  <span>Delete</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       )}
 
                       {/* Delete confirmation popover */}

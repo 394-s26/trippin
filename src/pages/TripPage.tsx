@@ -51,6 +51,9 @@ const TripPage = () => {
     lock: 'acquired' | 'readonly';
     holderName?: string;
   } | null>(null);
+  // Snapshot of event IDs pending deletion confirmation. Captured up-front so
+  // the SelectionActionBar's overlay auto-deselect doesn't erase them mid-flow.
+  const [deleteConfirmIds, setDeleteConfirmIds] = useState<string[] | null>(null);
 
   // If our lock is stolen (expired past TTL while browser slept, etc.), flip
   // the open modal to read-only so we can't accidentally overwrite.
@@ -138,12 +141,18 @@ const TripPage = () => {
     await createEvent(appUser.uid, { ...event, tripId: id!, dayId });
   };
 
-  const handleDeleteSelected = async () => {
-    if (!appUser) return;
-    const selected = events.filter(e => mySelectedIds.includes(e.id));
+  const handleRequestDeleteSelected = () => {
+    if (mySelectedIds.length === 0) return;
+    setDeleteConfirmIds([...mySelectedIds]);
+  };
+
+  const handleConfirmDeleteSelected = async () => {
+    if (!appUser || !deleteConfirmIds) return;
+    const selected = events.filter(e => deleteConfirmIds.includes(e.id));
     await Promise.all(
       selected.map(e => deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)),
     );
+    setDeleteConfirmIds(null);
     await deselectAll();
   };
 
@@ -305,11 +314,33 @@ const TripPage = () => {
           <SelectionActionBar
             selectedCount={mySelectedIds.length}
             onEdit={handleEditSelected}
-            onDelete={handleDeleteSelected}
+            onDelete={handleRequestDeleteSelected}
             onDeselectAll={deselectAll}
             canEdit={can('edit_event')}
             canDelete={can('delete_event')}
           />
+        )}
+
+        {deleteConfirmIds && (
+          <div className="overlay-bottom">
+            <div className="overlay-scrim" onClick={() => setDeleteConfirmIds(null)} />
+            <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 flex flex-col gap-3 animate-slide-up">
+              <h2 className="delete-confirm-title">
+                Delete {deleteConfirmIds.length} {deleteConfirmIds.length === 1 ? 'event' : 'events'}?
+              </h2>
+              <p className="delete-confirm-body">
+                {deleteConfirmIds.length === 1
+                  ? 'This event will be permanently deleted. This cannot be undone.'
+                  : `These ${deleteConfirmIds.length} events will be permanently deleted. This cannot be undone.`}
+              </p>
+              <button onClick={handleConfirmDeleteSelected} className="delete-confirm-btn">
+                Delete
+              </button>
+              <button onClick={() => setDeleteConfirmIds(null)} className="delete-cancel-btn">
+                Cancel
+              </button>
+            </div>
+          </div>
         )}
 
         <EventFormModal
