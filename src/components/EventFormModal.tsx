@@ -3,7 +3,10 @@ import { Event } from '../types/event';
 import { AppUser } from '../types/auth';
 import { UserIcon } from '../services/svgIcons';
 import UserAvatar from './UserAvatar';
+import { toDate } from '../utilities/timestamps';
 import './EventFormModal.css';
+
+export type EventFormMode = 'create' | 'edit' | 'readonly';
 
 interface EventFormModalProps {
   isOpen: boolean;
@@ -14,7 +17,23 @@ interface EventFormModalProps {
   currentUserId?: string;
   tripBudget?: number;
   tripSpent?: number;
+  mode?: EventFormMode;
+  initialEvent?: Event;
+  lockHolderName?: string;
 }
+
+const toTimeString = (d: Date): string => {
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+};
+
+const toDateTimeLocal = (d: Date): string => {
+  const yyyy = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mo}-${dd}T${toTimeString(d)}`;
+};
 
 const EVENT_TYPES: Event['type'][] = ['Activity', 'Hotel', 'Restaurant', 'Food'];
 
@@ -28,7 +47,8 @@ const TIMEZONES = [
   'UTC',
 ];
 
-const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, currentUserId, tripBudget, tripSpent }: EventFormModalProps) => {
+const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, currentUserId, tripBudget, tripSpent, mode = 'create', initialEvent, lockHolderName }: EventFormModalProps) => {
+  const readOnly = mode === 'readonly';
   const [type, setType] = useState<Event['type']>('Activity');
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
@@ -42,10 +62,33 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen && currentUserId) {
+    if (isOpen && currentUserId && mode === 'create') {
       setPaidBy(currentUserId);
     }
-  }, [isOpen, currentUserId]);
+  }, [isOpen, currentUserId, mode]);
+
+  // Pre-populate fields from initialEvent when the modal opens in edit or
+  // readonly mode. Keyed on the event id so reopening with a different event
+  // resets the form.
+  useEffect(() => {
+    if (!isOpen || !initialEvent) return;
+    setType(initialEvent.type);
+    setName(initialEvent.name);
+    setLocation(initialEvent.location ?? '');
+    setTimezone(initialEvent.timezone ?? 'America/Chicago');
+    setCost(initialEvent.cost != null ? String(initialEvent.cost) : '');
+    setPaidBy(initialEvent.paidBy ?? '');
+    const start = toDate(initialEvent.startDate as Parameters<typeof toDate>[0]);
+    const end = initialEvent.endDate
+      ? toDate(initialEvent.endDate as Parameters<typeof toDate>[0])
+      : null;
+    if (dayDate) {
+      setStartTime(toTimeString(start));
+      setEndTime(end ? toTimeString(end) : '');
+    } else {
+      setDateValue(toDateTimeLocal(start));
+    }
+  }, [isOpen, initialEvent?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!paidByOpen) return;
@@ -95,15 +138,17 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       paidBy: paidBy || null,
     });
 
-    setType('Activity');
-    setName('');
-    setLocation('');
-    setStartTime('');
-    setEndTime('');
-    setDateValue('');
-    setTimezone('America/Chicago');
-    setCost('');
-    setPaidBy(currentUserId ?? '');
+    if (mode === 'create') {
+      setType('Activity');
+      setName('');
+      setLocation('');
+      setStartTime('');
+      setEndTime('');
+      setDateValue('');
+      setTimezone('America/Chicago');
+      setCost('');
+      setPaidBy(currentUserId ?? '');
+    }
     setPaidByOpen(false);
     onClose();
   };
@@ -113,7 +158,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       <div className="overlay-scrim" onClick={onClose} />
       <div className="overlay-panel overlay-panel--lg rounded-t-2xl p-6 pb-10 max-h-[90vh] overflow-y-auto animate-slide-up">
         <div className="event-modal-header">
-          <h2 className="event-modal-title">New Event</h2>
+          <h2 className="event-modal-title">
+            {mode === 'edit' ? 'Edit Event' : mode === 'readonly' ? 'Event (locked)' : 'New Event'}
+          </h2>
           <button
             onClick={onClose}
             className="event-modal-close-btn"
@@ -123,7 +170,30 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
           </button>
         </div>
 
+        {readOnly && (
+          <div className="event-modal-readonly-banner" role="status">
+            <span className="event-modal-readonly-banner-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </span>
+            <div className="event-modal-readonly-banner-text">
+              <span className="event-modal-readonly-banner-title">
+                <span className="event-modal-readonly-banner-pulse" aria-hidden="true" />
+                {lockHolderName ?? 'Another user'}
+                <span className="event-modal-readonly-banner-separator"> · </span>
+                <span className="event-modal-readonly-banner-live">editing now</span>
+              </span>
+              <span className="event-modal-readonly-banner-subtitle">
+                You're viewing this event in read-only mode.
+              </span>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="event-modal-form">
+         <fieldset disabled={readOnly} className="event-modal-fieldset">
           {/* Type */}
           <div>
             <label htmlFor="event-type" className="form-label">
@@ -255,7 +325,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
                     className="cost-input-total"
                     style={{ color: wouldExceedBudget ? 'var(--color-amber-600)' : 'var(--color-gray-400)' }}
                   >
-                    Trip Total: ${(tripSpent + costNum).toFixed(2)}
+                    Trip Expenses: {tripSpent.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
                   </span>
                 )}
               </div>
@@ -319,9 +389,12 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
             )}
           </div>
 
-          <button type="submit" className="event-modal-submit-btn">
-            Add Event
-          </button>
+         </fieldset>
+          {!readOnly && (
+            <button type="submit" className="event-modal-submit-btn">
+              {mode === 'edit' ? 'Save Changes' : 'Add Event'}
+            </button>
+          )}
         </form>
       </div>
     </div>

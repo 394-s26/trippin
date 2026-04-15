@@ -16,7 +16,8 @@ import useTrip from '../hooks/useTrip';
 import useDays from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
-import { createEvent, deleteEvent } from '../services/firestoreEventsService';
+import { useEventLock } from '../hooks/useEventLock';
+import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock } from '../services/firestoreEventsService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLastViewedTrip } from '../contexts/LastViewedTripContext';
 import './Home.css';
@@ -45,6 +46,26 @@ const TripPage = () => {
   const [bannerImage, setBannerImage] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [tripUsers, setTripUsers] = useState<AppUser[]>([]);
+  const [editingEvent, setEditingEvent] = useState<{
+    event: Event;
+    lock: 'acquired' | 'readonly';
+    holderName?: string;
+  } | null>(null);
+  // Snapshot of event IDs pending deletion confirmation. Captured up-front so
+  // the SelectionActionBar's overlay auto-deselect doesn't erase them mid-flow.
+  const [deleteConfirmIds, setDeleteConfirmIds] = useState<string[] | null>(null);
+
+  // If our lock is stolen (expired past TTL while browser slept, etc.), flip
+  // the open modal to read-only so we can't accidentally overwrite.
+  useEventLock(
+    id!,
+    editingEvent?.lock === 'acquired' ? editingEvent.event.id : null,
+    appUser?.uid,
+    editingEvent?.lock === 'acquired',
+    () => {
+      setEditingEvent((curr) => curr ? { ...curr, lock: 'readonly' } : curr);
+    },
+  );
 
   const handleDeleteConfirmed = async () => {
     await deleteTrip();
@@ -120,13 +141,50 @@ const TripPage = () => {
     await createEvent(appUser.uid, { ...event, tripId: id!, dayId });
   };
 
-  const handleDeleteSelected = async () => {
-    if (!appUser) return;
-    const selected = events.filter(e => mySelectedIds.includes(e.id));
+  const handleRequestDeleteSelected = () => {
+    if (mySelectedIds.length === 0) return;
+    setDeleteConfirmIds([...mySelectedIds]);
+  };
+
+  const handleConfirmDeleteSelected = async () => {
+    if (!appUser || !deleteConfirmIds) return;
+    const selected = events.filter(e => deleteConfirmIds.includes(e.id));
     await Promise.all(
       selected.map(e => deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)),
     );
+    setDeleteConfirmIds(null);
     await deselectAll();
+  };
+
+  const handleEditSelected = async () => {
+    if (!appUser || mySelectedIds.length !== 1 || !can('edit_event')) return;
+    const target = events.find(e => e.id === mySelectedIds[0]);
+    if (!target) return;
+    const result = await acquireEventLock(id!, target.id, appUser.uid);
+    if (result.acquired) {
+      setEditingEvent({ event: target, lock: 'acquired' });
+    } else {
+      const holder = tripUsers.find(u => u.uid === result.holderUid);
+      const holderName = holder ? `${holder.firstName} ${holder.lastName}`.trim() : 'Another user';
+      setEditingEvent({ event: target, lock: 'readonly', holderName });
+    }
+  };
+
+  const handleUpdateEvent = async (updated: Omit<Event, 'id' | 'tripId' | 'dayId'>) => {
+    if (!appUser || !editingEvent || editingEvent.lock !== 'acquired') return;
+    const { event } = editingEvent;
+    await updateEvent(appUser.uid, event.tripId, event.dayId, event.id, updated);
+    await releaseEventLock(id!, event.id, appUser.uid);
+    setEditingEvent(null);
+    await deselectAll();
+  };
+
+  const handleCloseEdit = async () => {
+    if (!appUser || !editingEvent) { setEditingEvent(null); return; }
+    if (editingEvent.lock === 'acquired') {
+      await releaseEventLock(id!, editingEvent.event.id, appUser.uid);
+    }
+    setEditingEvent(null);
   };
 
   if (loading) {
@@ -222,6 +280,7 @@ const TripPage = () => {
               canInvite={true}
               canRemove={can('remove_member')}
               canChangeRole={can('change_member_role')}
+              onBeforeOpen={deselectAll}
             />
             <BudgetModal
               tripId={id!}
@@ -251,12 +310,38 @@ const TripPage = () => {
           </div>
         </main>
 
-        <SelectionActionBar
-          selectedCount={mySelectedIds.length}
-          onDelete={handleDeleteSelected}
-          onDeselectAll={deselectAll}
-          canDelete={can('delete_event')}
-        />
+        {editingEvent === null && (
+          <SelectionActionBar
+            selectedCount={mySelectedIds.length}
+            onEdit={handleEditSelected}
+            onDelete={handleRequestDeleteSelected}
+            onDeselectAll={deselectAll}
+            canEdit={can('edit_event')}
+            canDelete={can('delete_event')}
+          />
+        )}
+
+        {deleteConfirmIds && (
+          <div className="overlay-bottom">
+            <div className="overlay-scrim" onClick={() => setDeleteConfirmIds(null)} />
+            <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 flex flex-col gap-3 animate-slide-up">
+              <h2 className="delete-confirm-title">
+                Delete {deleteConfirmIds.length} {deleteConfirmIds.length === 1 ? 'event' : 'events'}?
+              </h2>
+              <p className="delete-confirm-body">
+                {deleteConfirmIds.length === 1
+                  ? 'This event will be permanently deleted. This cannot be undone.'
+                  : `These ${deleteConfirmIds.length} events will be permanently deleted. This cannot be undone.`}
+              </p>
+              <button onClick={handleConfirmDeleteSelected} className="delete-confirm-btn">
+                Delete
+              </button>
+              <button onClick={() => setDeleteConfirmIds(null)} className="delete-cancel-btn">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         <EventFormModal
           isOpen={activeDay !== null}
@@ -267,6 +352,24 @@ const TripPage = () => {
           currentUserId={appUser?.uid}
           tripBudget={trip.budget}
           tripSpent={events.reduce((sum, e) => sum + (e.cost ?? 0), 0)}
+        />
+
+        <EventFormModal
+          isOpen={editingEvent !== null}
+          onClose={handleCloseEdit}
+          onSubmit={handleUpdateEvent}
+          dayDate={
+            editingEvent
+              ? days.find(d => d.id === editingEvent.event.dayId)?.date
+              : undefined
+          }
+          tripUsers={tripUsers}
+          currentUserId={appUser?.uid}
+          tripBudget={trip.budget}
+          tripSpent={events.reduce((sum, e) => sum + (e.cost ?? 0), 0)}
+          mode={editingEvent?.lock === 'readonly' ? 'readonly' : 'edit'}
+          initialEvent={editingEvent?.event}
+          lockHolderName={editingEvent?.holderName}
         />
 
         {showDeleteConfirm && (
