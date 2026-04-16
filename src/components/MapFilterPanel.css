@@ -14,20 +14,17 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 25%;
+  height: 35%;
   z-index: 10;
   overflow: hidden;
   pointer-events: none;
   background: white;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
 
-  /* Closed: clipped to the toggle button pill.
-     Values match the button's position inside .map-filter-inner:
-       top offset    = inner padding (0.75rem)
-       left offset   = inner padding (0.75rem)
-       button height ≈ 2.25rem  →  bottom clip = 100% - (0.75+2.25)rem = 100% - 3rem
-       button width  ≈ 6rem     →  right clip  = 100% - (0.75+6)rem   = 100% - 6.75rem  */
-  clip-path: inset(0.75rem calc(100% - 6.75rem) calc(100% - 3rem) 0.75rem round 9999px);
+  /* Closed: clipped tight to the toggle button pill.
+     Insets sit a few px inside the button's own border so no
+     panel background peeks out around the edges. */
+  clip-path: inset(0.875rem calc(100% - 6.375rem) calc(100% - 2.75rem) 0.875rem round 9999px);
   transition: clip-path 0.38s cubic-bezier(0.32, 0.72, 0, 1);
 }
 

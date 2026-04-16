@@ -6,6 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 import AppHeader from '../components/AppHeader';
 import MapFilterPanel from '../components/MapFilterPanel';
+import DirectionsExplorer from '../components/DirectionsExplorer';
 import useTrip from '../hooks/useTrip';
 import useDays from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
@@ -234,7 +235,7 @@ const [nameQuery, setNameQuery] = useState('');
           ) : (
             <div
               className="map-layout"
-              style={{ display: 'flex', flexDirection: 'row', width: '100%', height: 'calc(100vh - 80px)', minHeight: '500px' }}
+              style={{ display: 'flex', flexDirection: 'row', width: '100%', height: 'calc(100vh - 160px)', minHeight: '500px' }}
             >
               <div
                 className="map-canvas-wrapper"
@@ -263,6 +264,13 @@ const [nameQuery, setNameQuery] = useState('');
                 <div className="map-load-meter" aria-live="polite">
                   {remaining} map views left
                 </div>
+
+                <DirectionsExplorer
+                  days={days}
+                  mappableEvents={mappableEvents}
+                  mapRef={mapRef}
+                  accessToken={mapboxgl.accessToken}
+                />
 
                 {unmappableEvents.length > 0 && (
                   <details className="map-unmappable">
