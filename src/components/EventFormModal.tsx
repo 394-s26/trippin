@@ -119,61 +119,77 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
   }, [paidByOpen]);
 
   useEffect(() => {
-  if (!isOpen) return;
+    if (!isOpen) return;
 
-  let isMounted = true;
+    let isMounted = true;
 
-  const init = async () => {
-    // 1. Set your global options (once)
-    setOptions({
-      key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-      v: "weekly",
-    });
+    const init = async () => {
+      // 1. Set your global options (once)
+      setOptions({
+        key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+        v: "weekly",
+      });
 
-    try {
-      // 2. Use the functional importLibrary instead of the loader class
-      const { PlaceAutocompleteElement, Place } = 
-        (await importLibrary("places")) as google.maps.PlacesLibrary;
+      try {
+        // 2. Use the functional importLibrary instead of the loader class
+        const { PlaceAutocompleteElement, Place } = 
+          (await importLibrary("places")) as google.maps.PlacesLibrary;
 
-      if (!isMounted || !locationContainerRef.current) return;
+        if (!isMounted || !locationContainerRef.current) return;
 
-      // 3. Setup the Web Component
-      const el = new PlaceAutocompleteElement();
-      
-      locationContainerRef.current.innerHTML = "";
-      locationContainerRef.current.appendChild(el);
-
-      el.addEventListener("gmp-select", async (event: any) => {
-        const placeId = event.placePrediction.placeId;
-        const { Place } = (await importLibrary("places")) as any;
-        const fullPlace = new Place({ id: placeId });
+        // 3. Setup the Web Component
+        const el = new PlaceAutocompleteElement();
         
-        await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress"] });
-        
-        if (isMounted) {
-          const placeName = fullPlace.displayName || "";
-          const placeAddress = fullPlace.formattedAddress || "";
+        locationContainerRef.current.innerHTML = "";
+        locationContainerRef.current.appendChild(el);
 
-          // Set the name of the event to the Place name automatically
-          setName(placeName); 
-          // Set the location to the address
-          setLocation(placeAddress);
-              }
-            });
-          } catch (error) {
-            console.error("Error loading Google Maps:", error);
-          }
-        };
+        // if (name) {
+        //   el.value = name;
+        // }
 
-  init();
+        // el.classList.add("form-input");
 
-  return () => {
-    isMounted = false;
-    if (locationContainerRef.current) {
-      locationContainerRef.current.innerHTML = "";
-    }
-  };
-}, [isOpen]);
+        // // 2. Sync the value when the user types (Manual entry)
+        // el.addEventListener("input", (e: any) => {
+        //   const value = e.target.value;
+        //   setName(value);
+        //   // so it doesn't stay tied to a previous selection's address
+        //   setLocation(""); 
+        // });
+
+        el.addEventListener("gmp-select", async (event: any) => {
+          const placeId = event.placePrediction.placeId;
+          const { Place } = (await importLibrary("places")) as any;
+          const fullPlace = new Place({ id: placeId });
+          
+          await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress"] });
+          
+          if (isMounted) {
+            const placeName = fullPlace.displayName || "";
+            const placeAddress = fullPlace.formattedAddress || "";
+
+            // Set the name of the event to the Place name automatically
+            setName(placeName); 
+            // Set the location to the address
+            setLocation(placeAddress);
+            // Set the input value to the place name
+            el.value = placeName;
+                }
+              });
+            } catch (error) {
+              console.error("Error loading Google Maps:", error);
+            }
+          };
+  
+    init();
+
+    return () => {
+      isMounted = false;
+      if (locationContainerRef.current) {
+        locationContainerRef.current.innerHTML = "";
+      }
+    };
+  }, [isOpen]);
 
   const costNum = cost !== '' ? parseFloat(cost) : 0;
   const wouldExceedBudget = tripBudget != null && tripBudget > 0 && tripSpent != null && (tripSpent + costNum) > tripBudget;

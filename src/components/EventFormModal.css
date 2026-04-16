@@ -309,3 +309,24 @@
 .event-modal-submit-btn {
   @apply w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm mt-1;
 }
+
+/* target the internal input of the Google component */
+.google-autocomplete-input::part(input) {
+  border: 1px solid var(--color-gray-200); /* Match your app's border color */
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem 0.5rem 2.5rem; /* Space for the search icon */
+  font-size: 1rem;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.google-autocomplete-input::part(input):focus {
+  border-color: var(--color-blue-500);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* If you want to move or hide the search icon */
+.google-autocomplete-input::part(icon) {
+  display: none; /* Or style it to match your UI */
+}
