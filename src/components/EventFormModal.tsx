@@ -57,6 +57,8 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
   const [type, setType] = useState<Event['type']>('Hiking');
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
+  const [lat, setLat] = useState<number | undefined>(undefined);
+  const [lng, setLng] = useState<number | undefined>(undefined);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [dateValue, setDateValue] = useState('');
@@ -92,6 +94,8 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
     setType(initialEvent.type);
     setName(initialEvent.name);
     setLocation(initialEvent.location ?? '');
+    setLat(initialEvent.lat);
+    setLng(initialEvent.lng);
     setTimezone(initialEvent.timezone ?? 'America/Chicago');
     setCost(initialEvent.cost != null ? String(initialEvent.cost) : '');
     setPaidBy(initialEvent.paidBy ?? '');
@@ -132,8 +136,10 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
     try {
       // 2. Use the functional importLibrary instead of the loader class
-      const { PlaceAutocompleteElement, Place } = 
-        (await importLibrary("places")) as google.maps.PlacesLibrary;
+      const { PlaceAutocompleteElement, Place } =
+        (await importLibrary("places")) as google.maps.PlacesLibrary & {
+          PlaceAutocompleteElement: new () => HTMLElement;
+        };
 
       if (!isMounted || !locationContainerRef.current) return;
 
@@ -146,11 +152,19 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       el.addEventListener("gmp-select", async (event: any) => {
         const placeId = event.placePrediction.placeId;
         const fullPlace = new Place({ id: placeId });
-        
-        await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress"] });
-        
+
+        await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress", "location"] });
+
         if (isMounted) {
           setLocation(fullPlace.formattedAddress || fullPlace.displayName || "");
+          const loc = fullPlace.location;
+          if (loc) {
+            setLat(typeof loc.lat === 'function' ? loc.lat() : (loc as unknown as { lat: number }).lat);
+            setLng(typeof loc.lng === 'function' ? loc.lng() : (loc as unknown as { lng: number }).lng);
+          } else {
+            setLat(undefined);
+            setLng(undefined);
+          }
         }
       });
     } catch (error) {
@@ -195,7 +209,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
     onSubmit({
       type,
       name,
-      location: location || undefined,
+      ...(location ? { location } : {}),
+      ...(lat !== undefined ? { lat } : {}),
+      ...(lng !== undefined ? { lng } : {}),
       startDate: eventDate,
       endDate: eventEndDate,
       timezone,
@@ -208,6 +224,8 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       setType('Hiking');
       setName('');
       setLocation('');
+      setLat(undefined);
+      setLng(undefined);
       setStartTime('');
       setEndTime('');
       setDateValue('');
@@ -323,7 +341,11 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
               id="event-location"
               type="text"
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              onChange={(e) => {
+                setLocation(e.target.value);
+                setLat(undefined);
+                setLng(undefined);
+              }}
               placeholder="e.g. Main Geyser Loop"
               className="form-input"
             />

@@ -10,6 +10,8 @@ interface BaseEvent {
   startDate: Date;
   endDate?: Date | null;
   location?: string;
+  lat?: number;
+  lng?: number;
   timezone?: string;
   paidBy?: string | null; // UID of the user responsible for paying; null = unassigned
 }
@@ -106,6 +108,8 @@ export interface EventUpdate {
   startDate?: Date | null;
   endDate?: Date | null;
   location?: string;
+  lat?: number;
+  lng?: number;
   timezone?: string;
   paidBy?: string | null;
 }
