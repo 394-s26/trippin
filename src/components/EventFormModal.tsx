@@ -145,18 +145,25 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
       el.addEventListener("gmp-select", async (event: any) => {
         const placeId = event.placePrediction.placeId;
+        const { Place } = (await importLibrary("places")) as any;
         const fullPlace = new Place({ id: placeId });
         
         await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress"] });
         
         if (isMounted) {
-          setLocation(fullPlace.formattedAddress || fullPlace.displayName || "");
-        }
-      });
-    } catch (error) {
-      console.error("Error loading Google Maps:", error);
-    }
-  };
+          const placeName = fullPlace.displayName || "";
+          const placeAddress = fullPlace.formattedAddress || "";
+
+          // Set the name of the event to the Place name automatically
+          setName(placeName); 
+          // Set the location to the address
+          setLocation(placeAddress);
+              }
+            });
+          } catch (error) {
+            console.error("Error loading Google Maps:", error);
+          }
+        };
 
   init();
 
