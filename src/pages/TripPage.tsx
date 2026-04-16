@@ -35,15 +35,16 @@ const TripPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { appUser } = useAuth();
-  const { trip, loading, error, permissionDenied, can, updateTripName, updateBannerImage, updateEndDate, deleteTrip } = useTrip(id!);
-  const { days, addDay, renameDayLabel, removeDay, changeStartDate } = useDays(id!);
+  const { trip, loading, error, permissionDenied, can, updateTripName, updateBannerImage, deleteTrip } = useTrip(id!);
+  const { days, changeStartDate, syncDaysToRange } = useDays(id!);
   const { events } = useItinerary(id!);
   const { mySelectedIds, allSelections, toggleSelection, deselectAll } = useSessionSelections(id!, appUser?.uid);
   const { setLastViewedTrip } = useLastViewedTrip();
 
   const scrollRef = useRef<HTMLElement>(null);
 
-  const [activeDay, setActiveDay] = useState<{ id: string; date: Date } | null>(null);
+  const [activeDay, setActiveDay] = useState<{ id: string; date: Date; time?: Date } | null>(null);
+  const lastSyncRef = useRef<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [tripName, setTripName] = useState('New Trip');
   const [bannerImage, setBannerImage] = useState<string | null>(null);
@@ -104,26 +105,20 @@ const TripPage = () => {
     });
   }, [memberUidsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-sync days when trip date range changes
+  useEffect(() => {
+    if (!trip || !appUser) return;
+    const key = `${trip.startDate.getTime()}-${trip.endDate.getTime()}`;
+    if (lastSyncRef.current === key) return;
+    lastSyncRef.current = key;
+    const expected = Math.round((trip.endDate.getTime() - trip.startDate.getTime()) / 86400000) + 1;
+    if (expected !== days.length) {
+      syncDaysToRange(trip.startDate, trip.endDate);
+    }
+  }, [trip?.startDate?.getTime(), trip?.endDate?.getTime(), days.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleChangeStartDate = (newStartDate: Date) => {
     changeStartDate(newStartDate);
-  };
-
-  const handleAddDay = async () => {
-    const lastDate = days[days.length - 1]?.date ?? new Date();
-    await addDay(lastDate);
-    const newDayDate = new Date(lastDate);
-    newDayDate.setDate(newDayDate.getDate() + 1);
-    if (trip?.endDate && newDayDate > trip.endDate) {
-      await updateEndDate(newDayDate);
-    }
-  };
-
-  const handleUpdateDayLabel = (dayId: string, label: string) => {
-    renameDayLabel(dayId, label);
-  };
-
-  const handleDeleteDay = (dayId: string) => {
-    removeDay(dayId);
   };
 
   const handleChangeName = (newName: string) => {
@@ -296,19 +291,13 @@ const TripPage = () => {
             />
             <ItineraryList
               days={daysWithEvents}
-              onAddDay={handleAddDay}
-              onUpdateDayLabel={handleUpdateDayLabel}
-              onDeleteDay={handleDeleteDay}
-              onAddEvent={(day) => setActiveDay({ id: day.id, date: day.date })}
+              onAddEvent={(day, time) => setActiveDay({ id: day.id, date: day.date, time })}
               selectedEventIds={mySelectedIds}
               onSelectEvent={toggleSelection}
               allSelections={allSelections}
               currentUserId={appUser?.uid}
               tripUsers={tripUsers}
               canAddEvent={can('add_event')}
-              canAddDay={can('add_day')}
-              canEditDay={can('edit_day')}
-              canDeleteDay={can('delete_day')}
             />
           </div>
         </main>

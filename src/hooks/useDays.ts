@@ -48,7 +48,22 @@ const useDays = (tripId: string) => {
         );
     };
 
-    return { days, addDay, renameDayLabel, removeDay, changeStartDate };
+    const syncDaysToRange = async (startDate: Date, endDate: Date): Promise<void> => {
+        const msPerDay = 86400000;
+        const expectedCount = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / msPerDay) + 1);
+
+        if (expectedCount > days.length) {
+            for (let i = days.length; i < expectedCount; i++) {
+                const d = new Date(startDate);
+                d.setDate(d.getDate() + i);
+                await createDay(uid, tripId, d, d.toLocaleDateString('en-US', { weekday: 'long' }));
+            }
+        } else if (expectedCount < days.length) {
+            await Promise.all(days.slice(expectedCount).map(d => deleteDayDoc(uid, tripId, d.id)));
+        }
+    };
+
+    return { days, addDay, renameDayLabel, removeDay, changeStartDate, syncDaysToRange };
 };
 
 export default useDays;

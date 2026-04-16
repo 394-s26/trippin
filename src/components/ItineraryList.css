@@ -1,175 +1,194 @@
 @reference "../index.css";
 
+/* ── Outer container ──────────────────────────────────────────────────────── */
 .itinerary-list {
-  @apply flex flex-col gap-6;
+  display: flex;
+  flex-direction: column;
 }
 
-.day-section {
-  @apply rounded-2xl p-3 -mx-3 transition-colors;
+/* ── Per-day block ────────────────────────────────────────────────────────── */
+.cal-day {
+  display: flex;
+  flex-direction: column;
 }
 
-.day-section-editing {
-  @apply bg-green-50;
+/* ── Day header: number + horizontal divider ─────────────────────────────── */
+.cal-day-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
 }
 
-.day-header {
-  @apply flex items-center gap-3 mb-3;
+.cal-day-num-col {
+  width: 44px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 8px;
 }
 
-.day-number {
-  @apply w-8 h-8 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center shrink-0;
+.cal-day-number {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--color-primary);
+  line-height: 1;
+  user-select: none;
+  /* nudge so the baseline sits on the divider line */
+  transform: translateY(0.45em);
 }
 
-.day-label-wrapper {
-  @apply flex items-center gap-2 flex-1 min-w-0;
+.cal-day-header-line {
+  flex: 1;
+  height: 2px;
+  background: #9ca3af;
+  border-radius: 1px;
 }
 
-.day-label-input {
-  @apply flex-1 min-w-0 text-primary font-bold text-base bg-transparent border-b-2 border-primary focus:outline-none;
+/* ── Segments wrapper (indented past the day-number column) ──────────────── */
+.cal-segments {
+  margin-left: 44px;
+  display: flex;
+  flex-direction: column;
 }
 
-.day-confirm-btn {
-  @apply text-primary hover:text-primary-light transition-colors shrink-0 ml-auto;
+/* ── One segment row (labels + grid, or labels-spacer + collapsed bar) ───── */
+.cal-segment-row {
+  display: flex;
+  align-items: stretch;
 }
 
-.day-label-text {
-  @apply text-primary font-bold text-base truncate;
+/* ── Hour-label column ────────────────────────────────────────────────────── */
+.cal-labels {
+  width: 48px;
+  flex-shrink: 0;
+  position: relative;
 }
 
-.day-actions {
-  @apply ml-auto flex items-center gap-2 shrink-0 relative;
+/* Spacer used in collapsed rows to keep grid aligned */
+.cal-labels-spacer {
+  width: 48px;
+  flex-shrink: 0;
 }
 
-.day-add-event-btn {
-  @apply flex items-center gap-1 text-xs font-semibold text-white bg-primary border border-primary rounded-lg px-2 py-1 hover:bg-primary-light transition-colors;
+.cal-label {
+  position: absolute;
+  right: 6px;
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: #9ca3af;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1;
 }
 
-.day-menu-wrapper {
-  @apply relative flex items-center;
+/* ── Calendar grid ────────────────────────────────────────────────────────── */
+.cal-grid {
+  flex: 1;
+  position: relative;
+  border-left: 1px solid #e5e7eb;
 }
 
-.day-gear-btn {
-  @apply inline-flex items-center justify-center rounded-lg text-gray-400 transition-all;
-  width: 36px;
-  height: 36px;
+.cal-grid--interactive {
+  cursor: crosshair;
 }
 
-.day-gear-btn:hover {
-  @apply text-primary bg-gray-100;
-}
-
-.day-gear-btn--open {
-  @apply text-primary bg-gray-100;
-  transform: rotate(60deg);
-}
-
-.day-menu {
-  @apply absolute z-30 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden flex flex-col;
+/* ── Hour lines ───────────────────────────────────────────────────────────── */
+.cal-hour-line {
+  position: absolute;
+  left: 0;
   right: 0;
-  top: calc(100% + 6px);
-  min-width: 160px;
-  transform-origin: top right;
-  animation: day-menu-pop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  height: 1px;
+  background: #e5e7eb;
+  pointer-events: none;
 }
 
-.day-menu-item {
-  @apply flex items-center gap-2.5 w-full px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors text-left;
+/* ── Collapsed gap bar ────────────────────────────────────────────────────── */
+.cal-collapsed-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 22px;
+  border: none;
+  border-left: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #9ca3af;
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  letter-spacing: 0.02em;
 }
 
-.day-menu-item:hover {
-  @apply bg-gray-50 text-primary;
+.cal-collapsed-bar:hover {
+  background: #f3f4f6;
+  color: var(--color-primary);
 }
 
-.day-menu-item--danger {
-  @apply text-gray-700;
+/* ── Event wrapper (absolutely positioned within the grid) ───────────────── */
+.cal-event-wrapper {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 2px 3px;
+  overflow: visible;
 }
 
-.day-menu-item--danger:hover {
-  @apply bg-red-50 text-red-600;
+/* ── Ghost event ──────────────────────────────────────────────────────────── */
+.ghost-event {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 2.5px dashed var(--color-primary);
+  border-radius: 8px;
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(45, 90, 39, 0.04);
+  pointer-events: none;
+  opacity: 0.75;
+  z-index: 10;
+  box-sizing: border-box;
 }
 
-@keyframes day-menu-pop {
-  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+.ghost-event--static {
+  opacity: 1;
+  animation: ghost-pulse 1.8s ease-in-out infinite;
 }
 
-@media (max-width: 640px) {
-  .day-gear-btn {
-    width: 40px;
-    height: 40px;
-  }
-
-  .day-menu {
-    min-width: 180px;
-  }
-
-  .day-menu-item {
-    @apply py-3;
-  }
+@keyframes ghost-pulse {
+  0%, 100% { opacity: 0.65; }
+  50%       { opacity: 1; }
 }
 
-.day-gear-btn {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s, background-color 0.15s;
-}
-
-.delete-popover {
-  @apply absolute right-0 top-7 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-52;
-}
-
-.delete-popover-text {
-  @apply text-xs text-gray-700 font-medium mb-3;
-}
-
-.delete-popover-actions {
-  @apply flex gap-2;
-}
-
-.delete-confirm-btn {
-  @apply flex-1 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors;
-}
-
-.delete-cancel-btn {
-  @apply flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-1.5 rounded-lg transition-colors;
-}
-
-.day-events {
-  @apply relative pl-4 flex flex-col gap-3;
-}
-
-.day-timeline {
-  @apply absolute left-0 top-2 bottom-2 w-0.5 rounded-full;
-  background: var(--color-secondary);
-}
-
-.day-no-events {
-  @apply text-gray-300 text-xs py-2;
-}
-
+/* ── Empty-state hint ─────────────────────────────────────────────────────── */
 .empty-trip-hint {
-  @apply flex flex-col items-center gap-1 pb-2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 8px;
 }
 
 .empty-trip-text {
-  @apply text-gray-400 text-sm font-medium;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .empty-trip-caret {
-  @apply text-2xl leading-none;
+  font-size: 1.5rem;
+  line-height: 1;
   color: rgba(45, 90, 39, 0.4);
   animation: caret-bob 1.2s ease-in-out infinite;
 }
 
 @keyframes caret-bob {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(5px); }
-}
-
-.add-day-btn {
-  @apply flex items-center justify-center gap-2 w-full py-3 rounded-2xl border-2 border-dashed text-primary text-sm font-medium transition-colors;
-  border-color: rgba(45, 90, 39, 0.3);
-}
-
-.add-day-btn:hover {
-  border-color: rgba(45, 90, 39, 0.6);
-  background-color: rgba(45, 90, 39, 0.05);
+  50%       { transform: translateY(5px); }
 }
