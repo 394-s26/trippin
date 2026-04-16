@@ -4,6 +4,7 @@
   --color-secondary: #98FB98;
   --color-tertiary: #8A9A5B;
   --color-neutral: #F8FAF8;
+  --color-brand: #178F96;
 
   --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
@@ -49,4 +50,18 @@ html, body, #root {
 
 .overlay-panel--sm {
   @apply w-full max-w-sm;
+}
+
+/* ── Brand identity ──────────────────────────────────────── */
+
+/* Reusable brand logo text — use this anywhere Trippin branding appears
+   (app header, login page, emails, marketing, etc.) */
+@utility brand-logo-text {
+  color: var(--color-primary);
+  font-family: var(--font-family-sans);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  border-radius: 8px;
+  padding: 2px 8px;
+
 }

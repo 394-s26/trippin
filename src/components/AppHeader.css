@@ -5,7 +5,15 @@
 }
 
 .app-header-logo {
-  @apply flex items-center gap-2;
+  @apply flex items-center gap-0 no-underline;
+}
+
+.app-header-logo-img {
+  @apply h-12 w-auto;
+}
+
+.app-header-logo-text {
+  @apply text-2xl brand-logo-text;
 }
 
 .app-header-profile-wrapper {

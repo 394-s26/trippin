@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useTrip from '../hooks/useTrip';
 import { PencilIcon, ChevronsUpDownIcon } from '../services/svgIcons';
 import { Event } from '../types/event';
-import { SplitMethod } from '../types/trip';
+import { SplitMethod, SplitConfig } from '../types/trip';
 import { AppUser } from '../types/auth';
+import { calculateUserShare, calculateBreakdown } from '../utilities/budget';
 import UserAvatar from './UserAvatar';
 import './BudgetModal.css';
 
@@ -22,6 +23,43 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
   const [inputValue, setInputValue] = useState(trip?.budget ?? 0);
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [editingConfig, setEditingConfig] = useState<Record<string, number>>({});
+
+  const budget = trip?.budget ?? 0;
+  const splitMethod: SplitMethod = trip?.splitMethod ?? 'even';
+  const splitConfig: SplitConfig | undefined = trip?.splitConfig;
+  const numUsers = tripUsers.length || 1;
+  const fmt = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  const fmtDecimal = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const yourShare = calculateUserShare(splitMethod, splitConfig, currentUserId, spent, numUsers, events);
+  const breakdown = calculateBreakdown(splitMethod, splitConfig, tripUsers, spent, events);
+
+  // Initialize editing config when opening modal or switching methods
+  useEffect(() => {
+    if (!isShareOpen) return;
+    initEditingConfig(splitMethod);
+  }, [isShareOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const initEditingConfig = (method: SplitMethod) => {
+    if (method === 'percentage') {
+      const existing = splitConfig ?? {};
+      const config: Record<string, number> = {};
+      tripUsers.forEach(u => {
+        config[u.uid] = existing[u.uid] ?? +(100 / numUsers).toFixed(2);
+      });
+      setEditingConfig(config);
+    } else if (method === 'shares') {
+      const existing = splitConfig ?? {};
+      const config: Record<string, number> = {};
+      tripUsers.forEach(u => {
+        config[u.uid] = existing[u.uid] ?? 1;
+      });
+      setEditingConfig(config);
+    } else {
+      setEditingConfig({});
+    }
+  };
 
   const handleBudgetOpen = () => {
     setInputValue(trip?.budget ?? 0);
@@ -35,66 +73,86 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
   };
 
   const handleSplitSelect = async (method: SplitMethod) => {
-    await updateSplitMethod(method);
+    if (!canEditSplitMethod) return;
+    initEditingConfig(method);
+    if (method === 'even' || method === 'byEvent') {
+      await updateSplitMethod(method);
+    }
+    // For percentage/shares, save happens via handleConfigSave
+    // But we still need to persist the method choice immediately
+    if (method === 'percentage' || method === 'shares') {
+      await updateSplitMethod(method);
+    }
   };
 
-  const budget = trip?.budget ?? 0;
-  const splitMethod: SplitMethod = trip?.splitMethod ?? 'even';
-  const numUsers = tripUsers.length || 1;
-  const overBudget = spent > budget;
-  const fmt = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-  const fmtDecimal = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const handleConfigSave = async () => {
+    await updateSplitMethod(splitMethod, editingConfig);
+  };
 
-  const yourShare = splitMethod === 'even'
-    ? budget / numUsers
-    : events.filter(e => e.paidBy === currentUserId).reduce((sum, e) => sum + (e.cost ?? 0), 0);
+  // Percentage validation
+  const pctTotal = Object.values(editingConfig).reduce((a, b) => a + b, 0);
+  const pctValid = Math.abs(pctTotal - 100) < 0.01;
 
-  // Breakdown for "split evenly" table: how much each person has paid vs. their fair share
-  const fairShare = spent / numUsers;
-  const breakdown = tripUsers.map(user => {
-    const paid = events.filter(e => e.paidBy === user.uid).reduce((sum, e) => sum + (e.cost ?? 0), 0);
-    const owed = Math.max(0, paid - fairShare);
-    return { user, paid, owed };
-  });
+  // Shares derived percentages
+  const totalShares = Object.values(editingConfig).reduce((a, b) => a + b, 0) || 1;
 
   return (
     <>
+      {/* ── Three Budget Cards ──────────────────────────────────── */}
       <div className="budget-cards-row">
+        {/* Card 1: TOTAL BUDGET */}
         {canEditBudget ? (
-          <button className={`budget-card ${overBudget ? 'budget-card--over' : 'budget-card--dark'}`} onClick={handleBudgetOpen}>
+          <button className="budget-card budget-card--dark" onClick={handleBudgetOpen}>
             <div className="budget-card-text">
               <span className="budget-card-label">TOTAL BUDGET</span>
-              <span className="budget-card-value">{fmt(spent)} <span className="budget-card-budget">({fmt(budget)})</span></span>
+              <span className="budget-card-value">{fmt(budget)}</span>
             </div>
             <ChevronsUpDownIcon size={22} />
           </button>
         ) : (
-          <div className={`budget-card ${overBudget ? 'budget-card--over' : 'budget-card--dark'}`}>
+          <div className="budget-card budget-card--dark">
             <div className="budget-card-text">
               <span className="budget-card-label">TOTAL BUDGET</span>
-              <span className="budget-card-value">{fmt(spent)} <span className="budget-card-budget">({fmt(budget)})</span></span>
+              <span className="budget-card-value">{fmt(budget)}</span>
             </div>
           </div>
         )}
 
-        {canEditSplitMethod ? (
-          <button className="budget-card budget-card--light" onClick={() => setIsShareOpen(true)}>
-            <div className="budget-card-text">
-              <span className="budget-card-label">YOUR SHARE</span>
-              <span className="budget-card-value">{fmt(yourShare)}</span>
+        {/* Card 2: SPENT — subtle tint that goes solid red when over budget */}
+        {(() => {
+          const ratio = budget > 0 ? spent / budget : 0;
+          const overBudget = ratio >= 1;
+          let style: React.CSSProperties | undefined;
+          if (budget > 0) {
+            if (overBudget) {
+              style = { background: '#f87171', color: 'white' };
+            } else {
+              // Subtle warm tint that deepens as spending grows
+              const alpha = ratio * 0.25; // max 25% opacity before hitting 100%
+              style = { background: `rgba(248,113,113,${alpha})` };
+            }
+          }
+          return (
+            <div className="budget-card budget-card--spent" style={style}>
+              <div className="budget-card-text">
+                <span className="budget-card-label">SPENT</span>
+                <span className="budget-card-value">{fmt(spent)}</span>
+              </div>
             </div>
-            <PencilIcon size={22} />
-          </button>
-        ) : (
-          <div className="budget-card budget-card--light">
-            <div className="budget-card-text">
-              <span className="budget-card-label">YOUR SHARE</span>
-              <span className="budget-card-value">{fmt(yourShare)}</span>
-            </div>
+          );
+        })()}
+
+        {/* Card 3: YOUR SHARE — tappable for all roles */}
+        <button className="budget-card budget-card--light" onClick={() => setIsShareOpen(true)}>
+          <div className="budget-card-text">
+            <span className="budget-card-label">YOUR SHARE</span>
+            <span className="budget-card-value">{fmt(yourShare)}</span>
           </div>
-        )}
+          {canEditSplitMethod && <PencilIcon size={22} />}
+        </button>
       </div>
 
+      {/* ── Budget Edit Modal ───────────────────────────────────── */}
       {isBudgetOpen && (
         <div className="overlay-bottom">
           <div className="overlay-scrim" onClick={() => setIsBudgetOpen(false)} />
@@ -127,51 +185,183 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
         </div>
       )}
 
+      {/* ── Split Method Modal ──────────────────────────────────── */}
       {isShareOpen && (
         <div className="overlay-center" onClick={() => setIsShareOpen(false)}>
           <div className="overlay-panel overlay-panel--sm rounded-2xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h2 className="budget-modal-title">Split Method</h2>
 
+            {/* Split option buttons */}
             <div className="split-options">
-              <button
-                className={`split-option-btn${splitMethod === 'even' ? ' split-option-btn--active' : ''}`}
-                onClick={() => handleSplitSelect('even')}
-              >
-                <span className="split-option-title">Split Evenly</span>
-                <span className="split-option-desc">Divide the total budget equally among all members</span>
-              </button>
-              <button
-                className={`split-option-btn${splitMethod === 'byEvent' ? ' split-option-btn--active' : ''}`}
-                onClick={() => handleSplitSelect('byEvent')}
-              >
-                <span className="split-option-title">Pay for What You Buy</span>
-                <span className="split-option-desc">Each person pays only for the events assigned to them</span>
-              </button>
+              {([
+                { key: 'even' as SplitMethod, title: 'Split Evenly', desc: 'Divide the total equally among all members' },
+                { key: 'byEvent' as SplitMethod, title: 'Pay for What You Buy', desc: 'Each person pays only for events assigned to them' },
+                { key: 'percentage' as SplitMethod, title: 'Split by Percentage', desc: 'Assign a custom percentage to each member' },
+                { key: 'shares' as SplitMethod, title: 'Split by Shares', desc: 'Use ratios like 2:1:1 for unequal splits' },
+              ]).map(opt => (
+                <button
+                  key={opt.key}
+                  className={`split-option-btn${splitMethod === opt.key ? ' split-option-btn--active' : ''}`}
+                  onClick={() => handleSplitSelect(opt.key)}
+                  disabled={!canEditSplitMethod}
+                >
+                  <span className="split-option-title">{opt.title}</span>
+                  <span className="split-option-desc">{opt.desc}</span>
+                </button>
+              ))}
             </div>
 
-            {splitMethod === 'even' && tripUsers.length > 0 && (
+            {/* Config editor — percentage (owner/manager only) */}
+            {canEditSplitMethod && splitMethod === 'percentage' && tripUsers.length > 0 && (
+              <div className="split-config">
+                <h3 className="split-config-title">Set Percentages</h3>
+                {tripUsers.map(user => (
+                  <div key={user.uid} className="split-config-row">
+                    <div className="split-config-user">
+                      <UserAvatar user={user} size="sm" />
+                      <span className="split-config-name">{user.firstName}</span>
+                    </div>
+                    <div className="split-config-input-wrap">
+                      <input
+                        type="number"
+                        className="split-config-input"
+                        value={editingConfig[user.uid] ?? 0}
+                        onChange={e => setEditingConfig(prev => ({ ...prev, [user.uid]: Number(e.target.value) }))}
+                        min={0}
+                        max={100}
+                        step={0.01}
+                      />
+                      <span className="split-config-suffix">%</span>
+                    </div>
+                  </div>
+                ))}
+                <div className={`split-config-total ${pctValid ? '' : 'split-config-total--invalid'}`}>
+                  Total: {pctTotal.toFixed(1)}%
+                  {!pctValid && <span className="split-config-warning"> (must equal 100%)</span>}
+                </div>
+                <button
+                  className="split-config-save"
+                  onClick={handleConfigSave}
+                  disabled={!pctValid}
+                >
+                  Save Percentages
+                </button>
+              </div>
+            )}
+
+            {/* Config editor — shares (owner/manager only) */}
+            {canEditSplitMethod && splitMethod === 'shares' && tripUsers.length > 0 && (
+              <div className="split-config">
+                <h3 className="split-config-title">Set Shares</h3>
+                {tripUsers.map(user => {
+                  const shares = editingConfig[user.uid] ?? 1;
+                  const pct = (shares / totalShares * 100).toFixed(1);
+                  return (
+                    <div key={user.uid} className="split-config-row">
+                      <div className="split-config-user">
+                        <UserAvatar user={user} size="sm" />
+                        <span className="split-config-name">{user.firstName}</span>
+                      </div>
+                      <div className="split-config-input-wrap">
+                        <input
+                          type="number"
+                          className="split-config-input"
+                          value={shares}
+                          onChange={e => setEditingConfig(prev => ({ ...prev, [user.uid]: Math.max(1, Number(e.target.value)) }))}
+                          min={1}
+                          step={1}
+                        />
+                        <span className="split-config-suffix">shares</span>
+                      </div>
+                      <span className="split-config-pct">{pct}%</span>
+                    </div>
+                  );
+                })}
+                <button
+                  className="split-config-save"
+                  onClick={handleConfigSave}
+                >
+                  Save Shares
+                </button>
+              </div>
+            )}
+
+            {/* Breakdown table — visible for all roles, all methods */}
+            {tripUsers.length > 0 && splitMethod !== 'byEvent' && (
               <div className="split-breakdown">
                 <h3 className="split-breakdown-title">Breakdown</h3>
-                <div className="split-breakdown-header">
+                <div className={`split-breakdown-header ${splitMethod === 'percentage' || splitMethod === 'shares' ? 'split-breakdown-header--4col' : ''}`}>
                   <span>Member</span>
                   <span>Paid</span>
-                  <span>Owed Back</span>
+                  {(splitMethod === 'percentage' || splitMethod === 'shares') && <span>Owes</span>}
+                  <span>{splitMethod === 'even' ? 'Owed Back' : 'Balance'}</span>
                 </div>
-                {breakdown.map(({ user, paid, owed }) => (
-                  <div key={user.uid} className="split-breakdown-row">
+                {breakdown.map(({ user, paid, owes, balance }) => (
+                  <div key={user.uid} className={`split-breakdown-row ${splitMethod === 'percentage' || splitMethod === 'shares' ? 'split-breakdown-row--4col' : ''}`}>
                     <div className="split-breakdown-user">
                       <UserAvatar user={user} size="sm" />
                       <span className="split-breakdown-name">{user.firstName}</span>
                     </div>
                     <span className="split-breakdown-paid">{fmtDecimal(paid)}</span>
-                    <span className={`split-breakdown-owed${owed > 0 ? ' split-breakdown-owed--positive' : ''}`}>
-                      {owed > 0 ? fmtDecimal(owed) : '$0'}
+                    {(splitMethod === 'percentage' || splitMethod === 'shares') && (
+                      <span className="split-breakdown-paid">{fmtDecimal(owes)}</span>
+                    )}
+                    <span className={`split-breakdown-owed${balance > 0.01 ? ' split-breakdown-owed--positive' : balance < -0.01 ? ' split-breakdown-owed--negative' : ''}`}>
+                      {splitMethod === 'even'
+                        ? (balance > 0.01 ? fmtDecimal(balance) : '$0')
+                        : (balance > 0.01
+                            ? `+${fmtDecimal(balance)}`
+                            : balance < -0.01
+                              ? fmtDecimal(balance)
+                              : '$0'
+                          )
+                      }
                     </span>
                   </div>
                 ))}
                 <div className="split-breakdown-footer">
-                  <span>Fair share per person</span>
-                  <span>{fmtDecimal(fairShare)}</span>
+                  {splitMethod === 'even' && (
+                    <>
+                      <span>Fair share per person</span>
+                      <span>{fmtDecimal(spent / numUsers)}</span>
+                    </>
+                  )}
+                  {splitMethod === 'percentage' && (
+                    <>
+                      <span>Total spent</span>
+                      <span>{fmtDecimal(spent)}</span>
+                    </>
+                  )}
+                  {splitMethod === 'shares' && (
+                    <>
+                      <span>Total spent</span>
+                      <span>{fmtDecimal(spent)}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* byEvent simple breakdown */}
+            {tripUsers.length > 0 && splitMethod === 'byEvent' && (
+              <div className="split-breakdown">
+                <h3 className="split-breakdown-title">Who Paid What</h3>
+                <div className="split-breakdown-header split-breakdown-header--2col">
+                  <span>Member</span>
+                  <span>Paid</span>
+                </div>
+                {breakdown.map(({ user, paid }) => (
+                  <div key={user.uid} className="split-breakdown-row split-breakdown-row--2col">
+                    <div className="split-breakdown-user">
+                      <UserAvatar user={user} size="sm" />
+                      <span className="split-breakdown-name">{user.firstName}</span>
+                    </div>
+                    <span className="split-breakdown-paid">{fmtDecimal(paid)}</span>
+                  </div>
+                ))}
+                <div className="split-breakdown-footer">
+                  <span>Total spent</span>
+                  <span>{fmtDecimal(spent)}</span>
                 </div>
               </div>
             )}

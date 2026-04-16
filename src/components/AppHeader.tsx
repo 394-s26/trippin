@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { UserIcon } from '../services/svgIcons';
-import TrippinLogo from './TrippinLogo';
+import trippinBird from '../images/trippinBird.png';
 import { useAuth } from '../contexts/AuthContext';
 import './AppHeader.css';
 
@@ -21,9 +22,10 @@ const AppHeader = () => {
 
   return (
     <header className="app-header">
-      <div className="app-header-logo">
-        <TrippinLogo size="md" />
-      </div>
+      <Link to="/" className="app-header-logo">
+        <img src={trippinBird} alt="" className="app-header-logo-img" />
+        <span className="app-header-logo-text">Trippin'</span>
+      </Link>
       <div className="app-header-profile-wrapper" ref={menuRef}>
         <button
           aria-label="User profile"

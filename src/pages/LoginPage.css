@@ -30,6 +30,18 @@
   @apply text-white/60 underline underline-offset-2 hover:text-white/90;
 }
 
+.login-logo-wrapper {
+  @apply flex items-center justify-center gap-0 mb-1;
+}
+
+.login-logo-bird {
+  @apply h-20 w-auto;
+}
+
+.login-logo-text {
+  @apply text-4xl brand-logo-text;
+}
+
 .login-tagline {
   @apply text-sm text-gray-500 text-center mt-1 mb-6;
 }
