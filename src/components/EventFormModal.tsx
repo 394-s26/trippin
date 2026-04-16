@@ -139,23 +139,23 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
         // 3. Setup the Web Component
         const el = new PlaceAutocompleteElement();
+
+        el.classList.add("form-input");
+
+        if (name) {
+          el.value = name;
+        }
         
         locationContainerRef.current.innerHTML = "";
         locationContainerRef.current.appendChild(el);
 
-        // if (name) {
-        //   el.value = name;
-        // }
-
-        // el.classList.add("form-input");
-
-        // // 2. Sync the value when the user types (Manual entry)
-        // el.addEventListener("input", (e: any) => {
-        //   const value = e.target.value;
-        //   setName(value);
-        //   // so it doesn't stay tied to a previous selection's address
-        //   setLocation(""); 
-        // });
+        // 2. Sync the value when the user types (Manual entry)
+        el.addEventListener("input", (e: any) => {
+          const value = e.target.value;
+          setName(value);
+          // so it doesn't stay tied to a previous selection's address
+          setLocation(""); 
+        });
 
         el.addEventListener("gmp-select", async (event: any) => {
           const placeId = event.placePrediction.placeId;
@@ -218,7 +218,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
     onSubmit({
       type,
       name,
-      location: location || undefined,
+      location: location,
       startDate: eventDate,
       endDate: eventEndDate,
       timezone,
