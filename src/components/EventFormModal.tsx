@@ -7,6 +7,7 @@ import { UserIcon } from '../services/svgIcons';
 import UserAvatar from './UserAvatar';
 import { toDate } from '../utilities/timestamps';
 import './EventFormModal.css';
+import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 
 export type EventFormMode = 'create' | 'edit' | 'readonly';
 
@@ -64,6 +65,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
   const [paidBy, setPaidBy] = useState<string>(currentUserId ?? '');
   const [paidByOpen, setPaidByOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const locationContainerRef = useRef<HTMLDivElement>(null);
 
   const filteredTypes = ALL_EVENT_TYPES.filter(t => EVENT_CATEGORY[t] === category);
 
@@ -115,6 +117,56 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [paidByOpen]);
+
+  useEffect(() => {
+  if (!isOpen) return;
+
+  let isMounted = true;
+
+  const init = async () => {
+    // 1. Set your global options (once)
+    setOptions({
+      key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+      v: "weekly",
+    });
+
+    try {
+      // 2. Use the functional importLibrary instead of the loader class
+      const { PlaceAutocompleteElement, Place } = 
+        (await importLibrary("places")) as google.maps.PlacesLibrary;
+
+      if (!isMounted || !locationContainerRef.current) return;
+
+      // 3. Setup the Web Component
+      const el = new PlaceAutocompleteElement();
+      
+      locationContainerRef.current.innerHTML = "";
+      locationContainerRef.current.appendChild(el);
+
+      el.addEventListener("gmp-select", async (event: any) => {
+        const placeId = event.placePrediction.placeId;
+        const fullPlace = new Place({ id: placeId });
+        
+        await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress"] });
+        
+        if (isMounted) {
+          setLocation(fullPlace.formattedAddress || fullPlace.displayName || "");
+        }
+      });
+    } catch (error) {
+      console.error("Error loading Google Maps:", error);
+    }
+  };
+
+  init();
+
+  return () => {
+    isMounted = false;
+    if (locationContainerRef.current) {
+      locationContainerRef.current.innerHTML = "";
+    }
+  };
+}, [isOpen]);
 
   const costNum = cost !== '' ? parseFloat(cost) : 0;
   const wouldExceedBudget = tripBudget != null && tripBudget > 0 && tripSpent != null && (tripSpent + costNum) > tripBudget;
@@ -252,7 +304,8 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
           {/* Name */}
           <div>
             <label htmlFor="event-name" className="form-label">Name</label>
-            <input
+            { <div ref={locationContainerRef} /> }
+            {/* <input
               id="event-name"
               type="text"
               value={name}
@@ -260,7 +313,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
               placeholder="e.g. Hike to Old Faithful"
               className="form-input"
               required
-            />
+            /> */}
           </div>
 
           {/* Location */}
