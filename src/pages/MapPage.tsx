@@ -13,11 +13,9 @@ import useMapLoadLimit from '../hooks/useMapLoadLimit';
 import { useAuth } from '../contexts/AuthContext';
 import { Event, EventCategory, EVENT_CATEGORY } from '../types/event';
 import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
-import { FilterIcon } from '../services/svgIcons';
 import './MapPage.css';
 
 const ALL_CATEGORIES: EventCategory[] = ['Transportation', 'Lodging', 'Activity', 'Attraction', 'Food & Drink'];
-const ALL_TYPES = Object.keys(EVENT_CATEGORY) as Event['type'][];
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN ?? '';
 
@@ -64,11 +62,10 @@ const MapPage = () => {
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
   const initializedRef = useRef(false);
 
-  const [filterOpen, setFilterOpen] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [selectedDayIds, setSelectedDayIds] = useState<Set<string>>(new Set());
   const [selectedCategories, setSelectedCategories] = useState<Set<EventCategory>>(new Set(ALL_CATEGORIES));
-  const [selectedTypes, setSelectedTypes] = useState<Set<Event['type']>>(new Set(ALL_TYPES));
-  const [nameQuery, setNameQuery] = useState('');
+const [nameQuery, setNameQuery] = useState('');
 
   useEffect(() => {
     if (days.length > 0 && selectedDayIds.size === 0) {
@@ -83,12 +80,11 @@ const MapPage = () => {
     const q = nameQuery.trim().toLowerCase();
     return mappableEvents.filter(e => {
       if (!selectedDayIds.has(e.dayId)) return false;
-      if (!selectedTypes.has(e.type)) return false;
       if (!selectedCategories.has(EVENT_CATEGORY[e.type])) return false;
       if (q && !e.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [mappableEvents, selectedDayIds, selectedCategories, selectedTypes, nameQuery]);
+  }, [mappableEvents, selectedDayIds, selectedCategories, nameQuery]);
 
   // Initialize the map exactly once per mount, and only if the user hasn't hit the limit.
   useEffect(() => {
@@ -120,7 +116,7 @@ const MapPage = () => {
       mapRef.current = null;
       initializedRef.current = false;
     };
-  }, [atLimit]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [atLimit, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync markers with the filtered event list.
   useEffect(() => {
@@ -162,7 +158,6 @@ const MapPage = () => {
   const clearFilters = () => {
     setSelectedDayIds(new Set(days.map(d => d.id)));
     setSelectedCategories(new Set(ALL_CATEGORIES));
-    setSelectedTypes(new Set(ALL_TYPES));
     setNameQuery('');
   };
 
@@ -251,15 +246,19 @@ const MapPage = () => {
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
                 />
 
-                <button
-                  type="button"
-                  className="map-filter-toggle"
-                  onClick={() => setFilterOpen(o => !o)}
-                  aria-label="Toggle filters"
-                >
-                  <FilterIcon size={18} />
-                  <span>Filters</span>
-                </button>
+                <MapFilterPanel
+                  isOpen={filterOpen}
+                  onToggle={() => setFilterOpen(o => !o)}
+                  days={days}
+                  selectedDayIds={selectedDayIds}
+                  selectedCategories={selectedCategories}
+                  nameQuery={nameQuery}
+                  onChangeDays={setSelectedDayIds}
+                  onChangeCategories={setSelectedCategories}
+                  onChangeNameQuery={setNameQuery}
+                  onClose={() => setFilterOpen(false)}
+                  onClearAll={clearFilters}
+                />
 
                 <div className="map-load-meter" aria-live="polite">
                   {remaining} map views left
@@ -282,21 +281,6 @@ const MapPage = () => {
                 )}
               </div>
 
-              {filterOpen && (
-                <MapFilterPanel
-                  days={days}
-                  selectedDayIds={selectedDayIds}
-                  selectedCategories={selectedCategories}
-                  selectedTypes={selectedTypes}
-                  nameQuery={nameQuery}
-                  onChangeDays={setSelectedDayIds}
-                  onChangeCategories={setSelectedCategories}
-                  onChangeTypes={setSelectedTypes}
-                  onChangeNameQuery={setNameQuery}
-                  onClose={() => setFilterOpen(false)}
-                  onClearAll={clearFilters}
-                />
-              )}
             </div>
           )}
         </main>
