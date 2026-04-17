@@ -1,0 +1,69 @@
+@reference "../index.css";
+
+/* Centered modal overlay — sits above the bottom-sheet event modal so the
+   timezone picker stacks cleanly on both mobile and desktop. */
+.tz-modal-overlay {
+  @apply fixed inset-0 z-[60] flex items-center justify-center p-4;
+}
+
+.tz-modal-scrim {
+  @apply absolute inset-0 bg-black/55;
+  animation: tz-scrim-fade 120ms ease-out;
+}
+
+.tz-modal-panel {
+  @apply relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 sm:p-6 flex flex-col gap-4 max-h-[92vh] overflow-y-auto;
+  animation: tz-panel-pop 140ms ease-out;
+}
+
+@keyframes tz-scrim-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes tz-panel-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.tz-modal-title {
+  @apply text-lg font-semibold text-gray-900;
+}
+
+.tz-modal-checkbox {
+  @apply flex items-center gap-3 text-sm text-gray-700 cursor-pointer select-none;
+}
+
+.tz-modal-checkbox input {
+  @apply w-4 h-4 accent-primary cursor-pointer;
+}
+
+.tz-modal-pickers {
+  @apply relative flex flex-col gap-3;
+}
+
+/* The swap arrow sits between the two pickers. On mobile it sits inline
+   between them; on desktop it floats to the right edge to mirror Google. */
+.tz-modal-swap {
+  @apply self-end -my-1 w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors;
+}
+
+.tz-modal-actions {
+  @apply flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-1;
+}
+
+.tz-modal-actions-right {
+  @apply flex items-center justify-end gap-2;
+}
+
+.tz-modal-link {
+  @apply text-sm font-medium text-primary hover:underline self-start sm:self-center;
+}
+
+.tz-modal-cancel {
+  @apply text-sm font-medium text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors;
+}
+
+.tz-modal-ok {
+  @apply text-sm font-semibold text-white bg-primary px-5 py-2 rounded-full transition-opacity hover:opacity-90;
+}

@@ -1,0 +1,57 @@
+@reference "../index.css";
+
+.tz-picker {
+  @apply relative flex flex-col gap-1;
+}
+
+.tz-picker-label {
+  @apply text-xs font-semibold text-gray-500;
+}
+
+.tz-picker-input-wrap {
+  @apply relative;
+}
+
+.tz-picker-input {
+  @apply w-full bg-gray-50 border border-gray-200 rounded-xl pl-3 pr-9 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-colors;
+}
+
+.tz-picker-input:disabled {
+  @apply opacity-50 cursor-not-allowed bg-gray-100 text-gray-500;
+}
+
+.tz-picker-clear {
+  @apply absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-200 transition-colors text-base leading-none;
+}
+
+.tz-picker-options {
+  @apply absolute left-0 right-0 top-[calc(100%+4px)] z-40 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden max-h-72 overflow-y-auto py-1;
+}
+
+.tz-picker-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tz-picker-options::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+
+.tz-picker-option {
+  @apply flex flex-col items-start w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors;
+}
+
+.tz-picker-option--selected {
+  @apply bg-green-50;
+}
+
+.tz-picker-option-title {
+  @apply text-sm font-medium text-gray-800;
+}
+
+.tz-picker-option-subtitle {
+  @apply text-xs text-gray-500;
+}
+
+.tz-picker-empty {
+  @apply px-4 py-3 text-sm text-gray-400 text-center;
+}

@@ -334,12 +334,34 @@
   @apply text-gray-400 mt-2 shrink-0;
 }
 
+/* On mobile, the When row stacks as two [date][time] pairs; on desktop it
+   collapses to a single chip row with a dash separator between start and
+   end. The end pair flips visual order on desktop so the end-date sits on
+   the far right (matching Google Calendar). */
 .when-chips {
-  @apply flex flex-wrap items-center gap-2 min-w-0;
+  @apply flex flex-col items-stretch gap-2 min-w-0 md:flex-row md:flex-wrap md:items-center;
+}
+
+.when-pair {
+  @apply flex items-center gap-2 min-w-0;
+}
+
+.when-pair-end {
+  @apply md:flex-row-reverse;
 }
 
 .when-dash {
-  @apply text-gray-400 text-sm font-medium;
+  @apply hidden md:inline text-gray-400 text-sm font-medium;
+}
+
+/* Wrapper that fades the time chip when All-day is active. Chip stays in
+   layout (preserving the row geometry) but is dimmed and click-blocked. */
+.when-time-fade {
+  @apply inline-flex transition-opacity duration-150;
+}
+
+.when-time-fade--off {
+  @apply opacity-40 pointer-events-none;
 }
 
 .date-chip-wrap {
@@ -390,10 +412,6 @@
   @apply text-sm text-primary font-medium hover:underline;
 }
 
-.when-tz-select {
-  @apply ml-8;
-  width: calc(100% - 2rem);
-}
 
 /* ── Color label swatches ─────────────────────────────────── */
 

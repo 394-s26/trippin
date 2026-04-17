@@ -61,3 +61,23 @@
   @apply left-0 right-auto;
   min-width: 8.5rem;
 }
+
+/* ── Invalid-time feedback ───────────────────────────────── */
+
+.time-select-input--invalid {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+  outline: 2px solid #ef4444;
+}
+
+.time-select-invalid-tooltip {
+  @apply absolute left-1/2 -translate-x-1/2 -top-7 z-30 bg-gray-800 text-white text-xs font-medium px-2 py-1 rounded-md shadow whitespace-nowrap pointer-events-none;
+  animation: invalid-tooltip-fade 120ms ease-out;
+}
+
+/* Fade only — no translate — so the tooltip appears centered above the chip
+   immediately without sliding into place. */
+@keyframes invalid-tooltip-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

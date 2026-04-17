@@ -41,7 +41,15 @@ export const formatTime12h = (hhmm: string): string => {
   return `${h12}:${pad2(m)}${ampm}`;
 };
 
-export const parseTime = (raw: string): string | null => {
+// Returns the AM/PM half of an HH:MM string (24h), used to seed the meridiem
+// hint when the user re-types a time without typing am/pm again.
+export const meridiemOf = (hhmm: string): 'am' | 'pm' | null => {
+  const total = toMinutes(hhmm);
+  if (total == null) return null;
+  return Math.floor(total / 60) >= 12 ? 'pm' : 'am';
+};
+
+export const parseTime = (raw: string, meridiemHint?: 'am' | 'pm'): string | null => {
   const s = raw.trim().toLowerCase().replace(/\s+/g, '');
   if (!s) return null;
 
@@ -74,6 +82,12 @@ export const parseTime = (raw: string): string | null => {
   if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
   if (m < 0 || m > 59) return null;
 
+  // Auto-fill the meridiem from the hint when the user typed a 12-hour value
+  // with no AM/PM (e.g. just "5:00" while the previous value was AM).
+  if (!ampm && meridiemHint && h >= 1 && h <= 12) {
+    ampm = meridiemHint;
+  }
+
   if (ampm) {
     if (h < 1 || h > 12) return null;
     if (ampm === 'pm' && h !== 12) h += 12;
@@ -99,8 +113,19 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel, v
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(formatTime12h(value));
   const [focused, setFocused] = useState(false);
+  const [invalid, setInvalid] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Re-evaluate validity for the in-progress text. Empty input is treated as
+  // valid (it just reverts on blur). Otherwise the parser is the source of
+  // truth — same one used at commit time.
+  const evaluateInvalid = (raw: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed) { setInvalid(false); return; }
+    const parsed = parseTime(trimmed, meridiemOf(value) ?? undefined);
+    setInvalid(parsed == null);
+  };
 
   useEffect(() => {
     if (!focused) setText(formatTime12h(value));
@@ -126,12 +151,21 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel, v
   }, [open]);
 
   const commit = (raw: string) => {
-    const parsed = parseTime(raw);
+    const trimmed = raw.trim();
+    const previousFormatted = formatTime12h(value);
+    setInvalid(false);
+    if (!trimmed || trimmed === previousFormatted) {
+      setText(previousFormatted);
+      return;
+    }
+    const parsed = parseTime(trimmed, meridiemOf(value) ?? undefined);
     if (parsed != null) {
       onChange(parsed);
       setText(formatTime12h(parsed));
     } else {
-      setText(formatTime12h(value));
+      // Live validation already showed the tooltip while typing — just revert
+      // quietly to the previous valid time on blur.
+      setText(previousFormatted);
     }
   };
 
@@ -143,13 +177,17 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel, v
   const selectedMinutes = toMinutes(value);
 
   const isChip = variant === 'chip';
+  const baseClass = isChip ? 'time-select-chip-input' : 'time-select-input form-input';
 
   return (
     <div className={`time-select${isChip ? ' time-select--chip' : ''}`} ref={wrapRef}>
+      {invalid && (
+        <span className="time-select-invalid-tooltip" role="alert">Invalid time</span>
+      )}
       <input
         id={id}
         type="text"
-        className={isChip ? 'time-select-chip-input' : 'time-select-input form-input'}
+        className={`${baseClass}${invalid ? ' time-select-input--invalid' : ''}`}
         value={text}
         disabled={disabled}
         aria-label={ariaLabel}
@@ -164,7 +202,11 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel, v
           setFocused(false);
           commit(text);
         }}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          const next = e.target.value;
+          setText(next);
+          evaluateInvalid(next);
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
@@ -173,6 +215,7 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel, v
             (e.target as HTMLInputElement).blur();
           } else if (e.key === 'Escape') {
             setText(formatTime12h(value));
+            setInvalid(false);
             setOpen(false);
             (e.target as HTMLInputElement).blur();
           } else if (e.key === 'ArrowDown' && !open) {

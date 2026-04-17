@@ -62,7 +62,8 @@ export const sliceEventForDay = (event: Event, day: DayLike): EventDaySlice | nu
   // already spans the full day.
   const startsBeforeToday = !sameCalendarDay(start, day.date);
   const endsAfterToday = !sameCalendarDay(end, day.date);
-  const isAllDay = startsBeforeToday && endsAfterToday;
+  // Explicit allDay flag overrides — every overlapping day shows "All day".
+  const isAllDay = event.allDay === true || (startsBeforeToday && endsAfterToday);
 
   return { sliceStart, sliceEnd, dayIndex, totalDays, isAllDay };
 };
