@@ -19,6 +19,7 @@ import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
 import { useEventLock } from '../hooks/useEventLock';
 import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock } from '../services/firestoreEventsService';
+import { eventOverlapsDay } from '../utilities/eventOverlapsDay';
 import { useAuth } from '../contexts/AuthContext';
 import { useLastViewedTrip } from '../contexts/LastViewedTripContext';
 import './Home.css';
@@ -75,11 +76,14 @@ const TripPage = () => {
     navigate('/');
   };
 
-  // Merge Firestore events into their matching days by dayId.
+  // Merge Firestore events into every day they overlap. A multi-day event
+  // appears as a separate chunk under each day's label.
   const daysWithEvents: Day[] = days.map(day => ({
     ...day,
-    events: events.filter(e => e.dayId === day.id),
+    events: events.filter(e => eventOverlapsDay(e, day)),
   }));
+
+  const tripDayRefs = days.map(d => ({ id: d.id, date: d.date }));
 
   useEffect(() => {
     if (trip && !initialized) {
@@ -138,10 +142,9 @@ const TripPage = () => {
     setLastViewedTrip({ tripId: id!, tripName: tripName, bannerImageUrl: url });
   };
 
-  const handleNewEvent = async (event: Omit<Event, 'id' | 'tripId' | 'dayId'>) => {
-    const dayId = activeDay?.id;
-    if (!dayId || !appUser) return;
-    await createEvent(appUser.uid, { ...event, tripId: id!, dayId });
+  const handleNewEvent = async (event: Omit<Event, 'id' | 'tripId'>) => {
+    if (!event.dayId || !appUser) return;
+    await createEvent(appUser.uid, { ...event, tripId: id! });
   };
 
   const handleRequestDeleteSelected = () => {
@@ -173,10 +176,17 @@ const TripPage = () => {
     }
   };
 
-  const handleUpdateEvent = async (updated: Omit<Event, 'id' | 'tripId' | 'dayId'>) => {
+  const handleUpdateEvent = async (updated: Omit<Event, 'id' | 'tripId'>) => {
     if (!appUser || !editingEvent || editingEvent.lock !== 'acquired') return;
     const { event } = editingEvent;
-    await updateEvent(appUser.uid, event.tripId, event.dayId, event.id, updated);
+    if (updated.dayId && updated.dayId !== event.dayId) {
+      // Anchor day moved — Firestore stores events under the day's subcollection,
+      // so re-create at the new path and delete the old doc.
+      await createEvent(appUser.uid, { ...updated, tripId: event.tripId });
+      await deleteEvent(appUser.uid, event.tripId, event.dayId, event.id);
+    } else {
+      await updateEvent(appUser.uid, event.tripId, event.dayId, event.id, updated);
+    }
     await releaseEventLock(id!, event.id, appUser.uid);
     setEditingEvent(null);
     await deselectAll();
@@ -340,7 +350,8 @@ const TripPage = () => {
           isOpen={activeDay !== null}
           onClose={() => setActiveDay(null)}
           onSubmit={handleNewEvent}
-          dayDate={activeDay?.date}
+          tripDays={tripDayRefs}
+          initialDayId={activeDay?.id}
           tripUsers={tripUsers}
           currentUserId={appUser?.uid}
           tripBudget={trip.budget}
@@ -351,11 +362,8 @@ const TripPage = () => {
           isOpen={editingEvent !== null}
           onClose={handleCloseEdit}
           onSubmit={handleUpdateEvent}
-          dayDate={
-            editingEvent
-              ? days.find(d => d.id === editingEvent.event.dayId)?.date
-              : undefined
-          }
+          tripDays={tripDayRefs}
+          initialDayId={editingEvent?.event.dayId}
           tripUsers={tripUsers}
           currentUserId={appUser?.uid}
           tripBudget={trip.budget}

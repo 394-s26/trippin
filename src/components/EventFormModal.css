@@ -140,6 +140,37 @@
   @apply absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none whitespace-nowrap;
 }
 
+/* ── All-day toggle ───────────────────────────────────────── */
+
+.all-day-row {
+  @apply flex items-center justify-between;
+}
+
+.all-day-label {
+  @apply text-sm font-medium text-gray-700;
+}
+
+.all-day-toggle {
+  @apply relative inline-flex items-center w-11 h-6 rounded-full bg-gray-200 transition-colors;
+}
+
+.all-day-toggle--on {
+  @apply bg-primary;
+}
+
+.all-day-toggle:disabled {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+.all-day-toggle-thumb {
+  @apply inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform;
+  transform: translateX(2px);
+}
+
+.all-day-toggle--on .all-day-toggle-thumb {
+  transform: translateX(22px);
+}
+
 /* ── Start / End time row ─────────────────────────────────── */
 
 .time-row {
@@ -287,4 +318,126 @@
 
 .event-modal-submit-btn {
   @apply w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm mt-1;
+}
+
+/* ── When block (chip-based date / time row) ──────────────── */
+
+.when-block {
+  @apply flex flex-col gap-2;
+}
+
+.when-row {
+  @apply flex items-start gap-3;
+}
+
+.when-icon {
+  @apply text-gray-400 mt-2 shrink-0;
+}
+
+/* On mobile, the When row stacks as two [date][time] pairs; on desktop it
+   collapses to a single chip row with a dash separator between start and
+   end. The end pair flips visual order on desktop so the end-date sits on
+   the far right (matching Google Calendar). */
+.when-chips {
+  @apply flex flex-col items-stretch gap-2 min-w-0 md:flex-row md:flex-wrap md:items-center;
+}
+
+.when-pair {
+  @apply flex items-center gap-2 min-w-0;
+}
+
+.when-pair-end {
+  @apply md:flex-row-reverse;
+}
+
+.when-dash {
+  @apply hidden md:inline text-gray-400 text-sm font-medium;
+}
+
+/* Wrapper that fades the time chip when All-day is active. Chip stays in
+   layout (preserving the row geometry) but is dimmed and click-blocked. */
+.when-time-fade {
+  @apply inline-flex transition-opacity duration-150;
+}
+
+.when-time-fade--off {
+  @apply opacity-40 pointer-events-none;
+}
+
+.date-chip-wrap {
+  @apply relative;
+}
+
+.date-chip {
+  @apply bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-2 text-sm text-gray-800 whitespace-nowrap transition-colors;
+}
+
+.date-chip:disabled {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+.date-chip-options {
+  @apply absolute left-0 top-[calc(100%+6px)] z-20 bg-white border border-gray-100 rounded-2xl shadow-lg py-1.5 min-w-[220px] max-h-60 overflow-y-auto;
+}
+
+.date-chip-option {
+  @apply flex flex-col items-start w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors;
+}
+
+.date-chip-option--selected {
+  @apply bg-green-50;
+}
+
+.date-chip-option-num {
+  @apply text-xs font-semibold text-primary uppercase tracking-wide;
+}
+
+.date-chip-option-date {
+  @apply text-sm text-gray-700;
+}
+
+.when-meta-row {
+  @apply flex items-center gap-5 ml-8;
+}
+
+.when-allday {
+  @apply flex items-center gap-2 text-sm text-gray-700 cursor-pointer;
+}
+
+.when-allday input {
+  @apply w-4 h-4 accent-primary cursor-pointer;
+}
+
+.when-tz-link {
+  @apply text-sm text-primary font-medium hover:underline;
+}
+
+
+/* ── Color label swatches ─────────────────────────────────── */
+
+.color-swatch-row {
+  @apply flex flex-wrap gap-2;
+}
+
+.color-swatch {
+  @apply w-7 h-7 rounded-full flex items-center justify-center transition-transform;
+  border: 2px solid transparent;
+}
+
+.color-swatch:hover {
+  transform: scale(1.08);
+}
+
+.color-swatch--none {
+  @apply bg-gray-100 text-gray-500;
+}
+
+.color-swatch--selected {
+  border-color: rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 2px white inset;
+}
+
+.color-swatch--none.color-swatch--selected {
+  border-color: var(--color-primary);
+  box-shadow: none;
 }
