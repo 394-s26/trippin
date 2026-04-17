@@ -5,6 +5,7 @@ import { AppUser } from '../types/auth';
 import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
 import { UserIcon } from '../services/svgIcons';
 import UserAvatar from './UserAvatar';
+import TimeSelect, { toMinutes } from './TimeSelect';
 import { toDate } from '../utilities/timestamps';
 import './EventFormModal.css';
 
@@ -28,6 +29,29 @@ const toTimeString = (d: Date): string => {
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
   return `${hh}:${mm}`;
+};
+
+// Default start = now + 10 min rounded up to the next 15-min slot (clamped so
+// a 1h event still fits the same day). Default end = start + 1h.
+const computeSmartDefaults = (): { start: string; end: string } => {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 10, 0, 0);
+  const rounded = new Date(now);
+  const remainder = rounded.getMinutes() % 15;
+  if (remainder !== 0) rounded.setMinutes(rounded.getMinutes() + (15 - remainder));
+  let startMins = rounded.getHours() * 60 + rounded.getMinutes();
+  if (startMins > 22 * 60 + 45) startMins = 22 * 60 + 45;
+  const endMins = startMins + 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const fmt = (m: number) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+  return { start: fmt(startMins), end: fmt(endMins) };
+};
+
+const isAllDayRange = (start: Date, end: Date | null): boolean => {
+  if (!end) return false;
+  if (start.getHours() !== 0 || start.getMinutes() !== 0) return false;
+  if (end.getHours() !== 23 || end.getMinutes() !== 59) return false;
+  return start.toDateString() === end.toDateString();
 };
 
 const toDateTimeLocal = (d: Date): string => {
@@ -63,6 +87,7 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
   const [cost, setCost] = useState('');
   const [paidBy, setPaidBy] = useState<string>(currentUserId ?? '');
   const [paidByOpen, setPaidByOpen] = useState(false);
+  const [allDay, setAllDay] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const filteredTypes = ALL_EVENT_TYPES.filter(t => EVENT_CATEGORY[t] === category);
@@ -81,6 +106,16 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
     }
   }, [isOpen, currentUserId, mode]);
 
+  // Seed smart default times on create-mode open (only when dayDate is present
+  // and the user hasn't already typed a value).
+  useEffect(() => {
+    if (!isOpen || mode !== 'create' || !dayDate) return;
+    const defaults = computeSmartDefaults();
+    setStartTime(prev => prev || defaults.start);
+    setEndTime(prev => prev || defaults.end);
+    setAllDay(false);
+  }, [isOpen, mode, dayDate]);
+
   // Pre-populate fields from initialEvent when the modal opens in edit or
   // readonly mode. Keyed on the event id so reopening with a different event
   // resets the form.
@@ -98,8 +133,16 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       ? toDate(initialEvent.endDate as Parameters<typeof toDate>[0])
       : null;
     if (dayDate) {
-      setStartTime(toTimeString(start));
-      setEndTime(end ? toTimeString(end) : '');
+      if (isAllDayRange(start, end)) {
+        setAllDay(true);
+        const defaults = computeSmartDefaults();
+        setStartTime(defaults.start);
+        setEndTime(defaults.end);
+      } else {
+        setAllDay(false);
+        setStartTime(toTimeString(start));
+        setEndTime(end ? toTimeString(end) : '');
+      }
     } else {
       setDateValue(toDateTimeLocal(start));
     }
@@ -127,14 +170,20 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
     if (dayDate) {
       eventDate = new Date(dayDate);
-      if (startTime) {
-        const [h, m] = startTime.split(':').map(Number);
-        eventDate.setHours(h, m, 0, 0);
-      }
-      if (endTime) {
+      if (allDay) {
+        eventDate.setHours(0, 0, 0, 0);
         eventEndDate = new Date(dayDate);
-        const [h, m] = endTime.split(':').map(Number);
-        eventEndDate.setHours(h, m, 0, 0);
+        eventEndDate.setHours(23, 59, 0, 0);
+      } else {
+        if (startTime) {
+          const [h, m] = startTime.split(':').map(Number);
+          eventDate.setHours(h, m, 0, 0);
+        }
+        if (endTime) {
+          eventEndDate = new Date(dayDate);
+          const [h, m] = endTime.split(':').map(Number);
+          eventEndDate.setHours(h, m, 0, 0);
+        }
       }
     } else {
       eventDate = dateValue ? new Date(dateValue) : new Date();
@@ -156,12 +205,14 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       setType('Hiking');
       setName('');
       setLocation('');
-      setStartTime('');
-      setEndTime('');
+      const defaults = computeSmartDefaults();
+      setStartTime(defaults.start);
+      setEndTime(defaults.end);
       setDateValue('');
       setTimezone('America/Chicago');
       setCost('');
       setPaidBy(currentUserId ?? '');
+      setAllDay(false);
     }
     setPaidByOpen(false);
     onClose();
@@ -278,28 +329,47 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
 
           {/* Start / End Time */}
           {dayDate ? (
-            <div className="time-row">
-              <div className="time-field">
-                <label htmlFor="event-start-time" className="form-label">Start Time</label>
-                <input
-                  id="event-start-time"
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="form-input"
-                />
+            <>
+              <div className="all-day-row">
+                <label htmlFor="event-all-day" className="all-day-label">All-day</label>
+                <button
+                  id="event-all-day"
+                  type="button"
+                  role="switch"
+                  aria-checked={allDay}
+                  disabled={readOnly}
+                  className={`all-day-toggle${allDay ? ' all-day-toggle--on' : ''}`}
+                  onClick={() => setAllDay(v => !v)}
+                >
+                  <span className="all-day-toggle-thumb" />
+                </button>
               </div>
-              <div className="time-field">
-                <label htmlFor="event-end-time" className="form-label">End Time</label>
-                <input
-                  id="event-end-time"
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="form-input"
-                />
-              </div>
-            </div>
+              {!allDay && (
+                <div className="time-row">
+                  <div className="time-field">
+                    <label htmlFor="event-start-time" className="form-label">Start Time</label>
+                    <TimeSelect
+                      id="event-start-time"
+                      value={startTime}
+                      onChange={setStartTime}
+                      disabled={readOnly}
+                      ariaLabel="Start time"
+                    />
+                  </div>
+                  <div className="time-field">
+                    <label htmlFor="event-end-time" className="form-label">End Time</label>
+                    <TimeSelect
+                      id="event-end-time"
+                      value={endTime}
+                      onChange={setEndTime}
+                      anchorMinutes={toMinutes(startTime) ?? undefined}
+                      disabled={readOnly}
+                      ariaLabel="End time"
+                    />
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div>
               <label htmlFor="event-date" className="form-label">Date & Time</label>
