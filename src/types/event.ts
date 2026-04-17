@@ -12,6 +12,7 @@ interface BaseEvent {
   location?: string;
   timezone?: string;
   paidBy?: string | null; // UID of the user responsible for paying; null = unassigned
+  color?: string | null; // Color label token from EVENT_COLORS; null = no color
 }
 
 // Transportation-specific event types
@@ -108,4 +109,5 @@ export interface EventUpdate {
   location?: string;
   timezone?: string;
   paidBy?: string | null;
+  color?: string | null;
 }

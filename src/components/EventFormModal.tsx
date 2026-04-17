@@ -4,6 +4,7 @@ import { Event, EVENT_CATEGORY, EventCategory } from '../types/event';
 import { AppUser } from '../types/auth';
 import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
 import { UserIcon } from '../services/svgIcons';
+import { EVENT_COLORS } from '../utilities/eventColors';
 import UserAvatar from './UserAvatar';
 import TimeSelect, { toMinutes } from './TimeSelect';
 import { toDate } from '../utilities/timestamps';
@@ -11,11 +12,17 @@ import './EventFormModal.css';
 
 export type EventFormMode = 'create' | 'edit' | 'readonly';
 
+export interface TripDayRef {
+  id: string;
+  date: Date;
+}
+
 interface EventFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (event: Omit<Event, 'id' | 'tripId' | 'dayId'>) => void;
-  dayDate?: Date;
+  onSubmit: (event: Omit<Event, 'id' | 'tripId'>) => void;
+  tripDays?: TripDayRef[];
+  initialDayId?: string;
   tripUsers?: AppUser[];
   currentUserId?: string;
   tripBudget?: number;
@@ -31,8 +38,6 @@ const toTimeString = (d: Date): string => {
   return `${hh}:${mm}`;
 };
 
-// Default start = now + 10 min rounded up to the next 15-min slot (clamped so
-// a 1h event still fits the same day). Default end = start + 1h.
 const computeSmartDefaults = (): { start: string; end: string } => {
   const now = new Date();
   now.setMinutes(now.getMinutes() + 10, 0, 0);
@@ -45,20 +50,6 @@ const computeSmartDefaults = (): { start: string; end: string } => {
   const pad = (n: number) => String(n).padStart(2, '0');
   const fmt = (m: number) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
   return { start: fmt(startMins), end: fmt(endMins) };
-};
-
-const isAllDayRange = (start: Date, end: Date | null): boolean => {
-  if (!end) return false;
-  if (start.getHours() !== 0 || start.getMinutes() !== 0) return false;
-  if (end.getHours() !== 23 || end.getMinutes() !== 59) return false;
-  return start.toDateString() === end.toDateString();
-};
-
-const toDateTimeLocal = (d: Date): string => {
-  const yyyy = d.getFullYear();
-  const mo = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mo}-${dd}T${toTimeString(d)}`;
 };
 
 const ALL_EVENT_TYPES = Object.keys(EVENT_CATEGORY) as Event['type'][];
@@ -74,23 +65,83 @@ const TIMEZONES = [
   'UTC',
 ];
 
-const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, currentUserId, tripBudget, tripSpent, mode = 'create', initialEvent, lockHolderName }: EventFormModalProps) => {
+const TZ_LABEL: Record<string, string> = {
+  'America/New_York':    '(GMT-05:00) Eastern Time — New York',
+  'America/Chicago':     '(GMT-06:00) Central Time — Chicago',
+  'America/Denver':      '(GMT-07:00) Mountain Time — Denver',
+  'America/Los_Angeles': '(GMT-08:00) Pacific Time — Los Angeles',
+  'America/Anchorage':   '(GMT-09:00) Alaska Time — Anchorage',
+  'Pacific/Honolulu':    '(GMT-10:00) Hawaii Time — Honolulu',
+  'UTC':                 '(GMT+00:00) UTC',
+};
+
+const formatChipDate = (d: Date): string =>
+  d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+const formatPopoverDate = (d: Date): string =>
+  d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+// Combines a calendar date and HH:MM time into a single Date.
+const combineDateAndTime = (date: Date, hhmm: string): Date => {
+  const out = new Date(date);
+  if (hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    out.setHours(h, m, 0, 0);
+  } else {
+    out.setHours(0, 0, 0, 0);
+  }
+  return out;
+};
+
+// Adds a positive minute offset to an HH:MM time, capping at 23:45 for the
+// chip picker (matching its 15-min step ceiling). Returns HH:MM.
+const shiftTime = (hhmm: string, deltaMins: number): string => {
+  const start = toMinutes(hhmm);
+  if (start == null) return hhmm;
+  const total = Math.max(0, Math.min(23 * 60 + 45, start + deltaMins));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
+};
+
+const EventFormModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  tripDays = [],
+  initialDayId,
+  tripUsers,
+  currentUserId,
+  tripBudget,
+  tripSpent,
+  mode = 'create',
+  initialEvent,
+  lockHolderName,
+}: EventFormModalProps) => {
   const readOnly = mode === 'readonly';
   const [category, setCategory] = useState<EventCategory>('Activity');
   const [type, setType] = useState<Event['type']>('Hiking');
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
+  const [startDayId, setStartDayId] = useState<string>('');
+  const [endDayId, setEndDayId] = useState<string>('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [dateValue, setDateValue] = useState('');
+  const [allDay, setAllDay] = useState(false);
   const [timezone, setTimezone] = useState('America/Chicago');
+  const [tzExpanded, setTzExpanded] = useState(false);
+  const [color, setColor] = useState<string | null>(null);
   const [cost, setCost] = useState('');
   const [paidBy, setPaidBy] = useState<string>(currentUserId ?? '');
   const [paidByOpen, setPaidByOpen] = useState(false);
-  const [allDay, setAllDay] = useState(false);
+  const [startDayOpen, setStartDayOpen] = useState(false);
+  const [endDayOpen, setEndDayOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const startDayRef = useRef<HTMLDivElement>(null);
+  const endDayRef = useRef<HTMLDivElement>(null);
 
   const filteredTypes = ALL_EVENT_TYPES.filter(t => EVENT_CATEGORY[t] === category);
+  const startDay = tripDays.find(d => d.id === startDayId);
+  const endDay = tripDays.find(d => d.id === endDayId);
 
   const handleCategoryChange = (cat: EventCategory) => {
     setCategory(cat);
@@ -106,19 +157,21 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
     }
   }, [isOpen, currentUserId, mode]);
 
-  // Seed smart default times on create-mode open (only when dayDate is present
-  // and the user hasn't already typed a value).
+  // Seed defaults when opening in create mode.
   useEffect(() => {
-    if (!isOpen || mode !== 'create' || !dayDate) return;
+    if (!isOpen || mode !== 'create' || tripDays.length === 0) return;
+    const initialId = initialDayId ?? tripDays[0].id;
     const defaults = computeSmartDefaults();
+    setStartDayId(prev => prev || initialId);
+    setEndDayId(prev => prev || initialId);
     setStartTime(prev => prev || defaults.start);
     setEndTime(prev => prev || defaults.end);
     setAllDay(false);
-  }, [isOpen, mode, dayDate]);
+    setColor(null);
+    setTzExpanded(false);
+  }, [isOpen, mode, initialDayId, tripDays.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Pre-populate fields from initialEvent when the modal opens in edit or
-  // readonly mode. Keyed on the event id so reopening with a different event
-  // resets the form.
+  // Pre-populate from initialEvent in edit/readonly modes.
   useEffect(() => {
     if (!isOpen || !initialEvent) return;
     setCategory(EVENT_CATEGORY[initialEvent.type]);
@@ -128,76 +181,142 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
     setTimezone(initialEvent.timezone ?? 'America/Chicago');
     setCost(initialEvent.cost != null ? String(initialEvent.cost) : '');
     setPaidBy(initialEvent.paidBy ?? '');
+    setColor(initialEvent.color ?? null);
+    setTzExpanded(false);
+
     const start = toDate(initialEvent.startDate as Parameters<typeof toDate>[0]);
     const end = initialEvent.endDate
       ? toDate(initialEvent.endDate as Parameters<typeof toDate>[0])
-      : null;
-    if (dayDate) {
-      if (isAllDayRange(start, end)) {
-        setAllDay(true);
-        const defaults = computeSmartDefaults();
-        setStartTime(defaults.start);
-        setEndTime(defaults.end);
-      } else {
-        setAllDay(false);
-        setStartTime(toTimeString(start));
-        setEndTime(end ? toTimeString(end) : '');
-      }
+      : start;
+
+    // Match start/end day to nearest trip day by calendar date.
+    const dayMatch = (d: Date) =>
+      tripDays.find(td => td.date.toDateString() === d.toDateString())?.id
+      ?? initialEvent.dayId;
+    const sId = dayMatch(start);
+    const eId = dayMatch(end);
+    setStartDayId(sId);
+    setEndDayId(eId);
+
+    // Detect all-day: start at 00:00 of startDay AND end at ~23:59 of endDay.
+    const isAllDay =
+      start.getHours() === 0 && start.getMinutes() === 0 &&
+      end.getHours() === 23 && end.getMinutes() >= 59;
+
+    if (isAllDay) {
+      setAllDay(true);
+      const defaults = computeSmartDefaults();
+      setStartTime(defaults.start);
+      setEndTime(defaults.end);
     } else {
-      setDateValue(toDateTimeLocal(start));
+      setAllDay(false);
+      setStartTime(toTimeString(start));
+      setEndTime(toTimeString(end));
     }
   }, [isOpen, initialEvent?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!paidByOpen) return;
+    if (!paidByOpen && !startDayOpen && !endDayOpen) return;
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (paidByOpen && dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setPaidByOpen(false);
+      }
+      if (startDayOpen && startDayRef.current && !startDayRef.current.contains(e.target as Node)) {
+        setStartDayOpen(false);
+      }
+      if (endDayOpen && endDayRef.current && !endDayRef.current.contains(e.target as Node)) {
+        setEndDayOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [paidByOpen]);
+  }, [paidByOpen, startDayOpen, endDayOpen]);
 
   const costNum = cost !== '' ? parseFloat(cost) : 0;
   const wouldExceedBudget = tripBudget != null && tripBudget > 0 && tripSpent != null && (tripSpent + costNum) > tripBudget;
 
+  // Slide end forward by the same delta when the user changes start time —
+  // preserving duration (Google Calendar behavior).
+  const handleStartTimeChange = (next: string) => {
+    const prev = toMinutes(startTime);
+    const nextMins = toMinutes(next);
+    setStartTime(next);
+    if (prev == null || nextMins == null) return;
+    const delta = nextMins - prev;
+    if (delta === 0) return;
+    setEndTime(curr => shiftTime(curr || next, delta));
+  };
+
+  // Editing end time updates duration without moving start. If the user pulls
+  // end before start (same day), snap end forward to start + 15 min.
+  const handleEndTimeChange = (next: string) => {
+    const startMins = toMinutes(startTime);
+    const nextMins = toMinutes(next);
+    if (startMins == null || nextMins == null) {
+      setEndTime(next);
+      return;
+    }
+    if (startDayId === endDayId && nextMins <= startMins) {
+      setEndTime(shiftTime(startTime, 15));
+      return;
+    }
+    setEndTime(next);
+  };
+
+  const handleStartDayChange = (newId: string) => {
+    setStartDayId(newId);
+    setStartDayOpen(false);
+    // Keep end ≥ start by index in the trip-days list.
+    const startIdx = tripDays.findIndex(d => d.id === newId);
+    const endIdx = tripDays.findIndex(d => d.id === endDayId);
+    if (startIdx >= 0 && endIdx >= 0 && endIdx < startIdx) {
+      setEndDayId(newId);
+    }
+  };
+
+  const handleEndDayChange = (newId: string) => {
+    setEndDayId(newId);
+    setEndDayOpen(false);
+    const startIdx = tripDays.findIndex(d => d.id === startDayId);
+    const endIdx = tripDays.findIndex(d => d.id === newId);
+    if (startIdx >= 0 && endIdx >= 0 && endIdx < startIdx) {
+      setStartDayId(newId);
+    }
+  };
+
   const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
+    if (tripDays.length === 0) return;
+    const sDay = tripDays.find(d => d.id === startDayId) ?? tripDays[0];
+    const eDay = tripDays.find(d => d.id === endDayId) ?? sDay;
 
-    let eventDate: Date;
-    let eventEndDate: Date | null = null;
-
-    if (dayDate) {
-      eventDate = new Date(dayDate);
-      if (allDay) {
-        eventDate.setHours(0, 0, 0, 0);
-        eventEndDate = new Date(dayDate);
-        eventEndDate.setHours(23, 59, 0, 0);
-      } else {
-        if (startTime) {
-          const [h, m] = startTime.split(':').map(Number);
-          eventDate.setHours(h, m, 0, 0);
-        }
-        if (endTime) {
-          eventEndDate = new Date(dayDate);
-          const [h, m] = endTime.split(':').map(Number);
-          eventEndDate.setHours(h, m, 0, 0);
-        }
-      }
+    let eventStart: Date;
+    let eventEnd: Date;
+    if (allDay) {
+      eventStart = new Date(sDay.date);
+      eventStart.setHours(0, 0, 0, 0);
+      eventEnd = new Date(eDay.date);
+      eventEnd.setHours(23, 59, 0, 0);
     } else {
-      eventDate = dateValue ? new Date(dateValue) : new Date();
+      eventStart = combineDateAndTime(sDay.date, startTime);
+      eventEnd = combineDateAndTime(eDay.date, endTime);
+      if (eventEnd < eventStart) {
+        // Final guard: snap end to start + 15 min.
+        eventEnd = new Date(eventStart.getTime() + 15 * 60 * 1000);
+      }
     }
 
     onSubmit({
       type,
+      dayId: sDay.id,
       name,
       location: location || undefined,
-      startDate: eventDate,
-      endDate: eventEndDate,
+      startDate: eventStart,
+      endDate: eventEnd,
       timezone,
       cost: cost !== '' ? parseFloat(cost) : null,
       paidBy: paidBy || null,
+      color: color || null,
     });
 
     if (mode === 'create') {
@@ -208,13 +327,19 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       const defaults = computeSmartDefaults();
       setStartTime(defaults.start);
       setEndTime(defaults.end);
-      setDateValue('');
+      const initialId = initialDayId ?? tripDays[0].id;
+      setStartDayId(initialId);
+      setEndDayId(initialId);
       setTimezone('America/Chicago');
+      setTzExpanded(false);
       setCost('');
       setPaidBy(currentUserId ?? '');
       setAllDay(false);
+      setColor(null);
     }
     setPaidByOpen(false);
+    setStartDayOpen(false);
+    setEndDayOpen(false);
     onClose();
   };
 
@@ -310,7 +435,6 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Hike to Old Faithful"
               className="form-input"
-              required
             />
           </div>
 
@@ -327,75 +451,170 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
             />
           </div>
 
-          {/* Start / End Time */}
-          {dayDate ? (
-            <>
-              <div className="all-day-row">
-                <label htmlFor="event-all-day" className="all-day-label">All-day</label>
-                <button
-                  id="event-all-day"
-                  type="button"
-                  role="switch"
-                  aria-checked={allDay}
-                  disabled={readOnly}
-                  className={`all-day-toggle${allDay ? ' all-day-toggle--on' : ''}`}
-                  onClick={() => setAllDay(v => !v)}
-                >
-                  <span className="all-day-toggle-thumb" />
-                </button>
-              </div>
-              {!allDay && (
-                <div className="time-row">
-                  <div className="time-field">
-                    <label htmlFor="event-start-time" className="form-label">Start Time</label>
-                    <TimeSelect
-                      id="event-start-time"
-                      value={startTime}
-                      onChange={setStartTime}
-                      disabled={readOnly}
-                      ariaLabel="Start time"
-                    />
-                  </div>
-                  <div className="time-field">
-                    <label htmlFor="event-end-time" className="form-label">End Time</label>
-                    <TimeSelect
-                      id="event-end-time"
-                      value={endTime}
-                      onChange={setEndTime}
-                      anchorMinutes={toMinutes(startTime) ?? undefined}
-                      disabled={readOnly}
-                      ariaLabel="End time"
-                    />
-                  </div>
+          {/* When (chip row + all-day + time zone) */}
+          <div className="when-block">
+            <div className="when-row">
+              <span className="when-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" />
+                </svg>
+              </span>
+              <div className="when-chips">
+                <div className="date-chip-wrap" ref={startDayRef}>
+                  <button
+                    type="button"
+                    className="date-chip"
+                    onClick={() => setStartDayOpen(o => !o)}
+                    disabled={readOnly || tripDays.length === 0}
+                    aria-haspopup="listbox"
+                    aria-expanded={startDayOpen}
+                  >
+                    {startDay ? formatChipDate(startDay.date) : 'Start day'}
+                  </button>
+                  {startDayOpen && (
+                    <div className="date-chip-options" role="listbox">
+                      {tripDays.map((d, i) => (
+                        <button
+                          key={d.id}
+                          type="button"
+                          role="option"
+                          aria-selected={d.id === startDayId}
+                          className={`date-chip-option${d.id === startDayId ? ' date-chip-option--selected' : ''}`}
+                          onClick={() => handleStartDayChange(d.id)}
+                        >
+                          <span className="date-chip-option-num">Day {i + 1}</span>
+                          <span className="date-chip-option-date">{formatPopoverDate(d.date)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </>
-          ) : (
-            <div>
-              <label htmlFor="event-date" className="form-label">Date & Time</label>
-              <input
-                id="event-date"
-                type="datetime-local"
-                value={dateValue}
-                onChange={(e) => setDateValue(e.target.value)}
-                className="form-input"
-              />
-            </div>
-          )}
 
-          {/* Timezone */}
+                {!allDay && (
+                  <TimeSelect
+                    id="event-start-time"
+                    value={startTime}
+                    onChange={handleStartTimeChange}
+                    disabled={readOnly}
+                    ariaLabel="Start time"
+                    variant="chip"
+                  />
+                )}
+
+                <span className="when-dash" aria-hidden="true">–</span>
+
+                {!allDay && (
+                  <TimeSelect
+                    id="event-end-time"
+                    value={endTime}
+                    onChange={handleEndTimeChange}
+                    anchorMinutes={toMinutes(startTime) ?? undefined}
+                    disabled={readOnly}
+                    ariaLabel="End time"
+                    variant="chip"
+                  />
+                )}
+
+                <div className="date-chip-wrap" ref={endDayRef}>
+                  <button
+                    type="button"
+                    className="date-chip"
+                    onClick={() => setEndDayOpen(o => !o)}
+                    disabled={readOnly || tripDays.length === 0}
+                    aria-haspopup="listbox"
+                    aria-expanded={endDayOpen}
+                  >
+                    {endDay ? formatChipDate(endDay.date) : 'End day'}
+                  </button>
+                  {endDayOpen && (
+                    <div className="date-chip-options" role="listbox">
+                      {tripDays.map((d, i) => (
+                        <button
+                          key={d.id}
+                          type="button"
+                          role="option"
+                          aria-selected={d.id === endDayId}
+                          className={`date-chip-option${d.id === endDayId ? ' date-chip-option--selected' : ''}`}
+                          onClick={() => handleEndDayChange(d.id)}
+                        >
+                          <span className="date-chip-option-num">Day {i + 1}</span>
+                          <span className="date-chip-option-date">{formatPopoverDate(d.date)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="when-meta-row">
+              <label className="when-allday">
+                <input
+                  type="checkbox"
+                  checked={allDay}
+                  disabled={readOnly}
+                  onChange={(e) => setAllDay(e.target.checked)}
+                />
+                <span>All-day</span>
+              </label>
+              <button
+                type="button"
+                className="when-tz-link"
+                onClick={() => setTzExpanded(v => !v)}
+                disabled={readOnly}
+              >
+                Time zone
+              </button>
+            </div>
+
+            {tzExpanded && (
+              <select
+                id="event-timezone"
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                className="form-input when-tz-select"
+              >
+                {TIMEZONES.map((tz) => (
+                  <option key={tz} value={tz}>{TZ_LABEL[tz] ?? tz}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Color label */}
           <div>
-            <label htmlFor="event-timezone" className="form-label">Timezone</label>
-            <select
-              id="event-timezone"
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              className="form-input"
-            >
-              {TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>{tz}</option>
+            <label className="form-label">Label</label>
+            <div className="color-swatch-row">
+              <button
+                type="button"
+                className={`color-swatch color-swatch--none${color == null ? ' color-swatch--selected' : ''}`}
+                onClick={() => setColor(null)}
+                aria-label="No color"
+                aria-pressed={color == null}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="5" y1="19" x2="19" y2="5" />
+                </svg>
+              </button>
+              {EVENT_COLORS.map((c) => (
+                <button
+                  key={c.token}
+                  type="button"
+                  className={`color-swatch${color === c.token ? ' color-swatch--selected' : ''}`}
+                  style={{ backgroundColor: c.hex }}
+                  onClick={() => setColor(c.token)}
+                  aria-label={c.label}
+                  aria-pressed={color === c.token}
+                >
+                  {color === c.token && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           {/* Cost & Paid By */}

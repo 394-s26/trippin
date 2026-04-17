@@ -39,3 +39,25 @@
 .time-select-option--selected .time-select-option-hint {
   @apply text-primary/70;
 }
+
+/* ── Chip variant (compact pill button used inside the time row) ───── */
+
+.time-select--chip {
+  @apply inline-block;
+}
+
+.time-select-chip-input {
+  @apply bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-800 text-center cursor-pointer border-0 focus:outline-none focus:ring-2 focus:ring-primary;
+  width: 6.25rem;
+  padding: 0.5rem 0.75rem;
+  transition: background-color 100ms;
+}
+
+.time-select-chip-input:disabled {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+.time-select--chip .time-select-options {
+  @apply left-0 right-auto;
+  min-width: 8.5rem;
+}

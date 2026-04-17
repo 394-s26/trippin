@@ -8,6 +8,7 @@ interface TimeSelectProps {
   anchorMinutes?: number;
   disabled?: boolean;
   ariaLabel?: string;
+  variant?: 'input' | 'chip';
 }
 
 const STEP_MINUTES = 15;
@@ -94,7 +95,7 @@ const formatDuration = (mins: number): string => {
   return `${h}h ${r}m`;
 };
 
-const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel }: TimeSelectProps) => {
+const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel, variant = 'input' }: TimeSelectProps) => {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(formatTime12h(value));
   const [focused, setFocused] = useState(false);
@@ -141,12 +142,14 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel }:
 
   const selectedMinutes = toMinutes(value);
 
+  const isChip = variant === 'chip';
+
   return (
-    <div className="time-select" ref={wrapRef}>
+    <div className={`time-select${isChip ? ' time-select--chip' : ''}`} ref={wrapRef}>
       <input
         id={id}
         type="text"
-        className="time-select-input form-input"
+        className={isChip ? 'time-select-chip-input' : 'time-select-input form-input'}
         value={text}
         disabled={disabled}
         aria-label={ariaLabel}
