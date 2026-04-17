@@ -93,7 +93,6 @@ const TimezoneModal = ({
             value={start}
             onChange={setStart}
             label={separate ? 'Event start time zone' : 'Event time zone'}
-            autoFocus
           />
 
           {/* Always rendered (just invisible when not separate) so toggling
