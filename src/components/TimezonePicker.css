@@ -24,8 +24,11 @@
   @apply absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-200 transition-colors text-base leading-none;
 }
 
+/* Positioning (top/left/width) comes from inline style — the popover is
+   portaled to document.body so it can overflow the modal panel that hosts
+   the input. z-[70] keeps it above the timezone modal (z-[60]). */
 .tz-picker-options {
-  @apply absolute left-0 right-0 top-[calc(100%+4px)] z-40 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden max-h-72 overflow-y-auto py-1;
+  @apply z-[70] bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden max-h-72 overflow-y-auto py-1;
 }
 
 .tz-picker-options::-webkit-scrollbar {

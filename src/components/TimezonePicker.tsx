@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './TimezonePicker.css';
 
 interface TimezonePickerProps {
@@ -76,7 +77,7 @@ const COUNTRY_ZONES: Record<string, string[]> = {
   'emirates': ['Asia/Dubai'],
   'saudi arabia': ['Asia/Riyadh'],
   'qatar': ['Asia/Qatar'],
-  'israel': ['Asia/Jerusalem'],
+  'palestine': ['Asia/Jerusalem'],
 };
 
 // Inverse of COUNTRY_ZONES — used to render "City, Country" in option titles.
@@ -91,7 +92,7 @@ const ZONE_TO_COUNTRY: Record<string, string> = (() => {
     'vietnam', 'singapore', 'malaysia', 'indonesia', 'philippines', 'australia',
     'new zealand', 'canada', 'mexico', 'brazil', 'argentina', 'chile', 'colombia',
     'peru', 'venezuela', 'south africa', 'egypt', 'morocco', 'nigeria', 'kenya',
-    'united arab emirates', 'saudi arabia', 'qatar', 'israel',
+    'united arab emirates', 'saudi arabia', 'qatar', 'palestine',
   ]);
   const titleize = (s: string) => s.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
   for (const [country, list] of Object.entries(COUNTRY_ZONES)) {
@@ -160,7 +161,13 @@ const TimezonePicker = ({ zones, value, onChange, disabled, label, autoFocus }: 
   const [text, setText] = useState(formattedValue);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const inputWrapRef = useRef<HTMLDivElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Position of the options popover. Tracked so the popover (portaled to
+  // document.body so it can overflow the modal panel) stays anchored to the
+  // input even when the page or modal scrolls.
+  const [popoverRect, setPopoverRect] = useState<{ top: number; left: number; width: number } | null>(null);
 
   // Build/cache the metadata for every zone exactly once per `zones` change.
   // `Intl.DateTimeFormat` is not free over 400+ zones, so this avoids
@@ -177,7 +184,10 @@ const TimezonePicker = ({ zones, value, onChange, disabled, label, autoFocus }: 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const insideWrap = wrapRef.current?.contains(target) ?? false;
+      const insideOptions = optionsRef.current?.contains(target) ?? false;
+      if (!insideWrap && !insideOptions) {
         setOpen(false);
         // Revert text to the formatted value if the user typed a query but
         // didn't pick anything.
@@ -187,6 +197,26 @@ const TimezonePicker = ({ zones, value, onChange, disabled, label, autoFocus }: 
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open, formattedValue]);
+
+  // Anchor the portaled popover to the input. Recompute on scroll/resize
+  // (capture phase so nested scroll containers fire too — the modal panel
+  // itself can scroll on small screens).
+  useEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const el = inputWrapRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setPopoverRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (autoFocus && !disabled) {
@@ -232,7 +262,7 @@ const TimezonePicker = ({ zones, value, onChange, disabled, label, autoFocus }: 
   return (
     <div className="tz-picker" ref={wrapRef}>
       <label className="tz-picker-label">{label}</label>
-      <div className="tz-picker-input-wrap">
+      <div className="tz-picker-input-wrap" ref={inputWrapRef}>
         <input
           ref={inputRef}
           type="text"
@@ -272,8 +302,18 @@ const TimezonePicker = ({ zones, value, onChange, disabled, label, autoFocus }: 
         )}
       </div>
 
-      {open && !disabled && (
-        <div className="tz-picker-options" role="listbox">
+      {open && !disabled && popoverRect && createPortal(
+        <div
+          ref={optionsRef}
+          className="tz-picker-options"
+          role="listbox"
+          style={{
+            position: 'fixed',
+            top: popoverRect.top,
+            left: popoverRect.left,
+            width: popoverRect.width,
+          }}
+        >
           {filtered.length === 0 && (
             <div className="tz-picker-empty">No matches</div>
           )}
@@ -297,7 +337,8 @@ const TimezonePicker = ({ zones, value, onChange, disabled, label, autoFocus }: 
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

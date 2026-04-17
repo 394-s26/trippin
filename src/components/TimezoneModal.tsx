@@ -96,22 +96,25 @@ const TimezoneModal = ({
             autoFocus
           />
 
-          {separate && (
-            <button
-              type="button"
-              className="tz-modal-swap"
-              onClick={handleSwap}
-              aria-label="Swap start and end time zones"
-              title="Swap start and end time zones"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M7 3v18" />
-                <path d="m3 7 4-4 4 4" />
-                <path d="M17 21V3" />
-                <path d="m21 17-4 4-4-4" />
-              </svg>
-            </button>
-          )}
+          {/* Always rendered (just invisible when not separate) so toggling
+              the checkbox doesn't change the modal's height. */}
+          <button
+            type="button"
+            className={`tz-modal-swap${separate ? '' : ' tz-modal-swap--hidden'}`}
+            onClick={handleSwap}
+            disabled={!separate}
+            aria-hidden={!separate}
+            tabIndex={separate ? 0 : -1}
+            aria-label="Swap start and end time zones"
+            title="Swap start and end time zones"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 3v18" />
+              <path d="m3 7 4-4 4 4" />
+              <path d="M17 21V3" />
+              <path d="m21 17-4 4-4-4" />
+            </svg>
+          </button>
 
           <TimezonePicker
             zones={zones}

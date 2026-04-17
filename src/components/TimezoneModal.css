@@ -42,10 +42,14 @@
   @apply relative flex flex-col gap-3;
 }
 
-/* The swap arrow sits between the two pickers. On mobile it sits inline
-   between them; on desktop it floats to the right edge to mirror Google. */
+/* The swap arrow sits between the two pickers. Always rendered so toggling
+   "Use separate" doesn't reflow the modal — just hidden when not in use. */
 .tz-modal-swap {
-  @apply self-end -my-1 w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors;
+  @apply self-end -my-1 w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-opacity;
+}
+
+.tz-modal-swap--hidden {
+  @apply invisible pointer-events-none;
 }
 
 .tz-modal-actions {
