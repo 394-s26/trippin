@@ -28,8 +28,10 @@ const buildMarkerElement = (event: Event, orderNum: number): HTMLDivElement => {
   const el = document.createElement('div');
   el.className = 'map-marker';
   el.innerHTML =
-    `<div class="map-marker-pin">${Icon ? renderToStaticMarkup(<Icon size={16} />) : ''}</div>` +
-    `<div class="map-marker-badge">${orderNum}</div>`;
+    `<div class="map-marker-pin">` +
+      `${Icon ? renderToStaticMarkup(<Icon size={16} />) : ''}` +
+      `<div class="map-marker-badge">${orderNum}</div>` +
+    `</div>`;
   return el;
 };
 
