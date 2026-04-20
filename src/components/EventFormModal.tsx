@@ -10,6 +10,7 @@ import TimeSelect, { toMinutes } from './TimeSelect';
 import TimezoneModal from './TimezoneModal';
 import { toDate } from '../utilities/timestamps';
 import './EventFormModal.css';
+import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 
 export type EventFormMode = 'create' | 'edit' | 'readonly';
 
@@ -138,6 +139,7 @@ const EventFormModal = ({
   const [startDayOpen, setStartDayOpen] = useState(false);
   const [endDayOpen, setEndDayOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const locationContainerRef = useRef<HTMLDivElement>(null);
   const startDayRef = useRef<HTMLDivElement>(null);
   const endDayRef = useRef<HTMLDivElement>(null);
 
@@ -237,6 +239,76 @@ const EventFormModal = ({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [paidByOpen, startDayOpen, endDayOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+
+    const init = async () => {
+      // 1. Set your global options (once)
+      setOptions({
+        key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+        v: "weekly",
+      });
+
+      try {
+        // 2. Use the functional importLibrary instead of the loader class
+        const { PlaceAutocompleteElement } =
+          (await importLibrary("places")) as any;
+
+        if (!isMounted || !locationContainerRef.current) return;
+
+        // 3. Setup the Web Component
+        const el = new PlaceAutocompleteElement();
+
+        el.classList.add("form-input");
+        el.style.display = "block";
+        el.style.width = "100%";
+
+        if (location) {
+          el.value = location;
+        }
+
+        locationContainerRef.current.innerHTML = "";
+        locationContainerRef.current.appendChild(el);
+
+        // Sync the value when the user types (Manual entry)
+        el.addEventListener("input", (e: any) => {
+          setLocation(e.target.value);
+        });
+
+        el.addEventListener("gmp-select", async (event: any) => {
+          const placeId = event.placePrediction.placeId;
+          const { Place } = (await importLibrary("places")) as any;
+          const fullPlace = new Place({ id: placeId });
+
+          await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress"] });
+
+          if (isMounted) {
+            const placeName = fullPlace.displayName || "";
+            const placeAddress = fullPlace.formattedAddress || "";
+
+            // Set the location to the formatted address
+            setLocation(placeAddress);
+            // Show the place name in the autocomplete input
+            el.value = placeName;
+                }
+              });
+            } catch (error) {
+              console.error("Error loading Google Maps:", error);
+            }
+          };
+  
+    init();
+
+    return () => {
+      isMounted = false;
+      if (locationContainerRef.current) {
+        locationContainerRef.current.innerHTML = "";
+      }
+    };
+  }, [isOpen]);
 
   const costNum = cost !== '' ? parseFloat(cost) : 0;
   const wouldExceedBudget = tripBudget != null && tripBudget > 0 && tripSpent != null && (tripSpent + costNum) > tripBudget;
@@ -339,7 +411,7 @@ const EventFormModal = ({
       type,
       dayId: sDay.id,
       name,
-      location: location || undefined,
+      location: location,
       startDate: eventStart,
       endDate: eventEnd,
       timezone,
@@ -468,20 +540,14 @@ const EventFormModal = ({
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Hike to Old Faithful"
               className="form-input"
+              required
             />
           </div>
 
           {/* Location */}
           <div>
             <label htmlFor="event-location" className="form-label">Location</label>
-            <input
-              id="event-location"
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. Main Geyser Loop"
-              className="form-input"
-            />
+            <div ref={locationContainerRef} />
           </div>
 
           {/* When (chip row + all-day + time zone) */}
