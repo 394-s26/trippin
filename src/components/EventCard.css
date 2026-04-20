@@ -1,7 +1,11 @@
 @reference "../index.css";
 
 .event-card {
-  @apply bg-white rounded-2xl p-4 shadow-sm border-4 border-white cursor-pointer transition-colors duration-150;
+  @apply bg-white rounded-2xl p-4 shadow-sm border-4 border-white cursor-pointer transition-colors duration-150 relative overflow-hidden;
+}
+
+.event-card-color-stripe {
+  @apply absolute left-0 top-0 bottom-0 w-1.5;
 }
 
 .event-card:hover {
@@ -40,6 +44,10 @@
   @apply text-xs font-medium bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5;
 }
 
+.event-card-span-pill {
+  @apply text-[10px] font-semibold uppercase tracking-wide text-primary bg-green-50 rounded-full px-2 py-0.5;
+}
+
 .event-card-selectors {
   @apply flex items-center gap-1;
 }
@@ -50,6 +58,10 @@
 
 .event-card-meta {
   @apply text-gray-400 text-xs mt-0.5;
+}
+
+.event-card-location-link {
+  @apply text-gray-500 hover:text-primary transition-colors;
 }
 
 .event-card-icon {

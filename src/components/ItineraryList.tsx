@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import EventCard from './EventCard';
 import { PencilIcon, CheckIcon, PlusIcon, TrashIcon, GearIcon } from '../services/svgIcons';
+import { sliceEventForDay } from '../utilities/eventOverlapsDay';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
 import { UserSelection } from '../hooks/useSessionSelections';
@@ -185,6 +186,7 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
                   <EventCard
                     key={event.id}
                     event={event}
+                    daySlice={sliceEventForDay(event, day) ?? undefined}
                     onSelect={() => onSelectEvent?.(event.id)}
                     isSelected={selectedEventIds.includes(event.id)}
                     allSelections={allSelections}
