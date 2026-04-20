@@ -261,73 +261,77 @@ const EventFormModal = ({
         const { PlaceAutocompleteElement } =
           (await importLibrary("places")) as any;
 
-    try {
-      // 2. Use the functional importLibrary instead of the loader class
-      const { PlaceAutocompleteElement, Place } =
-        (await importLibrary("places")) as google.maps.PlacesLibrary & {
-          PlaceAutocompleteElement: new () => HTMLElement;
-        };
 
-      if (!isMounted || !locationContainerRef.current) return;
+        if (!isMounted || !locationContainerRef.current) return;
 
-      // 3. Setup the Web Component
-      const el = new PlaceAutocompleteElement();
-            
-      el.classList.add("form-input");
-      el.style.display = "block";
-      el.style.width = "100%";
-      
-      locationContainerRef.current.innerHTML = "";
-      locationContainerRef.current.appendChild(el);
+        // 3. Setup the Web Component
+        const el = new PlaceAutocompleteElement();
+              
+        el.classList.add("form-input");
+        el.style.display = "block";
+        el.style.width = "100%";
 
-      el.addEventListener("gmp-select", async (event: any) => {
-        const placeId = event.placePrediction.placeId;
-        const fullPlace = new Place({ id: placeId });
-
-        await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress", "location"] });
-
-        if (isMounted) {
-          setLocation(fullPlace.formattedAddress || fullPlace.displayName || "");
-          const loc = fullPlace.location;
-          if (loc) {
-            setLat(typeof loc.lat === 'function' ? loc.lat() : (loc as unknown as { lat: number }).lat);
-            setLng(typeof loc.lng === 'function' ? loc.lng() : (loc as unknown as { lng: number }).lng);
-          } else {
-            setLat(undefined);
-            setLng(undefined);
-          }
+        if (location) {
+          el.value = location;
         }
-
+      
         locationContainerRef.current.innerHTML = "";
         locationContainerRef.current.appendChild(el);
 
-        // Sync the value when the user types (Manual entry)
-        el.addEventListener("input", (e: any) => {
-          setLocation(e.target.value);
-        });
+        const handleInput = (event: any) => {
+          if (!isMounted) return;
+          const rawValue = event?.target?.value;
+          const nextLocation = typeof rawValue === "string" ? rawValue : String(el.value ?? "");
+          setLocation(nextLocation);
+          // If the user types/edits text directly, we no longer have a
+          // guaranteed place match; clear coordinates until a suggestion is picked.
+          setLat(undefined);
+          setLng(undefined);
+        };
 
-        el.addEventListener("gmp-select", async (event: any) => {
+        const handleSelect = async (event: any) => {
           const placeId = event.placePrediction.placeId;
           const { Place } = (await importLibrary("places")) as any;
           const fullPlace = new Place({ id: placeId });
 
-          await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress"] });
+          await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress", "location"] });
 
           if (isMounted) {
             const placeName = fullPlace.displayName || "";
             const placeAddress = fullPlace.formattedAddress || "";
+            const placeLocation = fullPlace.location;
+            const nextLat =
+              typeof placeLocation?.lat === "function"
+                ? placeLocation.lat()
+                : placeLocation?.lat;
+            const nextLng =
+              typeof placeLocation?.lng === "function"
+                ? placeLocation.lng()
+                : placeLocation?.lng;
+
 
             // Set the location to the formatted address
             setLocation(placeAddress);
+            if (typeof nextLat === "number" && typeof nextLng === "number") {
+              setLat(nextLat);
+              setLng(nextLng);
+            } else {
+              // Keep text location but prevent stale coordinates from prior selections.
+              setLat(undefined);
+              setLng(undefined);
+            }
             // Show the place name in the autocomplete input
             el.value = placeName;
-                }
-              });
-            } catch (error) {
-              console.error("Error loading Google Maps:", error);
-            }
-          };
-  
+          }
+        };
+
+        el.addEventListener("input", handleInput);
+        el.addEventListener("gmp-select", handleSelect);
+      } catch (error) {
+        console.error("Error loading Google Maps:", error);
+      }
+    };
+
     init();
 
     return () => {
@@ -442,8 +446,8 @@ const EventFormModal = ({
       ...(location ? { location } : {}),
       ...(lat !== undefined ? { lat } : {}),
       ...(lng !== undefined ? { lng } : {}),
-      startDate: eventDate,
-      endDate: eventEndDate,
+      startDate: eventStart,
+      endDate: eventEnd,
       timezone,
       endTimezone: useSeparateEndTz ? endTimezone : null,
       cost: cost !== '' ? parseFloat(cost) : null,
