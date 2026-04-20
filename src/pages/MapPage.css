@@ -84,6 +84,9 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  width: 2rem;
+  height: 2rem;
+  overflow: visible;
 }
 
 .map-marker-badge {

@@ -123,6 +123,7 @@ const [nameQuery, setNameQuery] = useState('');
       style: 'mapbox://styles/mapbox/streets-v12',
       center: [0, 20],
       zoom: 1.5,
+      projection: 'mercator',
     });
     mapRef.current = map;
 
