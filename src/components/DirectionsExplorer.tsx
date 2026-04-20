@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 
 import { Day } from '../types/day';
 import { Event } from '../types/event';
-import { fetchDirections } from '../services/mapboxDirectionsService';
+import { fetchDirections, DirectionsResult } from '../services/mapboxDirectionsService';
 import { RouteIcon, XIcon } from '../services/svgIcons';
 import './DirectionsExplorer.css';
 
@@ -43,6 +43,8 @@ const DirectionsExplorer = ({
   const [error, setError] = useState<string | null>(null);
   const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
 
+  const routeLabelRef = useRef<mapboxgl.Marker | null>(null);
+
   // Group mappable events by dayId, each list sorted by startDate ascending.
   const eventsByDay = useMemo(() => {
     const map = new Map<string, Array<Event & { lat: number; lng: number }>>();
@@ -64,6 +66,10 @@ const DirectionsExplorer = ({
   );
 
   const clearRoute = useCallback(() => {
+    if (routeLabelRef.current) {
+      routeLabelRef.current.remove();
+      routeLabelRef.current = null;
+    }
     const map = mapRef.current;
     if (!map) return;
     try {
@@ -73,6 +79,48 @@ const DirectionsExplorer = ({
       // Map may have already been removed during cleanup.
     }
   }, [mapRef]);
+
+  const drawRoute = useCallback(
+    (
+      map: mapboxgl.Map,
+      geometry: DirectionsResult['geometry'],
+      distance: number,
+      duration: number,
+    ) => {
+      clearRoute();
+
+      map.addSource(ROUTE_SOURCE_ID, {
+        type: 'geojson',
+        data: { type: 'Feature', properties: {}, geometry },
+      });
+
+      const lineLayer: mapboxgl.LineLayer = {
+        id: ROUTE_LAYER_ID,
+        type: 'line',
+        source: ROUTE_SOURCE_ID,
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#2D5A27', 'line-width': 5, 'line-opacity': 0.85 },
+      };
+
+      // Add on top of all base-map layers so the route is visible over roads.
+      map.addLayer(lineLayer);
+
+      // Place a pill label at the geometric midpoint of the route.
+      const coords = geometry.coordinates;
+      const [midLng, midLat] = coords[Math.floor(coords.length / 2)];
+      const el = document.createElement('div');
+      el.className = 'directions-route-pill';
+      el.innerHTML =
+        `<span>${formatDistance(distance)}</span>` +
+        `<span class="directions-route-pill-sep">·</span>` +
+        `<span>${formatDuration(duration)}</span>`;
+
+      routeLabelRef.current = new mapboxgl.Marker({ element: el, anchor: 'bottom-left' })
+        .setLngLat([midLng, midLat])
+        .addTo(map);
+    },
+    [clearRoute],
+  );
 
   // Fetch and draw the route whenever the active day changes.
   useEffect(() => {
@@ -102,38 +150,24 @@ const DirectionsExplorer = ({
         const map = mapRef.current;
         if (!map) return;
 
-        clearRoute();
+        const applyRoute = () => {
+          if (cancelled) return;
+          drawRoute(map, result.geometry, result.distance, result.duration);
 
-        map.addSource(ROUTE_SOURCE_ID, {
-          type: 'geojson',
-          data: {
-            type: 'Feature',
-            properties: {},
-            geometry: result.geometry,
-          },
-        });
-
-        // Insert the route line beneath the map's text label layers so it
-        // doesn't obscure place names.
-        const layers = (map.getStyle()?.layers ?? []) as mapboxgl.AnyLayer[];
-        const firstSymbolId = layers.find(l => l.type === 'symbol')?.id;
-
-        const layerSpec = {
-          id: ROUTE_LAYER_ID,
-          type: 'line' as const,
-          source: ROUTE_SOURCE_ID,
-          layout: { 'line-join': 'round' as const, 'line-cap': 'round' as const },
-          paint: {
-            'line-color': '#2D5A27',
-            'line-width': 4,
-            'line-opacity': 0.85,
-          },
+          // Fit the map viewport to the full extent of the route.
+          const coords = result.geometry.coordinates;
+          if (coords.length > 0) {
+            const bounds = new mapboxgl.LngLatBounds();
+            coords.forEach(([lng, lat]) => bounds.extend([lng, lat] as [number, number]));
+            map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 800 });
+          }
         };
 
-        try {
-          map.addLayer(layerSpec, firstSymbolId);
-        } catch {
-          map.addLayer(layerSpec);
+        // If the map style is still loading, wait for it before adding layers.
+        if (!map.isStyleLoaded()) {
+          map.once('style.load', applyRoute);
+        } else {
+          applyRoute();
         }
 
         setRouteInfo({ distance: result.distance, duration: result.duration });
@@ -149,7 +183,7 @@ const DirectionsExplorer = ({
       cancelled = true;
       clearRoute();
     };
-  }, [activeDayId, eventsByDay, accessToken, mapRef, clearRoute]);
+  }, [activeDayId, eventsByDay, accessToken, mapRef, clearRoute, drawRoute]);
 
   // Deselect the active day and clear the route when the panel is closed.
   useEffect(() => {
@@ -166,7 +200,8 @@ const DirectionsExplorer = ({
 
   return (
     <div className={`directions-explorer${isOpen ? ' directions-explorer--open' : ''}`}>
-      <div className="directions-explorer-inner">
+      {/* Panel card — slides up above the toggle button */}
+      <div className="directions-explorer-card">
         <div className="directions-explorer-header">
           <h2 className="directions-explorer-title">Directions Explorer</h2>
           <button
@@ -231,20 +266,19 @@ const DirectionsExplorer = ({
             </ul>
           )}
         </div>
-
-        <div className="directions-explorer-footer">
-          <button
-            type="button"
-            className={`directions-explorer-toggle${isOpen ? ' directions-explorer-toggle--active' : ''}`}
-            onClick={() => setIsOpen(o => !o)}
-            aria-label="Toggle directions explorer"
-            aria-expanded={isOpen}
-          >
-            <RouteIcon size={18} />
-            <span>Directions</span>
-          </button>
-        </div>
       </div>
+
+      {/* Toggle button — always visible */}
+      <button
+        type="button"
+        className={`directions-explorer-toggle${isOpen ? ' directions-explorer-toggle--active' : ''}`}
+        onClick={() => setIsOpen(o => !o)}
+        aria-label="Toggle directions explorer"
+        aria-expanded={isOpen}
+      >
+        <RouteIcon size={18} />
+        <span>Directions</span>
+      </button>
     </div>
   );
 };

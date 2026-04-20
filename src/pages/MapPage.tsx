@@ -23,11 +23,13 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN ?? '';
 const hasCoords = (e: Event): e is Event & { lat: number; lng: number } =>
   typeof e.lat === 'number' && typeof e.lng === 'number';
 
-const buildMarkerElement = (event: Event): HTMLDivElement => {
+const buildMarkerElement = (event: Event, orderNum: number): HTMLDivElement => {
   const Icon = EVENT_TYPE_ICONS[event.type];
   const el = document.createElement('div');
   el.className = 'map-marker';
-  el.innerHTML = `<div class="map-marker-pin">${Icon ? renderToStaticMarkup(<Icon size={16} />) : ''}</div>`;
+  el.innerHTML =
+    `<div class="map-marker-pin">${Icon ? renderToStaticMarkup(<Icon size={16} />) : ''}</div>` +
+    `<div class="map-marker-badge">${orderNum}</div>`;
   return el;
 };
 
@@ -76,6 +78,23 @@ const [nameQuery, setNameQuery] = useState('');
 
   const mappableEvents = useMemo(() => events.filter(hasCoords), [events]);
   const unmappableEvents = useMemo(() => events.filter(e => !hasCoords(e)), [events]);
+
+  // Chronological order of each event within its day (1-based), used for pin badges.
+  const eventOrderMap = useMemo(() => {
+    const order = new Map<string, number>();
+    const byDay = new Map<string, Event[]>();
+    events.forEach(e => {
+      const arr = byDay.get(e.dayId) ?? [];
+      arr.push(e);
+      byDay.set(e.dayId, arr);
+    });
+    byDay.forEach(dayEvents => {
+      [...dayEvents]
+        .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
+        .forEach((e, i) => order.set(e.id, i + 1));
+    });
+    return order;
+  }, [events]);
 
   const visibleEvents = useMemo(() => {
     const q = nameQuery.trim().toLowerCase();
@@ -134,15 +153,26 @@ const [nameQuery, setNameQuery] = useState('');
     });
 
     visibleEvents.forEach(event => {
-      if (markersRef.current.has(event.id)) return;
-      const el = buildMarkerElement(event);
+      const orderNum = eventOrderMap.get(event.id) ?? 1;
+      const existing = markersRef.current.get(event.id);
+
+      if (existing) {
+        // Patch the badge text in-place if the order number changed.
+        const badge = existing.getElement().querySelector('.map-marker-badge');
+        if (badge && badge.textContent !== String(orderNum)) {
+          badge.textContent = String(orderNum);
+        }
+        return;
+      }
+
+      const el = buildMarkerElement(event, orderNum);
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([event.lng!, event.lat!])
         .setPopup(new mapboxgl.Popup({ offset: 20, closeButton: false }).setHTML(buildPopupHtml(event)))
         .addTo(map);
       markersRef.current.set(event.id, marker);
     });
-  }, [visibleEvents]);
+  }, [visibleEvents, eventOrderMap]);
 
   // Fit map bounds to visible markers whenever they change.
   useEffect(() => {
