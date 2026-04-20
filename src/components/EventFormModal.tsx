@@ -123,6 +123,8 @@ const EventFormModal = ({
   const [type, setType] = useState<Event['type']>('Hiking');
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
+  const [lat, setLat] = useState<number | undefined>(undefined);
+  const [lng, setLng] = useState<number | undefined>(undefined);
   const [startDayId, setStartDayId] = useState<string>('');
   const [endDayId, setEndDayId] = useState<string>('');
   const [startTime, setStartTime] = useState('');
@@ -182,6 +184,8 @@ const EventFormModal = ({
     setType(initialEvent.type);
     setName(initialEvent.name);
     setLocation(initialEvent.location ?? '');
+    setLat(initialEvent.lat);
+    setLng(initialEvent.lng);
     setTimezone(initialEvent.timezone ?? 'America/Chicago');
     setEndTimezone(initialEvent.endTimezone ?? initialEvent.timezone ?? 'America/Chicago');
     setUseSeparateEndTz(initialEvent.endTimezone != null);
@@ -257,11 +261,12 @@ const EventFormModal = ({
         const { PlaceAutocompleteElement } =
           (await importLibrary("places")) as any;
 
+
         if (!isMounted || !locationContainerRef.current) return;
 
         // 3. Setup the Web Component
         const el = new PlaceAutocompleteElement();
-
+              
         el.classList.add("form-input");
         el.style.display = "block";
         el.style.width = "100%";
@@ -269,37 +274,64 @@ const EventFormModal = ({
         if (location) {
           el.value = location;
         }
-
+      
         locationContainerRef.current.innerHTML = "";
         locationContainerRef.current.appendChild(el);
 
-        // Sync the value when the user types (Manual entry)
-        el.addEventListener("input", (e: any) => {
-          setLocation(e.target.value);
-        });
+        const handleInput = (event: any) => {
+          if (!isMounted) return;
+          const rawValue = event?.target?.value;
+          const nextLocation = typeof rawValue === "string" ? rawValue : String(el.value ?? "");
+          setLocation(nextLocation);
+          // If the user types/edits text directly, we no longer have a
+          // guaranteed place match; clear coordinates until a suggestion is picked.
+          setLat(undefined);
+          setLng(undefined);
+        };
 
-        el.addEventListener("gmp-select", async (event: any) => {
+        const handleSelect = async (event: any) => {
           const placeId = event.placePrediction.placeId;
           const { Place } = (await importLibrary("places")) as any;
           const fullPlace = new Place({ id: placeId });
 
-          await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress"] });
+          await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress", "location"] });
 
           if (isMounted) {
             const placeName = fullPlace.displayName || "";
             const placeAddress = fullPlace.formattedAddress || "";
+            const placeLocation = fullPlace.location;
+            const nextLat =
+              typeof placeLocation?.lat === "function"
+                ? placeLocation.lat()
+                : placeLocation?.lat;
+            const nextLng =
+              typeof placeLocation?.lng === "function"
+                ? placeLocation.lng()
+                : placeLocation?.lng;
+
 
             // Set the location to the formatted address
             setLocation(placeAddress);
+            if (typeof nextLat === "number" && typeof nextLng === "number") {
+              setLat(nextLat);
+              setLng(nextLng);
+            } else {
+              // Keep text location but prevent stale coordinates from prior selections.
+              setLat(undefined);
+              setLng(undefined);
+            }
             // Show the place name in the autocomplete input
             el.value = placeName;
-                }
-              });
-            } catch (error) {
-              console.error("Error loading Google Maps:", error);
-            }
-          };
-  
+          }
+        };
+
+        el.addEventListener("input", handleInput);
+        el.addEventListener("gmp-select", handleSelect);
+      } catch (error) {
+        console.error("Error loading Google Maps:", error);
+      }
+    };
+
     init();
 
     return () => {
@@ -411,7 +443,9 @@ const EventFormModal = ({
       type,
       dayId: sDay.id,
       name,
-      location: location,
+      ...(location ? { location } : {}),
+      ...(lat !== undefined ? { lat } : {}),
+      ...(lng !== undefined ? { lng } : {}),
       startDate: eventStart,
       endDate: eventEnd,
       timezone,
@@ -427,6 +461,8 @@ const EventFormModal = ({
       setType('Hiking');
       setName('');
       setLocation('');
+      setLat(undefined);
+      setLng(undefined);
       const defaults = computeSmartDefaults();
       setStartTime(defaults.start);
       setEndTime(defaults.end);

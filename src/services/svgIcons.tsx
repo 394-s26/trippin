@@ -434,6 +434,23 @@ export const XIcon = ({ size = 14, className }: IconProps): ReactElement => (
   </svg>
 );
 
+export const FilterIcon = ({ size = 20, className }: IconProps): ReactElement => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    className={className}
+  >
+    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+  </svg>
+);
+
 export const MoveRightIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
@@ -449,6 +466,26 @@ export const MoveRightIcon = ({ size = 24, className }: IconProps): ReactElement
   >
     <path d="M5 12h14"/>
     <path d="m12 5 7 7-7 7"/>
+  </svg>
+);
+
+// Route path with start/end circle markers — used in DirectionsExplorer toggle button
+export const RouteIcon = ({ size = 20, className }: IconProps): ReactElement => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    className={className}
+  >
+    <circle cx="6" cy="19" r="3" />
+    <path d="M9 19h8.5a3.5 3.5 0 0 0 0-7H5a3.5 3.5 0 0 1 0-7H14" />
+    <circle cx="18" cy="5" r="3" />
   </svg>
 );
 
