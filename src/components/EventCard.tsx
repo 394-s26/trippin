@@ -3,11 +3,14 @@ import { AppUser } from '../types/auth';
 import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
 import { UserSelection } from '../hooks/useSessionSelections';
 import { pickFirstSelector } from '../utilities/pickFirstSelector';
+import { resolveEventColor } from '../utilities/eventColors';
+import { EventDaySlice } from '../utilities/eventOverlapsDay';
 import UserAvatar from './UserAvatar';
 import './EventCard.css';
 
 interface EventCardProps {
   event: Event;
+  daySlice?: EventDaySlice;
   onSelect?: () => void;
   isSelected?: boolean;
   allSelections?: UserSelection[];
@@ -15,17 +18,29 @@ interface EventCardProps {
   tripUsers?: AppUser[];
 }
 
-const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], currentUserId, tripUsers = [] }: EventCardProps) => {
+const EventCard = ({ event, daySlice, onSelect, isSelected = false, allSelections = [], currentUserId, tripUsers = [] }: EventCardProps) => {
   const showTime = event.hasTime !== false;
   const timeFmt = (d: Date) => new Date(d).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
   });
-  const startTime = showTime ? timeFmt(event.startDate) : null;
-  const time = showTime
-    ? (event.endDate ? `${startTime} – ${timeFmt(event.endDate)}` : startTime)
-    : null;
+
+  let time: string | null;
+  if (!showTime) {
+    time = null;
+  } else if (daySlice?.isAllDay) {
+    time = 'All day';
+  } else if (daySlice) {
+    time = `${timeFmt(daySlice.sliceStart)} – ${timeFmt(daySlice.sliceEnd)}`;
+  } else {
+    const startTime = timeFmt(event.startDate);
+    time = event.endDate ? `${startTime} – ${timeFmt(event.endDate)}` : startTime;
+  }
+
+  const showSpanPill = !!daySlice && daySlice.totalDays > 1;
+  const displayName = event.name && event.name.trim() ? event.name : '(no name)';
+  const colorHex = resolveEventColor(event.color);
 
   const otherSelectors = allSelections.filter(
     s => s.uid !== currentUserId && s.selectedIds.includes(event.id),
@@ -42,10 +57,16 @@ const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], cu
 
   return (
     <div className={cardClass} style={cardStyle} data-event-id={event.id} onClick={(e) => { e.stopPropagation(); onSelect?.(); }}>
+      {colorHex && (
+        <span className="event-card-color-stripe" style={{ backgroundColor: colorHex }} aria-hidden="true" />
+      )}
       <div className="event-card-header">
         <div className="event-card-body">
           <div className="event-card-time-row">
             {time && <span className="event-card-time">{time}</span>}
+            {showSpanPill && (
+              <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
+            )}
             {otherSelectors.length > 0 && (
               <div className="event-card-selectors">
                 {otherSelectors.map(s => (
@@ -59,9 +80,18 @@ const EventCard = ({ event, onSelect, isSelected = false, allSelections = [], cu
               </div>
             )}
           </div>
-          <h3 className="event-card-name">{event.name}</h3>
+          <h3 className="event-card-name">{displayName}</h3>
           {event.location && (
-            <p className="event-card-meta">{event.location}</p>
+            <p className="event-card-meta">
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="event-card-location-link"
+              >
+                {event.location}
+              </a>
+            </p>
           )}
           {event.cost != null && (
             <p className="event-card-meta">${event.cost.toFixed(2)}</p>
