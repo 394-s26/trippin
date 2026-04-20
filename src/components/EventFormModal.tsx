@@ -254,8 +254,8 @@ const EventFormModal = ({
 
       try {
         // 2. Use the functional importLibrary instead of the loader class
-        const { PlaceAutocompleteElement, Place } = 
-          (await importLibrary("places")) as google.maps.PlacesLibrary;
+        const { PlaceAutocompleteElement } =
+          (await importLibrary("places")) as any;
 
         if (!isMounted || !locationContainerRef.current) return;
 
@@ -263,38 +263,35 @@ const EventFormModal = ({
         const el = new PlaceAutocompleteElement();
 
         el.classList.add("form-input");
+        el.style.display = "block";
+        el.style.width = "100%";
 
-        if (name) {
-          el.value = name;
+        if (location) {
+          el.value = location;
         }
-        
+
         locationContainerRef.current.innerHTML = "";
         locationContainerRef.current.appendChild(el);
 
-        // 2. Sync the value when the user types (Manual entry)
+        // Sync the value when the user types (Manual entry)
         el.addEventListener("input", (e: any) => {
-          const value = e.target.value;
-          setName(value);
-          // so it doesn't stay tied to a previous selection's address
-          setLocation(""); 
+          setLocation(e.target.value);
         });
 
         el.addEventListener("gmp-select", async (event: any) => {
           const placeId = event.placePrediction.placeId;
           const { Place } = (await importLibrary("places")) as any;
           const fullPlace = new Place({ id: placeId });
-          
+
           await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress"] });
-          
+
           if (isMounted) {
             const placeName = fullPlace.displayName || "";
             const placeAddress = fullPlace.formattedAddress || "";
 
-            // Set the name of the event to the Place name automatically
-            setName(placeName); 
-            // Set the location to the address
+            // Set the location to the formatted address
             setLocation(placeAddress);
-            // Set the input value to the place name
+            // Show the place name in the autocomplete input
             el.value = placeName;
                 }
               });
@@ -536,8 +533,7 @@ const EventFormModal = ({
           {/* Name */}
           <div>
             <label htmlFor="event-name" className="form-label">Name</label>
-            { <div ref={locationContainerRef} /> }
-            {/* <input
+            <input
               id="event-name"
               type="text"
               value={name}
@@ -545,20 +541,13 @@ const EventFormModal = ({
               placeholder="e.g. Hike to Old Faithful"
               className="form-input"
               required
-            /> */}
+            />
           </div>
 
           {/* Location */}
           <div>
             <label htmlFor="event-location" className="form-label">Location</label>
-            <input
-              id="event-location"
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. Main Geyser Loop"
-              className="form-input"
-            />
+            <div ref={locationContainerRef} />
           </div>
 
           {/* When (chip row + all-day + time zone) */}
