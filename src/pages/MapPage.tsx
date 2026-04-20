@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Event, EventCategory, EVENT_CATEGORY } from '../types/event';
 import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
 import './MapPage.css';
+import { CaretRightIcon } from '../services/svgIcons';
 
 const ALL_CATEGORIES: EventCategory[] = ['Transportation', 'Lodging', 'Activity', 'Attraction', 'Food & Drink'];
 
@@ -68,6 +69,7 @@ const MapPage = () => {
   const initializedRef = useRef(false);
 
   const [filterOpen, setFilterOpen] = useState(false);
+  const [showUnmappable, setShowUnmappable] = useState(false);
   const [selectedDayIds, setSelectedDayIds] = useState<Set<string>>(new Set());
   const [selectedCategories, setSelectedCategories] = useState<Set<EventCategory>>(new Set(ALL_CATEGORIES));
 const [nameQuery, setNameQuery] = useState('');
@@ -306,9 +308,8 @@ const [nameQuery, setNameQuery] = useState('');
                 />
 
                 {unmappableEvents.length > 0 && (
-                  <details className="map-unmappable">
-                    <summary>{unmappableEvents.length} event{unmappableEvents.length === 1 ? '' : 's'} without coordinates</summary>
-                    <ul>
+                  <div className="map-unmappable">
+                    {showUnmappable && (<ul>
                       {unmappableEvents.map(e => (
                         <li key={e.id}>
                           <span className="map-unmappable-name">{e.name}</span>
@@ -317,8 +318,12 @@ const [nameQuery, setNameQuery] = useState('');
                           </span>
                         </li>
                       ))}
-                    </ul>
-                  </details>
+                    </ul>)}
+                    <button className="map-unmappable-toggle" onClick={() => setShowUnmappable(!showUnmappable)}>
+                      <CaretRightIcon size={16} className={`map-unmappable-caret ${showUnmappable ? 'is-open' : ''}`} /> 
+                      <span>{unmappableEvents.length} event{unmappableEvents.length === 1 ? '' : 's'} without coordinates</span>
+                    </button>
+                  </div>
                 )}
               </div>
 
