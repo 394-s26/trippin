@@ -122,27 +122,30 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
   const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
 
-    let eventDate: Date;
-    let eventEndDate: Date | null = null;
+    let eventStart: Date;
+    let eventEnd: Date | null = null;
 
     let hasTime: boolean;
     if (dayDate) {
-      eventDate = new Date(dayDate);
+      eventStart = new Date(dayDate);
       if (startTime) {
         const [h, m] = startTime.split(':').map(Number);
-        eventDate.setHours(h, m, 0, 0);
+        eventStart.setHours(h, m, 0, 0);
         hasTime = true;
       } else {
-        eventDate.setHours(0, 0, 0, 0);
+        eventStart.setHours(0, 0, 0, 0);
         hasTime = false;
       }
       if (endTime) {
-        eventEndDate = new Date(dayDate);
+        eventEnd = new Date(dayDate);
         const [h, m] = endTime.split(':').map(Number);
-        eventEndDate.setHours(h, m, 0, 0);
+        eventEnd.setHours(h, m, 0, 0);
+      }
+      if (eventEnd && eventEnd < eventStart) {
+        eventEnd = new Date(eventStart.getTime() + 15 * 60 * 1000);
       }
     } else {
-      eventDate = dateValue ? new Date(dateValue) : new Date();
+      eventStart = dateValue ? new Date(dateValue) : new Date();
       hasTime = true;
     }
 
@@ -150,8 +153,8 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripUsers, current
       type,
       name,
       location: location || undefined,
-      startDate: eventDate,
-      endDate: eventEndDate,
+      startDate: eventStart,
+      endDate: eventEnd,
       hasTime,
       timezone,
       cost: cost !== '' ? parseFloat(cost) : null,
