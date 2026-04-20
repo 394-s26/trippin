@@ -1,0 +1,83 @@
+@reference "../index.css";
+
+.time-select {
+  @apply relative;
+}
+
+.time-select-input {
+  @apply cursor-text;
+}
+
+.time-select-options {
+  @apply absolute left-0 right-0 top-[calc(100%+4px)] z-20 bg-white border border-gray-100 rounded-xl shadow-lg py-1 max-h-60 overflow-y-auto;
+}
+
+.time-select-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+.time-select-options::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+
+.time-select-option {
+  @apply flex items-center justify-between w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors;
+}
+
+.time-select-option--selected {
+  @apply bg-green-50 text-primary font-medium;
+}
+
+.time-select-option-label {
+  @apply text-left;
+}
+
+.time-select-option-hint {
+  @apply text-xs text-gray-400 ml-3;
+}
+
+.time-select-option--selected .time-select-option-hint {
+  @apply text-primary/70;
+}
+
+/* ── Chip variant (compact pill button used inside the time row) ───── */
+
+.time-select--chip {
+  @apply inline-block;
+}
+
+.time-select-chip-input {
+  @apply bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-800 text-center cursor-pointer border-0 focus:outline-none focus:ring-2 focus:ring-primary;
+  width: 6.25rem;
+  padding: 0.5rem 0.75rem;
+  transition: background-color 100ms;
+}
+
+.time-select-chip-input:disabled {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+.time-select--chip .time-select-options {
+  @apply left-0 right-auto;
+  min-width: 8.5rem;
+}
+
+/* ── Invalid-time feedback ───────────────────────────────── */
+
+.time-select-input--invalid {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+  outline: 2px solid #ef4444;
+}
+
+.time-select-invalid-tooltip {
+  @apply absolute left-1/2 -translate-x-1/2 -top-7 z-30 bg-gray-800 text-white text-xs font-medium px-2 py-1 rounded-md shadow whitespace-nowrap pointer-events-none;
+  animation: invalid-tooltip-fade 120ms ease-out;
+}
+
+/* Fade only — no translate — so the tooltip appears centered above the chip
+   immediately without sliding into place. */
+@keyframes invalid-tooltip-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

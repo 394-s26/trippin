@@ -13,7 +13,10 @@ interface BaseEvent {
   lat?: number;
   lng?: number;
   timezone?: string;
+  endTimezone?: string | null; // Optional separate end-time zone; null = same as `timezone`
   paidBy?: string | null; // UID of the user responsible for paying; null = unassigned
+  color?: string | null; // Color label token from EVENT_COLORS; null = no color
+  allDay?: boolean; // True = day-bounded event; start/end Dates carry no meaningful time
 }
 
 // Transportation-specific event types
@@ -111,5 +114,8 @@ export interface EventUpdate {
   lat?: number;
   lng?: number;
   timezone?: string;
+  endTimezone?: string | null;
   paidBy?: string | null;
+  color?: string | null;
+  allDay?: boolean;
 }
