@@ -6,7 +6,6 @@ import { LocationPinIcon } from '../services/svgIcons';
 import { UserSelection } from '../hooks/useSessionSelections';
 import { pickFirstSelector } from '../utilities/pickFirstSelector';
 import { getSuggestionVoteSummary } from '../utilities/eventSuggestions';
-import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
 import { resolveEventColor } from '../utilities/eventColors';
 import { EventDaySlice } from '../utilities/eventOverlapsDay';
 import UserAvatar from './UserAvatar';
