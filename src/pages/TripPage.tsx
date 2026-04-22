@@ -16,7 +16,7 @@ import useTrip from '../hooks/useTrip';
 import useDays from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
-import { createEvent, deleteEvent, suggestEventDeletion, voteOnSuggestion } from '../services/firestoreEventsService';
+import { approveSuggestion, createEvent, deleteEvent, suggestEventDeletion, voteOnSuggestion } from '../services/firestoreEventsService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLastViewedTrip } from '../contexts/LastViewedTripContext';
 import './Home.css';
@@ -49,6 +49,7 @@ const TripPage = () => {
   const canProposeCreateEvent = can('propose_create_event');
   const canDeleteEvent = can('delete_event');
   const canProposeDeleteEvent = can('propose_delete_event');
+  const canApproveSuggestion = can('approve_suggestion');
   const totalTripUsers = trip ? new Set([trip.userId, ...trip.shared]).size : 0;
 
   const handleDeleteConfirmed = async () => {
@@ -150,6 +151,11 @@ const TripPage = () => {
   const handleVoteSuggestion = async (event: Event, vote: SuggestionVote) => {
     if (!appUser || !event.suggestion) return;
     await voteOnSuggestion(appUser.uid, event.tripId, event.dayId, event.id, vote);
+  };
+
+  const handleApproveSuggestion = async (event: Event) => {
+    if (!appUser || !event.suggestion) return;
+    await approveSuggestion(appUser.uid, event);
   };
 
   if (loading) {
@@ -273,6 +279,8 @@ const TripPage = () => {
               canDeleteDay={can('delete_day')}
               addEventLabel={canCreateEvent ? 'Event' : 'Suggest Event'}
               onVoteSuggestion={handleVoteSuggestion}
+              canApproveSuggestion={canApproveSuggestion}
+              onApproveSuggestion={handleApproveSuggestion}
             />
           </div>
         </main>

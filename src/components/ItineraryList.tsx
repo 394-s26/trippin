@@ -25,6 +25,8 @@ interface ItineraryListProps {
   canDeleteDay?: boolean;
   addEventLabel?: string;
   onVoteSuggestion?: (event: Event, vote: SuggestionVote) => void;
+  canApproveSuggestion?: boolean;
+  onApproveSuggestion?: (event: Event) => void;
 }
 
 const ItineraryList = ({
@@ -45,6 +47,8 @@ const ItineraryList = ({
   canDeleteDay = false,
   addEventLabel = 'Event',
   onVoteSuggestion,
+  canApproveSuggestion = false,
+  onApproveSuggestion,
 }: ItineraryListProps) => {
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -179,6 +183,8 @@ const ItineraryList = ({
                     tripUsers={tripUsers}
                     totalTripUsers={totalTripUsers}
                     onVoteSuggestion={onVoteSuggestion}
+                    canApproveSuggestion={canApproveSuggestion}
+                    onApproveSuggestion={onApproveSuggestion}
                   />
                 ))
               ) : (

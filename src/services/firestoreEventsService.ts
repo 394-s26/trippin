@@ -137,6 +137,30 @@ export const voteOnSuggestion = async (
   }
 };
 
+export const approveSuggestion = async (uid: string, event: Event) => {
+  if (!event.suggestion) return;
+  const allowed = await hasActionPermission(uid, event.tripId, 'approve_suggestion');
+  if (!allowed) throw new PermissionError('approve_suggestion');
+
+  const suggestionRef = doc(eventsCol(event.tripId, event.dayId), event.id);
+
+  try {
+    if (event.suggestion.type === 'delete') {
+      const targetId = event.suggestion.targetEventId;
+      if (targetId) {
+        await deleteDoc(doc(eventsCol(event.tripId, event.dayId), targetId));
+      }
+      await deleteDoc(suggestionRef);
+      return;
+    }
+
+    await updateDoc(suggestionRef, { suggestion: null });
+  } catch (error) {
+    console.error('Error approving suggestion: ', error);
+    throw error;
+  }
+};
+
 // Subscribes to all events for a specific trip across all its days.
 export const subscribeToEvents = (tripId: string, callback: (events: Event[]) => void) => {
   const q = query(

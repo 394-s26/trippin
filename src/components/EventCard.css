@@ -138,6 +138,22 @@
   @apply text-sm font-bold;
 }
 
+.event-card-vote-voters {
+  @apply flex items-center;
+}
+
+.event-card-vote-voters > * + * {
+  margin-left: -0.5rem;
+}
+
+.event-card-approve-btn {
+  @apply mt-3 w-full rounded-2xl px-4 py-3 text-sm font-semibold bg-primary text-white transition-colors duration-150;
+}
+
+.event-card-approve-btn:hover {
+  @apply bg-green-800;
+}
+
 .event-card-consensus-track {
   @apply mt-3 h-2 rounded-full bg-gray-200 overflow-hidden;
 }

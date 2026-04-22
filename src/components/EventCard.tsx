@@ -17,6 +17,8 @@ interface EventCardProps {
   tripUsers?: AppUser[];
   totalTripUsers?: number;
   onVoteSuggestion?: (event: Event, vote: SuggestionVote) => void;
+  canApproveSuggestion?: boolean;
+  onApproveSuggestion?: (event: Event) => void;
 }
 
 const TYPE_ICONS: Record<Event['type'], ReactElement> = {
@@ -35,6 +37,8 @@ const EventCard = ({
   tripUsers = [],
   totalTripUsers = 0,
   onVoteSuggestion,
+  canApproveSuggestion = false,
+  onApproveSuggestion,
 }: EventCardProps) => {
   const timeFmt = (d: Date) => new Date(d).toLocaleTimeString('en-US', {
     hour: 'numeric',
@@ -78,6 +82,12 @@ const EventCard = ({
   const noStyle = { ['--vote-fill' as string]: `${noRatio * 100}%` } as CSSProperties;
   const voteTitle = suggestionType === 'delete' ? 'Vote: should we remove this?' : 'Vote: should we do this?';
   const proposalBadge = suggestionType === 'delete' ? 'Delete Proposal' : 'Proposed';
+
+  const lookupUser = (uid: string): AppUser | null =>
+    tripUsers.find(u => u.uid === uid) ?? null;
+  const yesVoterUids = event.suggestion?.votes.yes ?? [];
+  const noVoterUids = event.suggestion?.votes.no ?? [];
+  const approveLabel = suggestionType === 'delete' ? 'Approve deletion' : 'Approve event';
 
   return (
     <div className={cardClass} style={cardStyle} onClick={onSelect}>
@@ -131,6 +141,13 @@ const EventCard = ({
               <span className="event-card-vote-btn-label">
                 {suggestionType === 'delete' ? 'Do it' : 'Count me in'}
               </span>
+              {yesVoterUids.length > 0 && (
+                <span className="event-card-vote-voters" aria-label={`${yesVotes} yes voters`}>
+                  {yesVoterUids.map(uid => (
+                    <UserAvatar key={uid} user={lookupUser(uid)} size="sm" bordered />
+                  ))}
+                </span>
+              )}
               <span className="event-card-vote-btn-count">{yesVotes}/{totalUsers}</span>
             </button>
 
@@ -146,9 +163,26 @@ const EventCard = ({
               <span className="event-card-vote-btn-label">
                 {suggestionType === 'delete' ? 'Keep it' : 'Not worth it'}
               </span>
+              {noVoterUids.length > 0 && (
+                <span className="event-card-vote-voters" aria-label={`${noVotes} no voters`}>
+                  {noVoterUids.map(uid => (
+                    <UserAvatar key={uid} user={lookupUser(uid)} size="sm" bordered />
+                  ))}
+                </span>
+              )}
               <span className="event-card-vote-btn-count">{noVotes}/{totalUsers}</span>
             </button>
           </div>
+
+          {canApproveSuggestion && (
+            <button
+              type="button"
+              className="event-card-approve-btn"
+              onClick={() => onApproveSuggestion?.(event)}
+            >
+              {approveLabel}
+            </button>
+          )}
 
           <div className="event-card-consensus-track">
             <span className="event-card-consensus-fill" style={consensusFillStyle} />
