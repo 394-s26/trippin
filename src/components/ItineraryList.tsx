@@ -5,6 +5,7 @@ import { sliceEventForDay } from '../utilities/eventOverlapsDay';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
 import { UserSelection } from '../hooks/useSessionSelections';
+import { Event, SuggestionVote } from '../types/event';
 import './ItineraryList.css';
 
 interface ItineraryListProps {
@@ -18,13 +19,38 @@ interface ItineraryListProps {
   allSelections?: UserSelection[];
   currentUserId?: string;
   tripUsers?: AppUser[];
+  totalTripUsers?: number;
   canAddEvent?: boolean;
   canAddDay?: boolean;
   canEditDay?: boolean;
   canDeleteDay?: boolean;
+  addEventLabel?: string;
+  onVoteSuggestion?: (event: Event, vote: SuggestionVote) => void;
+  canApproveSuggestion?: boolean;
+  onApproveSuggestion?: (event: Event) => void;
 }
 
-const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEvent, selectedEventIds = [], onSelectEvent, allSelections = [], currentUserId, tripUsers = [], canAddEvent = false, canAddDay = false, canEditDay = false, canDeleteDay = false }: ItineraryListProps) => {
+const ItineraryList = ({
+  days,
+  onAddDay,
+  onUpdateDayLabel,
+  onDeleteDay,
+  onAddEvent,
+  selectedEventIds = [],
+  onSelectEvent,
+  allSelections = [],
+  currentUserId,
+  tripUsers = [],
+  totalTripUsers = 0,
+  canAddEvent = false,
+  canAddDay = false,
+  canEditDay = false,
+  canDeleteDay = false,
+  addEventLabel = 'Event',
+  onVoteSuggestion,
+  canApproveSuggestion = false,
+  onApproveSuggestion,
+}: ItineraryListProps) => {
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -103,7 +129,7 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
                           className="day-add-event-btn"
                         >
                           <PlusIcon size={14} />
-                          Event
+                          {addEventLabel}
                         </button>
                       )}
                       {(canEditDay || canDeleteDay) && (
@@ -192,6 +218,10 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
                     allSelections={allSelections}
                     currentUserId={currentUserId}
                     tripUsers={tripUsers}
+                    totalTripUsers={totalTripUsers}
+                    onVoteSuggestion={onVoteSuggestion}
+                    canApproveSuggestion={canApproveSuggestion}
+                    onApproveSuggestion={onApproveSuggestion}
                   />
                 ))
               ) : (

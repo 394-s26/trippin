@@ -10,7 +10,7 @@ import EventFormModal from '../components/EventFormModal';
 import BudgetModal from '../components/BudgetModal';
 import TripShareBar from '../components/TripShareBar';
 import { SelectionActionBar } from '../components/SelectionActionBar';
-import { Event } from '../types/event';
+import { Event, SuggestionVote } from '../types/event';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
 import useTrip from '../hooks/useTrip';
@@ -18,7 +18,7 @@ import useDays from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
 import { useEventLock } from '../hooks/useEventLock';
-import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock } from '../services/firestoreEventsService';
+import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, approveSuggestion } from '../services/firestoreEventsService';
 import { eventOverlapsDay } from '../utilities/eventOverlapsDay';
 import { useAuth } from '../contexts/AuthContext';
 import { useLastViewedTrip } from '../contexts/LastViewedTripContext';
@@ -58,6 +58,13 @@ const TripPage = () => {
   // Snapshot of event IDs pending deletion confirmation. Captured up-front so
   // the SelectionActionBar's overlay auto-deselect doesn't erase them mid-flow.
   const [deleteConfirmIds, setDeleteConfirmIds] = useState<string[] | null>(null);
+
+  const canCreateEvent = can('add_event');
+  const canProposeCreateEvent = can('propose_create_event');
+  const canDeleteEvent = can('delete_event');
+  const canProposeDeleteEvent = can('propose_delete_event');
+  const canApproveSuggestion = can('approve_suggestion');
+  const totalTripUsers = trip ? new Set([trip.userId, ...trip.shared]).size : 0;
 
   // If our lock is stolen (expired past TTL while browser slept, etc.), flip
   // the open modal to read-only so we can't accidentally overwrite.
@@ -142,14 +149,20 @@ const TripPage = () => {
     setLastViewedTrip({ tripId: id!, tripName: tripName, bannerImageUrl: url });
   };
 
-  const handleNewEvent = async (event: Omit<Event, 'id' | 'tripId'>) => {
+  const handleNewEvent = async (event: Omit<Event, 'id' | 'tripId'> & { isSuggestion?: boolean }) => {
     if (!event.dayId || !appUser) return;
     await createEvent(appUser.uid, { ...event, tripId: id! });
   };
 
-  const handleRequestDeleteSelected = () => {
+  const handleRequestDeleteSelected = async () => {
     if (mySelectedIds.length === 0) return;
-    setDeleteConfirmIds([...mySelectedIds]);
+    if (canDeleteEvent) {
+      setDeleteConfirmIds([...mySelectedIds]);
+    } else if (canProposeDeleteEvent && appUser) {
+      const selected = events.filter(e => mySelectedIds.includes(e.id) && !e.suggestion);
+      await Promise.all(selected.map(e => suggestEventDeletion(appUser.uid, e)));
+      await deselectAll();
+    }
   };
 
   const handleConfirmDeleteSelected = async () => {
@@ -198,6 +211,16 @@ const TripPage = () => {
       await releaseEventLock(id!, editingEvent.event.id, appUser.uid);
     }
     setEditingEvent(null);
+  };
+
+  const handleVoteSuggestion = async (event: Event, vote: SuggestionVote) => {
+    if (!appUser || !event.suggestion) return;
+    await voteOnSuggestion(appUser.uid, event.tripId, event.dayId, event.id, vote);
+  };
+
+  const handleApproveSuggestion = async (event: Event) => {
+    if (!appUser || !event.suggestion) return;
+    await approveSuggestion(appUser.uid, event);
   };
 
   if (loading) {
@@ -315,10 +338,15 @@ const TripPage = () => {
               allSelections={allSelections}
               currentUserId={appUser?.uid}
               tripUsers={tripUsers}
-              canAddEvent={can('add_event')}
+              totalTripUsers={totalTripUsers}
+              canAddEvent={canCreateEvent || canProposeCreateEvent}
               canAddDay={can('add_day')}
               canEditDay={can('edit_day')}
               canDeleteDay={can('delete_day')}
+              addEventLabel={canCreateEvent ? 'Event' : 'Suggest Event'}
+              onVoteSuggestion={handleVoteSuggestion}
+              canApproveSuggestion={canApproveSuggestion}
+              onApproveSuggestion={handleApproveSuggestion}
             />
           </div>
         </main>
@@ -356,6 +384,8 @@ const TripPage = () => {
           currentUserId={appUser?.uid}
           tripBudget={trip.budget}
           tripSpent={events.reduce((sum, e) => sum + (e.cost ?? 0), 0)}
+          canCreateEvent={canCreateEvent}
+          canProposeEvent={canProposeCreateEvent}
         />
 
         <EventFormModal
@@ -399,7 +429,8 @@ const TripPage = () => {
         onDelete={handleRequestDeleteSelected}
         onDeselectAll={deselectAll}
         canEdit={can('edit_event')}
-        canDelete={can('delete_event')}
+        canDelete={canDeleteEvent}
+        canSuggestDelete={canProposeDeleteEvent && !canDeleteEvent}
         scrollContainer={scrollRef.current}
       />
     </div>
