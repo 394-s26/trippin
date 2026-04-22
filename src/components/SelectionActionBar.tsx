@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { PencilIcon, TrashIcon, XIcon } from '../services/svgIcons';
 import './SelectionActionBar.css';
 
@@ -132,7 +133,7 @@ const SelectionActionBar = ({
       ? 'Select a single event to edit'
       : undefined;
 
-  return (
+  return createPortal(
     <div
       ref={wrapperRef}
       className="selection-bar-wrapper"
@@ -169,7 +170,8 @@ const SelectionActionBar = ({
           <span className="selection-bar-btn-icon"><TrashIcon size={16} /></span>
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
