@@ -102,7 +102,6 @@ const EventCard = ({
     tripUsers.find(u => u.uid === uid) ?? null;
   const yesVoterUids = event.suggestion?.votes.yes ?? [];
   const noVoterUids = event.suggestion?.votes.no ?? [];
-  const approveLabel = suggestionType === 'delete' ? 'Approve deletion' : 'Approve event';
 
   return (
     <div className={cardClass} style={cardStyle} data-event-id={event.id} onClick={(e) => { e.stopPropagation(); onSelect?.(); }}>
@@ -207,10 +206,10 @@ const EventCard = ({
           {canApproveSuggestion && (
             <button
               type="button"
-              className="event-card-approve-btn"
+              className={`event-card-approve-btn ${suggestionType === 'delete' ? 'delete' : 'create'}`}
               onClick={() => onApproveSuggestion?.(event)}
             >
-              {approveLabel}
+              {suggestionType === 'delete' ? 'Approve deletion' : 'Approve event'}
             </button>
           )}
 

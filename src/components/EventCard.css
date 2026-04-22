@@ -190,9 +190,14 @@
   @apply mt-3 w-full rounded-2xl px-4 py-3 text-sm font-semibold bg-primary text-white transition-colors duration-150;
 }
 
-.event-card-approve-btn:hover {
-  @apply bg-green-800;
-}
+.event-card-approve-btn.create { @apply bg-primary; }
+
+.event-card-approve-btn.create:hover { @apply bg-green-800 }
+
+.event-card-approve-btn.delete { @apply bg-red-800; }
+
+.event-card-approve-btn.delete:hover { @apply bg-red-700; }
+
 
 .event-card-consensus-track {
   @apply mt-3 h-2 rounded-full bg-gray-200 overflow-hidden;
