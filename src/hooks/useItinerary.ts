@@ -14,7 +14,7 @@ const useItinerary = (tripId: string) => {
       const converted = fetchedEvents.map(e => ({
         ...e,
         startDate: toDate(e.startDate as Date | Timestamp),
-        endDate: e.endDate ? toDate(e.endDate as Date | Timestamp) : null,
+        endDate: e.endDate ? toDate(e.endDate as Date | Timestamp) : e.endDate,
       }));
       setEvents(converted);
       setLoading(false);

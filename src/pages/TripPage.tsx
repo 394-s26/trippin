@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -9,14 +10,16 @@ import EventFormModal from '../components/EventFormModal';
 import BudgetModal from '../components/BudgetModal';
 import TripShareBar from '../components/TripShareBar';
 import { SelectionActionBar } from '../components/SelectionActionBar';
-import { Event, EventDraft, SuggestionVote } from '../types/event';
+import { Event, SuggestionVote } from '../types/event';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
 import useTrip from '../hooks/useTrip';
 import useDays from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
-import { approveSuggestion, createEvent, deleteEvent, suggestEventDeletion, voteOnSuggestion } from '../services/firestoreEventsService';
+import { useEventLock } from '../hooks/useEventLock';
+import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, approveSuggestion } from '../services/firestoreEventsService';
+import { eventOverlapsDay } from '../utilities/eventOverlapsDay';
 import { useAuth } from '../contexts/AuthContext';
 import { useLastViewedTrip } from '../contexts/LastViewedTripContext';
 import './Home.css';
@@ -39,12 +42,23 @@ const TripPage = () => {
   const { mySelectedIds, allSelections, toggleSelection, deselectAll } = useSessionSelections(id!, appUser?.uid);
   const { setLastViewedTrip } = useLastViewedTrip();
 
+  const scrollRef = useRef<HTMLElement>(null);
+
   const [activeDay, setActiveDay] = useState<{ id: string; date: Date } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [tripName, setTripName] = useState('New Trip');
   const [bannerImage, setBannerImage] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [tripUsers, setTripUsers] = useState<AppUser[]>([]);
+  const [editingEvent, setEditingEvent] = useState<{
+    event: Event;
+    lock: 'acquired' | 'readonly';
+    holderName?: string;
+  } | null>(null);
+  // Snapshot of event IDs pending deletion confirmation. Captured up-front so
+  // the SelectionActionBar's overlay auto-deselect doesn't erase them mid-flow.
+  const [deleteConfirmIds, setDeleteConfirmIds] = useState<string[] | null>(null);
+
   const canCreateEvent = can('add_event');
   const canProposeCreateEvent = can('propose_create_event');
   const canDeleteEvent = can('delete_event');
@@ -52,16 +66,31 @@ const TripPage = () => {
   const canApproveSuggestion = can('approve_suggestion');
   const totalTripUsers = trip ? new Set([trip.userId, ...trip.shared]).size : 0;
 
+  // If our lock is stolen (expired past TTL while browser slept, etc.), flip
+  // the open modal to read-only so we can't accidentally overwrite.
+  useEventLock(
+    id!,
+    editingEvent?.lock === 'acquired' ? editingEvent.event.id : null,
+    appUser?.uid,
+    editingEvent?.lock === 'acquired',
+    () => {
+      setEditingEvent((curr) => curr ? { ...curr, lock: 'readonly' } : curr);
+    },
+  );
+
   const handleDeleteConfirmed = async () => {
     await deleteTrip();
     navigate('/');
   };
 
-  // Merge Firestore events into their matching days by dayId.
+  // Merge Firestore events into every day they overlap. A multi-day event
+  // appears as a separate chunk under each day's label.
   const daysWithEvents: Day[] = days.map(day => ({
     ...day,
-    events: events.filter(e => e.dayId === day.id),
+    events: events.filter(e => eventOverlapsDay(e, day)),
   }));
+
+  const tripDayRefs = days.map(d => ({ id: d.id, date: d.date }));
 
   useEffect(() => {
     if (trip && !initialized) {
@@ -120,32 +149,68 @@ const TripPage = () => {
     setLastViewedTrip({ tripId: id!, tripName: tripName, bannerImageUrl: url });
   };
 
-  const handleNewEvent = async (event: EventDraft) => {
-    const dayId = activeDay?.id;
-    if (!dayId || !appUser) return;
-    await createEvent(appUser.uid, { ...event, tripId: id!, dayId });
+  const handleNewEvent = async (event: Omit<Event, 'id' | 'tripId'> & { isSuggestion?: boolean }) => {
+    if (!event.dayId || !appUser) return;
+    await createEvent(appUser.uid, { ...event, tripId: id! });
   };
 
-  const handleDeleteSelected = async () => {
-    if (!appUser) return;
-    const selected = events.filter(e => mySelectedIds.includes(e.id));
-
+  const handleRequestDeleteSelected = async () => {
+    if (mySelectedIds.length === 0) return;
     if (canDeleteEvent) {
-      await Promise.all(
-        selected.map(e => deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)),
-      );
+      setDeleteConfirmIds([...mySelectedIds]);
+    } else if (canProposeDeleteEvent && appUser) {
+      const selected = events.filter(e => mySelectedIds.includes(e.id) && !e.suggestion);
+      await Promise.all(selected.map(e => suggestEventDeletion(appUser.uid, e)));
       await deselectAll();
-      return;
     }
+  };
 
-    if (canProposeDeleteEvent) {
-      const suggestionTargets = selected.filter(e => !e.suggestion);
-      await Promise.all(
-        suggestionTargets.map(e => suggestEventDeletion(appUser.uid, e)),
-      );
-    }
-
+  const handleConfirmDeleteSelected = async () => {
+    if (!appUser || !deleteConfirmIds) return;
+    const selected = events.filter(e => deleteConfirmIds.includes(e.id));
+    await Promise.all(
+      selected.map(e => deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)),
+    );
+    setDeleteConfirmIds(null);
     await deselectAll();
+  };
+
+  const handleEditSelected = async () => {
+    if (!appUser || mySelectedIds.length !== 1 || !can('edit_event')) return;
+    const target = events.find(e => e.id === mySelectedIds[0]);
+    if (!target) return;
+    const result = await acquireEventLock(id!, target.id, appUser.uid);
+    if (result.acquired) {
+      setEditingEvent({ event: target, lock: 'acquired' });
+    } else {
+      const holder = tripUsers.find(u => u.uid === result.holderUid);
+      const holderName = holder ? `${holder.firstName} ${holder.lastName}`.trim() : 'Another user';
+      setEditingEvent({ event: target, lock: 'readonly', holderName });
+    }
+  };
+
+  const handleUpdateEvent = async (updated: Omit<Event, 'id' | 'tripId'>) => {
+    if (!appUser || !editingEvent || editingEvent.lock !== 'acquired') return;
+    const { event } = editingEvent;
+    if (updated.dayId && updated.dayId !== event.dayId) {
+      // Anchor day moved — Firestore stores events under the day's subcollection,
+      // so re-create at the new path and delete the old doc.
+      await createEvent(appUser.uid, { ...updated, tripId: event.tripId });
+      await deleteEvent(appUser.uid, event.tripId, event.dayId, event.id);
+    } else {
+      await updateEvent(appUser.uid, event.tripId, event.dayId, event.id, updated);
+    }
+    await releaseEventLock(id!, event.id, appUser.uid);
+    setEditingEvent(null);
+    await deselectAll();
+  };
+
+  const handleCloseEdit = async () => {
+    if (!appUser || !editingEvent) { setEditingEvent(null); return; }
+    if (editingEvent.lock === 'acquired') {
+      await releaseEventLock(id!, editingEvent.event.id, appUser.uid);
+    }
+    setEditingEvent(null);
   };
 
   const handleVoteSuggestion = async (event: Event, vote: SuggestionVote) => {
@@ -216,10 +281,10 @@ const TripPage = () => {
   }
 
   return (
-    <div className="home-wrapper">
+    <div className="home-wrapper" onClick={() => { if (mySelectedIds.length > 0) deselectAll(); }}>
       <div className="home-container">
         <AppHeader />
-        <main className="home-main">
+        <main className="home-main" ref={scrollRef}>
           <div className="home-content">
             <TripBanner
               tripName={tripName}
@@ -251,6 +316,7 @@ const TripPage = () => {
               canInvite={true}
               canRemove={can('remove_member')}
               canChangeRole={can('change_member_role')}
+              onBeforeOpen={deselectAll}
             />
             <BudgetModal
               tripId={id!}
@@ -285,19 +351,35 @@ const TripPage = () => {
           </div>
         </main>
 
-        <SelectionActionBar
-          selectedCount={mySelectedIds.length}
-          onDelete={handleDeleteSelected}
-          onDeselectAll={deselectAll}
-          canDelete={canDeleteEvent}
-          canSuggestDelete={canProposeDeleteEvent}
-        />
+        {deleteConfirmIds && createPortal(
+          <div className="overlay-bottom">
+            <div className="overlay-scrim" onClick={() => setDeleteConfirmIds(null)} />
+            <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 flex flex-col gap-3 animate-slide-up">
+              <h2 className="delete-confirm-title">
+                Delete {deleteConfirmIds.length} {deleteConfirmIds.length === 1 ? 'event' : 'events'}?
+              </h2>
+              <p className="delete-confirm-body">
+                {deleteConfirmIds.length === 1
+                  ? 'This event will be permanently deleted. This cannot be undone.'
+                  : `These ${deleteConfirmIds.length} events will be permanently deleted. This cannot be undone.`}
+              </p>
+              <button onClick={handleConfirmDeleteSelected} className="delete-confirm-btn">
+                Delete
+              </button>
+              <button onClick={() => setDeleteConfirmIds(null)} className="delete-cancel-btn">
+                Cancel
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
 
         <EventFormModal
           isOpen={activeDay !== null}
           onClose={() => setActiveDay(null)}
           onSubmit={handleNewEvent}
-          dayDate={activeDay?.date}
+          tripDays={tripDayRefs}
+          initialDayId={activeDay?.id}
           tripUsers={tripUsers}
           currentUserId={appUser?.uid}
           tripBudget={trip.budget}
@@ -306,7 +388,22 @@ const TripPage = () => {
           canProposeEvent={canProposeCreateEvent}
         />
 
-        {showDeleteConfirm && (
+        <EventFormModal
+          isOpen={editingEvent !== null}
+          onClose={handleCloseEdit}
+          onSubmit={handleUpdateEvent}
+          tripDays={tripDayRefs}
+          initialDayId={editingEvent?.event.dayId}
+          tripUsers={tripUsers}
+          currentUserId={appUser?.uid}
+          tripBudget={trip.budget}
+          tripSpent={events.reduce((sum, e) => sum + (e.cost ?? 0), 0)}
+          mode={editingEvent?.lock === 'readonly' ? 'readonly' : 'edit'}
+          initialEvent={editingEvent?.event}
+          lockHolderName={editingEvent?.holderName}
+        />
+
+        {showDeleteConfirm && createPortal(
           <div className="overlay-bottom">
             <div className="overlay-scrim" onClick={() => setShowDeleteConfirm(false)} />
             <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 flex flex-col gap-3 animate-slide-up">
@@ -321,9 +418,21 @@ const TripPage = () => {
                 Cancel
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
+      <SelectionActionBar
+        selectedCount={mySelectedIds.length}
+        onEdit={handleEditSelected}
+        selectedEventIds={mySelectedIds}
+        onDelete={handleRequestDeleteSelected}
+        onDeselectAll={deselectAll}
+        canEdit={can('edit_event')}
+        canDelete={canDeleteEvent}
+        canSuggestDelete={canProposeDeleteEvent && !canDeleteEvent}
+        scrollContainer={scrollRef.current}
+      />
     </div>
   );
 };

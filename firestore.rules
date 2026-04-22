@@ -22,6 +22,19 @@ service cloud.firestore {
       allow write: if isAuthed() && request.auth.uid == userId;
     }
 
+    // Username reservations.
+    // Stored as: usernames/{username} -> { uid: <owner uid> }.
+    // Used to enforce uniqueness with a Firestore transaction.
+    match /usernames/{username} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() &&
+        request.resource.data.uid == request.auth.uid &&
+        !exists(/databases/$(database)/documents/usernames/$(username));
+      allow delete: if isAuthed() &&
+        resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
     match /trips/{tripId} {
       // Owner or anyone in shared[] can read.
       allow read: if isAuthed() && hasTripAccess(resource.data);
@@ -100,6 +113,27 @@ service cloud.firestore {
       allow write: if isAuthed() &&
         request.auth.uid == userId &&
         hasTripAccess(get(/databases/$(database)/documents/trips/$(tripId)).data);
+    }
+
+    // Event edit locks — prevent concurrent edits across users.
+    // Any trip member can read locks (to see who holds them).
+    // Only owners and managers (roles with edit_event permission) can
+    // acquire/release, and the lock's uid must match the caller.
+    // Delete is permitted for callers holding the lock OR overwriting an
+    // expired lock (transaction validates expiry client-side).
+    match /sessions/{tripId}/eventLocks/{eventId} {
+      function tripData() {
+        return get(/databases/$(database)/documents/trips/$(tripId)).data;
+      }
+      function canEditEvents() {
+        return isTripOwner(tripData()) ||
+          tripData().permissions[request.auth.uid] == 'manager';
+      }
+      allow read: if isAuthed() && hasTripAccess(tripData());
+      allow create, update: if isAuthed() &&
+        canEditEvents() &&
+        request.resource.data.uid == request.auth.uid;
+      allow delete: if isAuthed() && canEditEvents();
     }
 
     // Pending invites for users who haven't signed up yet.

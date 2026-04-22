@@ -6,6 +6,7 @@ export interface User {
   displayName: string | null;
   email: string | null;
   photoURL: string | null;
+  providerIds: string[];
 }
 
 // Stored in Firestore at users/{uid}. Extends the Firebase Auth identity
@@ -26,11 +27,4 @@ export interface EmailRegistrationInput {
   lastName: string;
   username: string;
   photoFile?: File | null;
-}
-
-export interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  signIn: () => Promise<void>;
-  signOut: () => Promise<void>;
 }

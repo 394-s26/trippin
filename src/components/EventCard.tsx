@@ -1,15 +1,19 @@
-import { CSSProperties, ReactElement } from 'react';
+import { CSSProperties } from 'react';
 import { Event, SuggestionVote } from '../types/event';
 import { AppUser } from '../types/auth';
-import { ActivityIcon, BedIcon, CheckIcon, FoodIcon, RestaurantIcon, XIcon } from '../services/svgIcons';
+import { CheckIcon, XIcon } from '../services/svgIcons';
 import { UserSelection } from '../hooks/useSessionSelections';
 import { pickFirstSelector } from '../utilities/pickFirstSelector';
 import { getSuggestionVoteSummary } from '../utilities/eventSuggestions';
+import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
+import { resolveEventColor } from '../utilities/eventColors';
+import { EventDaySlice } from '../utilities/eventOverlapsDay';
 import UserAvatar from './UserAvatar';
 import './EventCard.css';
 
 interface EventCardProps {
   event: Event;
+  daySlice?: EventDaySlice;
   onSelect?: () => void;
   isSelected?: boolean;
   allSelections?: UserSelection[];
@@ -21,15 +25,9 @@ interface EventCardProps {
   onApproveSuggestion?: (event: Event) => void;
 }
 
-const TYPE_ICONS: Record<Event['type'], ReactElement> = {
-  Hotel: <BedIcon size={24} />,
-  Restaurant: <RestaurantIcon size={24} />,
-  Activity: <ActivityIcon size={24} />,
-  Food: <FoodIcon size={24} />,
-};
-
 const EventCard = ({
   event,
+  daySlice,
   onSelect,
   isSelected = false,
   allSelections = [],
@@ -45,8 +43,20 @@ const EventCard = ({
     minute: '2-digit',
     hour12: true,
   });
-  const startTime = timeFmt(event.startDate);
-  const time = event.endDate ? `${startTime} – ${timeFmt(event.endDate)}` : startTime;
+
+  let time: string;
+  if (daySlice?.isAllDay) {
+    time = 'All day';
+  } else if (daySlice) {
+    time = `${timeFmt(daySlice.sliceStart)} – ${timeFmt(daySlice.sliceEnd)}`;
+  } else {
+    const startTime = timeFmt(event.startDate);
+    time = event.endDate ? `${startTime} – ${timeFmt(event.endDate)}` : startTime;
+  }
+
+  const showSpanPill = !!daySlice && daySlice.totalDays > 1;
+  const displayName = event.name && event.name.trim() ? event.name : '(no name)';
+  const colorHex = resolveEventColor(event.color);
 
   const otherSelectors = allSelections.filter(
     s => s.uid !== currentUserId && s.selectedIds.includes(event.id),
@@ -90,11 +100,17 @@ const EventCard = ({
   const approveLabel = suggestionType === 'delete' ? 'Approve deletion' : 'Approve event';
 
   return (
-    <div className={cardClass} style={cardStyle} onClick={onSelect}>
+    <div className={cardClass} style={cardStyle} data-event-id={event.id} onClick={(e) => { e.stopPropagation(); onSelect?.(); }}>
+      {colorHex && (
+        <span className="event-card-color-stripe" style={{ backgroundColor: colorHex }} aria-hidden="true" />
+      )}
       <div className="event-card-header">
         <div className="event-card-body">
           <div className="event-card-time-row">
             <span className="event-card-time">{time}</span>
+            {showSpanPill && (
+              <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
+            )}
             {isSuggestion && (
               <span className="event-card-proposed-badge">{proposalBadge}</span>
             )}
@@ -111,16 +127,25 @@ const EventCard = ({
               </div>
             )}
           </div>
-          <h3 className="event-card-name">{event.name}</h3>
+          <h3 className="event-card-name">{displayName}</h3>
           {event.location && (
-            <p className="event-card-meta">{event.location}</p>
+            <p className="event-card-meta">
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="event-card-location-link"
+              >
+                {event.location}
+              </a>
+            </p>
           )}
           {event.cost != null && (
             <p className="event-card-meta">${event.cost.toFixed(2)}</p>
           )}
         </div>
         <div className="event-card-icon">
-          {TYPE_ICONS[event.type]}
+          {EVENT_TYPE_ICONS[event.type]?.({ size: 24 })}
         </div>
       </div>
 

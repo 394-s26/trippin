@@ -1,11 +1,26 @@
 import { db } from './firebase';
-import { addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
-import { Event, EventCreateInput, EventSuggestion, SuggestionType, SuggestionVote } from '../types/event';
+import { addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, onSnapshot, orderBy, query, runTransaction, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { Event, EventSuggestion, SuggestionType, SuggestionVote } from '../types/event';
 import { hasActionPermission, PermissionError } from './permissionService';
 import { resolveCreateEventSuggestionMode } from '../utilities/eventSuggestions';
 
 const eventsCol = (tripId: string, dayId: string) =>
   collection(db, 'trips', tripId, 'days', dayId, 'events');
+
+const eventLockDoc = (tripId: string, eventId: string) =>
+  doc(db, 'sessions', tripId, 'eventLocks', eventId);
+
+export const LOCK_TTL_MS = 60_000;
+
+export interface EventLock {
+  uid: string;
+  acquiredAt: Timestamp;
+  expiresAt: Timestamp;
+}
+
+export type AcquireLockResult =
+  | { acquired: true }
+  | { acquired: false; holderUid: string };
 
 const buildSuggestion = (uid: string, type: SuggestionType, targetEventId?: string): EventSuggestion => ({
   type,
@@ -17,7 +32,7 @@ const buildSuggestion = (uid: string, type: SuggestionType, targetEventId?: stri
   ...(targetEventId ? { targetEventId } : {}),
 });
 
-export const createEvent = async (uid: string, event: EventCreateInput): Promise<Event> => {
+export const createEvent = async (uid: string, event: Omit<Event, 'id'> & { isSuggestion?: boolean }): Promise<Event> => {
   const { isSuggestion = false, ...eventData } = event;
   const [canCreateEvent, canProposeEvent] = await Promise.all([
     hasActionPermission(uid, event.tripId, 'add_event'),
@@ -48,7 +63,7 @@ export const createEvent = async (uid: string, event: EventCreateInput): Promise
   }
 };
 
-export const updateEvent = async (uid: string, tripId: string, dayId: string, id: string, updatedEvent: Partial<Event>) => {
+export const updateEvent = async (uid: string, tripId: string, dayId: string, id: string, updatedEvent: Omit<Event, 'id' | 'tripId' | 'dayId'>) => {
   const allowed = await hasActionPermission(uid, tripId, 'edit_event');
   if (!allowed) throw new PermissionError('edit_event');
   try {
@@ -159,6 +174,83 @@ export const approveSuggestion = async (uid: string, event: Event) => {
     console.error('Error approving suggestion: ', error);
     throw error;
   }
+};
+
+// Attempts to acquire an edit lock on an event. Lock is stored at
+// sessions/{tripId}/eventLocks/{eventId}. If the existing lock is expired or
+// held by the same user, it is re-acquired. Otherwise returns the holder's uid.
+export const acquireEventLock = async (
+  tripId: string,
+  eventId: string,
+  uid: string,
+): Promise<AcquireLockResult> => {
+  const ref = eventLockDoc(tripId, eventId);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const nowMs = Date.now();
+    const existing = snap.exists() ? (snap.data() as EventLock) : null;
+    const expiresMs = existing?.expiresAt.toMillis() ?? 0;
+    const heldByOther = existing && existing.uid !== uid && expiresMs > nowMs;
+    if (heldByOther) {
+      return { acquired: false, holderUid: existing!.uid } as AcquireLockResult;
+    }
+    const now = Timestamp.fromMillis(nowMs);
+    const expires = Timestamp.fromMillis(nowMs + LOCK_TTL_MS);
+    tx.set(ref, { uid, acquiredAt: now, expiresAt: expires });
+    return { acquired: true } as AcquireLockResult;
+  });
+};
+
+// Extends the lock expiration if the caller still holds it. Returns false if
+// the lock was stolen or never held by this user, so the caller can bail out.
+export const heartbeatEventLock = async (
+  tripId: string,
+  eventId: string,
+  uid: string,
+): Promise<boolean> => {
+  const ref = eventLockDoc(tripId, eventId);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return false;
+    const existing = snap.data() as EventLock;
+    const nowMs = Date.now();
+    if (existing.uid !== uid || existing.expiresAt.toMillis() <= nowMs) {
+      return false;
+    }
+    tx.update(ref, { expiresAt: Timestamp.fromMillis(nowMs + LOCK_TTL_MS) });
+    return true;
+  });
+};
+
+// Releases the lock only if the caller still holds it.
+export const releaseEventLock = async (
+  tripId: string,
+  eventId: string,
+  uid: string,
+): Promise<void> => {
+  const ref = eventLockDoc(tripId, eventId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const existing = snap.data() as EventLock;
+    if (existing.uid === uid) tx.delete(ref);
+  });
+};
+
+// Subscribes to the lock doc for a specific event. Callback receives the lock
+// or null when no one holds it (or the lock expired on the client clock).
+export const subscribeToEventLock = (
+  tripId: string,
+  eventId: string,
+  callback: (lock: EventLock | null) => void,
+) => {
+  const ref = eventLockDoc(tripId, eventId);
+  return onSnapshot(ref, (snap) => {
+    if (!snap.exists()) return callback(null);
+    const lock = snap.data() as EventLock;
+    if (lock.expiresAt.toMillis() <= Date.now()) return callback(null);
+    callback(lock);
+  });
 };
 
 // Subscribes to all events for a specific trip across all its days.

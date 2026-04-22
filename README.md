@@ -17,6 +17,16 @@ cd your-app-name
 npm install
 ```
 
+### Google Maps API
+
+To enable Google Maps place autocomplete for itinerary locations, create a `.env` file at the project root and add:
+
+```
+VITE_GOOGLE_MAPS_API_KEY=your_api_key_here
+```
+
+Then restart the Vite dev server.
+
 ## Test
 
 There is no code to test. This is a shell for writing an app vision for CoPilot to fill in.

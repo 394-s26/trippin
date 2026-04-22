@@ -59,6 +59,28 @@
   @apply bg-green-600/80 text-white;
 }
 
+@keyframes copied-fade {
+  0%   { opacity: 0; }
+  15%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.trip-share-bar-copied-text {
+  position: fixed;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  background: rgba(22, 163, 74, 0.9);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 9999;
+  animation: copied-fade 2s ease forwards;
+}
+
 .trip-share-bar-avatar-btn {
   @apply flex-shrink-0 rounded-full focus:outline-none;
 }
@@ -87,6 +109,12 @@
 
 .trip-share-bar-remove-cancel {
   @apply flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg py-1.5 transition-colors;
+}
+
+.share-modal {
+  position: relative;
+  border-radius: 1rem; /* matches rounded-2xl */
+  padding: 2px;
 }
 
 /* Share modal */
@@ -325,6 +353,15 @@
 
 .share-modal-role-guide-item {
   @apply flex-1 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 flex flex-col gap-1;
+  position: relative;
+}
+
+.share-modal-role-guide-emoji {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 1.5rem;
+  line-height: 1;
 }
 
 .share-modal-role-guide-label {

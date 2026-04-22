@@ -9,8 +9,27 @@ interface IconProps {
   className?: string;
 }
 
+// Gear / settings — used for context menus (e.g. day actions)
+export const GearIcon = ({ size = 24, className }: IconProps): ReactElement => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+
 // Pine tree — used in AppHeader as the Trippin' brand logo
-export const TreeIcon = ({ size = 16, className }: IconProps): ReactElement => (
+export const TreeIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -28,7 +47,7 @@ export const TreeIcon = ({ size = 16, className }: IconProps): ReactElement => (
 );
 
 // Person silhouette — used in AppHeader profile button and Navbar profile tab
-export const UserIcon = ({ size = 22, className }: IconProps): ReactElement => (
+export const UserIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -47,7 +66,7 @@ export const UserIcon = ({ size = 22, className }: IconProps): ReactElement => (
 );
 
 // House — used in Navbar home tab
-export const HomeIcon = ({ size = 22, className }: IconProps): ReactElement => (
+export const HomeIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -66,7 +85,7 @@ export const HomeIcon = ({ size = 22, className }: IconProps): ReactElement => (
 );
 
 // Magnifying glass — used in Navbar explore/search tab
-export const SearchIcon = ({ size = 22, className }: IconProps): ReactElement => (
+export const SearchIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -85,7 +104,7 @@ export const SearchIcon = ({ size = 22, className }: IconProps): ReactElement =>
 );
 
 // Bed / building — used on EventCard for Hotel event type
-export const HotelIcon = ({ size = 18, className }: IconProps): ReactElement => (
+export const HotelIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -104,7 +123,7 @@ export const HotelIcon = ({ size = 18, className }: IconProps): ReactElement => 
 );
 
 // Fork and knife — used on EventCard for Restaurant event type
-export const RestaurantIcon = ({ size = 18, className }: IconProps): ReactElement => (
+export const RestaurantIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -123,7 +142,7 @@ export const RestaurantIcon = ({ size = 18, className }: IconProps): ReactElemen
 );
 
 // Map pin — used on EventCard for Activity event type
-export const ActivityIcon = ({ size = 18, className }: IconProps): ReactElement => (
+export const ActivityIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -142,7 +161,7 @@ export const ActivityIcon = ({ size = 18, className }: IconProps): ReactElement 
 );
 
 // Utensils — used on EventCard for Food event type
-export const FoodIcon = ({ size = 18, className }: IconProps): ReactElement => (
+export const FoodIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -162,7 +181,7 @@ export const FoodIcon = ({ size = 18, className }: IconProps): ReactElement => (
 );
 
 // Calendar — used in TripBanner to open the start date picker
-export const CalendarIcon = ({ size = 16, className }: IconProps): ReactElement => (
+export const CalendarIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -181,7 +200,7 @@ export const CalendarIcon = ({ size = 16, className }: IconProps): ReactElement 
 );
 
 // Checkmark — used in ItineraryList to confirm day label editing
-export const CheckIcon = ({ size = 18, className }: IconProps): ReactElement => (
+export const CheckIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -199,7 +218,7 @@ export const CheckIcon = ({ size = 18, className }: IconProps): ReactElement => 
 );
 
 // Image with plus — used in TripBanner to change the background image
-export const ImagePlusIcon = ({ size = 20, className }: IconProps): ReactElement => (
+export const ImagePlusIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -239,7 +258,7 @@ export const PlusIcon = ({ size = 24, className }: IconProps): ReactElement => (
 );
 
 // Pencil — used in EventCard edit button
-export const PencilIcon = ({ size = 14, className }: IconProps): ReactElement => (
+export const PencilIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -259,7 +278,7 @@ export const PencilIcon = ({ size = 14, className }: IconProps): ReactElement =>
 );
 
 // Trash — used in EventCard delete button
-export const TrashIcon = ({ size = 14, className }: IconProps): ReactElement => (
+export const TrashIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -281,7 +300,7 @@ export const TrashIcon = ({ size = 14, className }: IconProps): ReactElement => 
 );
 
 // Bed — used on EventCard for Hotel event type
-export const BedIcon = ({ size = 18, className }: IconProps): ReactElement => (
+export const BedIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg 
     width={size}
     height={size}
@@ -341,7 +360,7 @@ export const SaveIcon = ({ size = 24, className }: IconProps): ReactElement => (
   </svg>
 );
 
-export const ChevronsUpDownIcon = ({ size = 18, className }: IconProps): ReactElement => (
+export const ChevronsUpDownIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg 
     width={size}
     height={size}
@@ -359,7 +378,7 @@ export const ChevronsUpDownIcon = ({ size = 18, className }: IconProps): ReactEl
 );
 
 // Folded map — used in Navbar map tab
-export const MapIcon = ({ size = 22, className }: IconProps): ReactElement => (
+export const MapIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -379,7 +398,7 @@ export const MapIcon = ({ size = 22, className }: IconProps): ReactElement => (
 );
 
 // Book with text — used in Navbar misc tab
-export const BookTextIcon = ({ size = 22, className }: IconProps): ReactElement => (
+export const BookTextIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -398,7 +417,7 @@ export const BookTextIcon = ({ size = 22, className }: IconProps): ReactElement 
   </svg>
 );
 
-export const XIcon = ({ size = 14, className }: IconProps): ReactElement => (
+export const XIcon = ({ size = 24, className }: IconProps): ReactElement => (
   <svg
     width={size}
     height={size}
@@ -412,6 +431,23 @@ export const XIcon = ({ size = 14, className }: IconProps): ReactElement => (
     className={className}>
     <path d="M18 6 6 18" />
     <path d="m6 6 12 12" />
+  </svg>
+);
+
+export const FilterIcon = ({ size = 24, className }: IconProps): ReactElement => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    className={className}
+  >
+    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
   </svg>
 );
 
@@ -430,6 +466,39 @@ export const MoveRightIcon = ({ size = 24, className }: IconProps): ReactElement
   >
     <path d="M5 12h14"/>
     <path d="m12 5 7 7-7 7"/>
+  </svg>
+);
+
+// Route path with start/end circle markers — used in DirectionsExplorer toggle button
+export const RouteIcon = ({ size = 24, className }: IconProps): ReactElement => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    className={className}
+  >
+    <circle cx="6" cy="19" r="3" />
+    <path d="M9 19h8.5a3.5 3.5 0 0 0 0-7H5a3.5 3.5 0 0 1 0-7H14" />
+    <circle cx="18" cy="5" r="3" />
+  </svg>
+);
+
+export const CaretRightIcon = ({ size = 24, className }: IconProps): ReactElement => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z"/>
   </svg>
 );
 

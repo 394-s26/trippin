@@ -1,0 +1,246 @@
+/*
+  The directions explorer floats in the bottom-right corner of .map-canvas-wrapper.
+  The toggle button is always visible (pointer-events: auto). The card slides up
+  above the button when the panel is open.
+*/
+
+/* ── Outer wrapper ───────────────────────────────────────────── */
+
+.directions-explorer {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+/* ── Panel card (slides up above the toggle button) ─────────── */
+
+.directions-explorer-card {
+  width: 18rem;
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+  pointer-events: none;
+
+  /* Hidden state */
+  opacity: 0;
+  transform: translateY(0.5rem);
+  max-height: 0;
+  transition:
+    opacity 0.22s ease,
+    transform 0.3s cubic-bezier(0.32, 0.72, 0, 1),
+    max-height 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.directions-explorer--open .directions-explorer-card {
+  opacity: 1;
+  transform: translateY(0);
+  max-height: 22rem;
+  pointer-events: auto;
+}
+
+/* ── Card header ─────────────────────────────────────────────── */
+
+.directions-explorer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.875rem 0.625rem;
+  border-bottom: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.directions-explorer-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.directions-explorer-close {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.directions-explorer-close:hover {
+  background: #f3f4f6;
+}
+
+/* ── Card body ───────────────────────────────────────────────── */
+
+.directions-explorer-body {
+  padding: 0.625rem 0.75rem;
+  overflow-y: auto;
+  max-height: calc(22rem - 3.5rem);
+}
+
+/* ── Empty state ─────────────────────────────────────────────── */
+
+.directions-explorer-empty {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  text-align: center;
+  padding: 0.75rem 0;
+}
+
+/* ── Day list ────────────────────────────────────────────────── */
+
+.directions-day-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.directions-day-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.directions-day-btn:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.directions-day-btn--active {
+  border-color: var(--color-primary);
+  background: #f0f7ef;
+  box-shadow: 0 0 0 2px rgba(45, 90, 39, 0.12);
+}
+
+.directions-day-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.directions-day-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.directions-day-meta {
+  font-size: 0.72rem;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Route summary badge ─────────────────────────────────────── */
+
+.directions-route-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* ── Loading spinner ─────────────────────────────────────────── */
+
+.directions-spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #d1d5db;
+  border-top-color: var(--color-primary);
+  border-radius: 9999px;
+  animation: directions-spin 0.65s linear infinite;
+}
+
+@keyframes directions-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Inline error message ────────────────────────────────────── */
+
+.directions-error {
+  font-size: 0.75rem;
+  color: #dc2626;
+  padding: 0.25rem 0.625rem 0;
+  margin: 0;
+}
+
+/* ── Toggle button (always visible pill in bottom-right) ─────── */
+
+.directions-explorer-toggle {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.directions-explorer-toggle--active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(45, 90, 39, 0.35);
+}
+
+/* ── On-map route label pill ─────────────────────────────────── */
+
+.directions-route-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.7rem;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 9999px 9999px 9999px 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--font-family-sans);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.directions-route-pill-sep {
+  opacity: 0.6;
+}
