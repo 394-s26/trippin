@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import EventCard from './EventCard';
-import { PencilIcon, CheckIcon, PlusIcon, TrashIcon, GearIcon } from '../services/svgIcons';
+import { PencilIcon, CheckIcon, PlusIcon, TrashIcon, GearIcon, SparkleIcon } from '../services/svgIcons';
 import { sliceEventForDay } from '../utilities/eventOverlapsDay';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
@@ -13,6 +13,7 @@ interface ItineraryListProps {
   onUpdateDayLabel: (dayId: string, label: string) => void;
   onDeleteDay: (dayId: string) => void;
   onAddEvent?: (day: Day) => void;
+  onAutoFillDay?: (day: Day) => void;
   selectedEventIds?: string[];
   onSelectEvent?: (eventId: string) => void;
   allSelections?: UserSelection[];
@@ -24,7 +25,7 @@ interface ItineraryListProps {
   canDeleteDay?: boolean;
 }
 
-const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEvent, selectedEventIds = [], onSelectEvent, allSelections = [], currentUserId, tripUsers = [], canAddEvent = false, canAddDay = false, canEditDay = false, canDeleteDay = false }: ItineraryListProps) => {
+const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEvent, onAutoFillDay, selectedEventIds = [], onSelectEvent, allSelections = [], currentUserId, tripUsers = [], canAddEvent = false, canAddDay = false, canEditDay = false, canDeleteDay = false }: ItineraryListProps) => {
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -96,6 +97,16 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
 
                     {/* Right-aligned action buttons */}
                     <div className="day-actions">
+                      {onAutoFillDay && (
+                        <button
+                          onClick={() => onAutoFillDay(day)}
+                          aria-label={`Auto-fill day ${index + 1}`}
+                          className="day-auto-fill-btn"
+                        >
+                          <SparkleIcon size={14} />
+                          Auto-fill day
+                        </button>
+                      )}
                       {canAddEvent && (
                         <button
                           onClick={() => onAddEvent?.(day)}

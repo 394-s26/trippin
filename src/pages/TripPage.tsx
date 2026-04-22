@@ -10,6 +10,10 @@ import EventFormModal from '../components/EventFormModal';
 import BudgetModal from '../components/BudgetModal';
 import TripShareBar from '../components/TripShareBar';
 import { SelectionActionBar } from '../components/SelectionActionBar';
+import UpgradeRoleModal from '../components/UpgradeRoleModal';
+import RegenerateDayConfirmModal from '../components/RegenerateDayConfirmModal';
+import AutoFillDayLocationModal, { ResolvedLocation } from '../components/AutoFillDayLocationModal';
+import AutoFillDaySuggestionsModal from '../components/AutoFillDaySuggestionsModal';
 import { Event } from '../types/event';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
@@ -58,6 +62,14 @@ const TripPage = () => {
   // Snapshot of event IDs pending deletion confirmation. Captured up-front so
   // the SelectionActionBar's overlay auto-deselect doesn't erase them mid-flow.
   const [deleteConfirmIds, setDeleteConfirmIds] = useState<string[] | null>(null);
+
+  // Auto-fill day flow state. One active day at a time moves through:
+  // regenerate-confirm (if day has events) → location picker → suggestions.
+  const [autoFillDay, setAutoFillDay] = useState<Day | null>(null);
+  const [regenerateDay, setRegenerateDay] = useState<Day | null>(null);
+  const [autoFillLocation, setAutoFillLocation] = useState<ResolvedLocation | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [regenerateSubmitting, setRegenerateSubmitting] = useState(false);
 
   // If our lock is stolen (expired past TTL while browser slept, etc.), flip
   // the open modal to read-only so we can't accidentally overwrite.
@@ -145,6 +157,33 @@ const TripPage = () => {
   const handleNewEvent = async (event: Omit<Event, 'id' | 'tripId'>) => {
     if (!event.dayId || !appUser) return;
     await createEvent(appUser.uid, { ...event, tripId: id! });
+  };
+
+  const handleAutoFillDay = (day: Day) => {
+    if (!can('auto_fill_day')) { setShowUpgradeModal(true); return; }
+    if (day.events.length > 0) { setRegenerateDay(day); return; }
+    setAutoFillDay(day);
+  };
+
+  const handleRegenerateConfirmed = async () => {
+    if (!appUser || !regenerateDay) return;
+    setRegenerateSubmitting(true);
+    try {
+      await Promise.all(
+        regenerateDay.events.map((e) =>
+          deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)
+        )
+      );
+      setAutoFillDay(regenerateDay);
+    } finally {
+      setRegenerateSubmitting(false);
+      setRegenerateDay(null);
+    }
+  };
+
+  const closeAutoFillFlow = () => {
+    setAutoFillDay(null);
+    setAutoFillLocation(null);
   };
 
   const handleRequestDeleteSelected = () => {
@@ -310,6 +349,7 @@ const TripPage = () => {
               onUpdateDayLabel={handleUpdateDayLabel}
               onDeleteDay={handleDeleteDay}
               onAddEvent={(day) => setActiveDay({ id: day.id, date: day.date })}
+              onAutoFillDay={handleAutoFillDay}
               selectedEventIds={mySelectedIds}
               onSelectEvent={toggleSelection}
               allSelections={allSelections}
@@ -371,6 +411,34 @@ const TripPage = () => {
           mode={editingEvent?.lock === 'readonly' ? 'readonly' : 'edit'}
           initialEvent={editingEvent?.event}
           lockHolderName={editingEvent?.holderName}
+        />
+
+        <UpgradeRoleModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+        />
+
+        <RegenerateDayConfirmModal
+          isOpen={regenerateDay !== null}
+          onCancel={() => setRegenerateDay(null)}
+          onConfirm={handleRegenerateConfirmed}
+          submitting={regenerateSubmitting}
+        />
+
+        <AutoFillDayLocationModal
+          isOpen={autoFillDay !== null && autoFillLocation === null}
+          onClose={closeAutoFillFlow}
+          onLocationSelected={setAutoFillLocation}
+        />
+
+        <AutoFillDaySuggestionsModal
+          isOpen={autoFillDay !== null && autoFillLocation !== null}
+          day={autoFillDay}
+          tripId={id!}
+          uid={appUser?.uid ?? ''}
+          location={autoFillLocation}
+          onClose={closeAutoFillFlow}
+          onCompleted={closeAutoFillFlow}
         />
 
         {showDeleteConfirm && createPortal(

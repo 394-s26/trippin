@@ -155,5 +155,12 @@ service cloud.firestore {
         get(/databases/$(database)/documents/trips/$(resource.data.tripId)).data.permissions[request.auth.uid] == 'manager'
       );
     }
+
+    // Geoapify suggestion cache, keyed by rounded lat/lng.
+    // Any authed user can read; only the Cloud Function (admin SDK) writes.
+    match /placeSuggestionsCache/{locationKey} {
+      allow read: if isAuthed();
+      allow write: if false;
+    }
   }
 }
