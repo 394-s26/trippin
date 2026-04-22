@@ -45,7 +45,19 @@
 }
 
 .trip-banner-date-btn {
-  @apply flex items-center gap-1.5 text-white/90 text-sm mt-1 hover:text-white transition-colors;
+  @apply inline-flex items-center gap-2 text-white text-sm font-semibold mt-1 rounded-lg px-3 py-1.5 border border-white/55 bg-black/35 hover:bg-black/50 hover:border-white/75 transition-colors;
+}
+
+.trip-banner-date-row {
+  @apply flex items-center gap-2 mt-1;
+}
+
+.trip-banner-date-separator {
+  @apply text-white/90 font-semibold px-1;
+}
+
+.trip-banner-date-btn:focus-visible {
+  @apply outline-none ring-2 ring-white/90 ring-offset-1 ring-offset-black/40;
 }
 
 .trip-banner-date-input {

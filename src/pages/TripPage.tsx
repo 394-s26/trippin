@@ -19,13 +19,17 @@ import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
 import { useEventLock } from '../hooks/useEventLock';
 import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, approveSuggestion } from '../services/firestoreEventsService';
-import { eventOverlapsDay } from '../utilities/eventOverlapsDay';
+import { eventOverlapsDay, sliceEventForDay } from '../utilities/eventOverlapsDay';
+import { EVENT_CATEGORY } from '../types/event';
 import { useAuth } from '../contexts/AuthContext';
 import { useLastViewedTrip } from '../contexts/LastViewedTripContext';
 import './Home.css';
 
-const formatDateRange = (days: Omit<Day, 'events'>[], fallbackStart?: Date): string => {
+const formatDateRange = (days: Omit<Day, 'events'>[], fallbackStart?: Date, fallbackEnd?: Date): string => {
   const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (fallbackStart && fallbackEnd) {
+    return `${fmt(fallbackStart)} — ${fmt(fallbackEnd)}`;
+  }
   if (days.length === 0) {
     return fallbackStart ? fmt(fallbackStart) : '';
   }
@@ -33,10 +37,30 @@ const formatDateRange = (days: Omit<Day, 'events'>[], fallbackStart?: Date): str
 };
 
 const TripPage = () => {
+  const sortEventsForDay = (day: Omit<Day, 'events'>, dayEvents: Event[]): Event[] => {
+    return [...dayEvents].sort((a, b) => {
+      const aSlice = sliceEventForDay(a, day);
+      const bSlice = sliceEventForDay(b, day);
+      const aIsMiddleLodging = EVENT_CATEGORY[a.type] === 'Lodging'
+        && !!aSlice
+        && aSlice.totalDays > 2
+        && aSlice.dayIndex > 1
+        && aSlice.dayIndex < aSlice.totalDays;
+      const bIsMiddleLodging = EVENT_CATEGORY[b.type] === 'Lodging'
+        && !!bSlice
+        && bSlice.totalDays > 2
+        && bSlice.dayIndex > 1
+        && bSlice.dayIndex < bSlice.totalDays;
+
+      if (aIsMiddleLodging !== bIsMiddleLodging) return aIsMiddleLodging ? 1 : -1;
+      return 0;
+    });
+  };
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { appUser } = useAuth();
-  const { trip, loading, error, permissionDenied, can, updateTripName, updateBannerImage, updateEndDate, deleteTrip } = useTrip(id!);
+  const { trip, loading, error, permissionDenied, can, updateTripName, updateBannerImage, updateStartDate, updateEndDate, deleteTrip } = useTrip(id!);
   const { days, addDay, renameDayLabel, removeDay, changeStartDate } = useDays(id!);
   const { events } = useItinerary(id!);
   const { mySelectedIds, allSelections, toggleSelection, deselectAll } = useSessionSelections(id!, appUser?.uid);
@@ -87,7 +111,7 @@ const TripPage = () => {
   // appears as a separate chunk under each day's label.
   const daysWithEvents: Day[] = days.map(day => ({
     ...day,
-    events: events.filter(e => eventOverlapsDay(e, day)),
+    events: sortEventsForDay(day, events.filter(e => eventOverlapsDay(e, day))),
   }));
 
   const tripDayRefs = days.map(d => ({ id: d.id, date: d.date }));
@@ -116,7 +140,13 @@ const TripPage = () => {
   }, [memberUidsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChangeStartDate = (newStartDate: Date) => {
+    if (trip?.endDate && newStartDate > trip.endDate) return;
+    updateStartDate(newStartDate);
     changeStartDate(newStartDate);
+  };
+
+  const handleChangeEndDate = (newEndDate: Date) => {
+    updateEndDate(newEndDate);
   };
 
   const handleAddDay = async () => {
@@ -289,7 +319,9 @@ const TripPage = () => {
             <TripBanner
               tripName={tripName}
               backgroundImage={bannerImage}
-              dateRange={formatDateRange(days, trip.startDate)}
+              dateRange={formatDateRange(days, trip.startDate, trip.endDate)}
+              startDate={trip.startDate}
+              endDate={trip.endDate}
               tripId={id!}
               ownerId={trip.userId}
               shared={trip.shared}
@@ -304,6 +336,7 @@ const TripPage = () => {
               onChangeName={handleChangeName}
               onChangeImage={handleChangeBannerImage}
               onChangeStartDate={handleChangeStartDate}
+              onChangeEndDate={handleChangeEndDate}
               onDelete={() => setShowDeleteConfirm(true)}
             />
             <TripShareBar

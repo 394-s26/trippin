@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react';
-import { Event, SuggestionVote } from '../types/event';
+import { EVENT_CATEGORY, Event, SuggestionVote } from '../types/event';
 import { AppUser } from '../types/auth';
 import { CheckIcon, XIcon } from '../services/svgIcons';
 import { UserSelection } from '../hooks/useSessionSelections';
@@ -78,11 +78,19 @@ const EventCard = ({
   } = getSuggestionVoteSummary(event, totalTripUsers);
 
   const useOtherBorder = !!firstOther && !isSelected;
-  const cardClass = isSelected
-    ? `event-card${isSuggestion ? ' event-card--suggestion' : ''} event-card--selected`
-    : useOtherBorder
-      ? `event-card${isSuggestion ? ' event-card--suggestion' : ''} event-card--selected-session`
-      : `event-card${isSuggestion ? ' event-card--suggestion' : ''}`;
+  const isLodgingMiddleDay = EVENT_CATEGORY[event.type] === 'Lodging'
+    && !!daySlice
+    && daySlice.totalDays > 2
+    && daySlice.dayIndex > 1
+    && daySlice.dayIndex < daySlice.totalDays;
+
+  const cardClass = [
+    'event-card',
+    isSuggestion ? 'event-card--suggestion' : '',
+    isSelected ? 'event-card--selected' : '',
+    !isSelected && useOtherBorder ? 'event-card--selected-session' : '',
+    isLodgingMiddleDay ? 'event-card--lodging-stay' : '',
+  ].filter(Boolean).join(' ');
   const cardStyle = (useOtherBorder ? { borderColor: firstOther.color } : undefined) as CSSProperties | undefined;
   const consensusFillStyle = {
     width: `${consensusRatio * 100}%`,

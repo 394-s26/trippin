@@ -10,6 +10,8 @@ interface TripBannerProps {
   tripName: string;
   backgroundImage: string | null;
   dateRange: string;
+  startDate?: Date;
+  endDate?: Date;
   tripId: string;
   ownerId?: string;
   shared?: string[];
@@ -24,18 +26,20 @@ interface TripBannerProps {
   onChangeName?: (url: string) => void;
   onChangeImage?: (url: string) => void;
   onChangeStartDate?: (date: Date) => void;
+  onChangeEndDate?: (date: Date) => void;
   onDelete?: () => void;
 }
 
 const TripBanner = ({
-  tripName, backgroundImage, dateRange, tripId, ownerId, shared = [],
+  tripName, backgroundImage, dateRange, startDate, endDate, tripId, ownerId, shared = [],
   permissions = {},
   canChangeName = false, canChangeBanner = false, canChangeStartDate = false,
   canDelete = false, canManageMembers = false, canRemoveMembers = false, canChangeRole = false,
-  onChangeName, onChangeImage, onChangeStartDate, onDelete,
+  onChangeName, onChangeImage, onChangeStartDate, onChangeEndDate, onDelete,
 }: TripBannerProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dateInputRef = useRef<HTMLInputElement>(null);
+  const startDateInputRef = useRef<HTMLInputElement>(null);
+  const endDateInputRef = useRef<HTMLInputElement>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState(tripName);
   const commitNameEdit = () => {
@@ -54,8 +58,28 @@ const TripBanner = ({
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.value && onChangeStartDate) {
-      onChangeStartDate(new Date(e.target.value + 'T00:00:00'));
+      const nextStart = new Date(e.target.value + 'T00:00:00');
+      if (endDate && nextStart > endDate) return;
+      onChangeStartDate(nextStart);
     }
+  };
+
+  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value && onChangeEndDate) {
+      onChangeEndDate(new Date(e.target.value + 'T00:00:00'));
+    }
+  };
+
+  const toInputDate = (d?: Date) => {
+    if (!d) return '';
+    const normalized = new Date(d);
+    normalized.setHours(0, 0, 0, 0);
+    return normalized.toISOString().slice(0, 10);
+  };
+
+  const formatShortDate = (d?: Date) => {
+    if (!d) return 'None';
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   return (
@@ -133,19 +157,42 @@ const TripBanner = ({
         </div>
         {canChangeStartDate ? (
           <>
-            <button
-              onClick={() => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.click()}
-              className="trip-banner-date-btn"
-              aria-label="Change start date"
-            >
-              <CalendarIcon size={14} />
-              <span>{dateRange || 'None'}</span>
-            </button>
+            <div className="trip-banner-date-row">
+              <button
+                onClick={() => startDateInputRef.current?.showPicker?.() ?? startDateInputRef.current?.click()}
+                className="trip-banner-date-btn"
+                aria-label="Change start date"
+                type="button"
+              >
+                <CalendarIcon size={14} />
+                <span>{formatShortDate(startDate)}</span>
+              </button>
+              <span className="trip-banner-date-separator" aria-hidden="true">-</span>
+              <button
+                onClick={() => endDateInputRef.current?.showPicker?.() ?? endDateInputRef.current?.click()}
+                className="trip-banner-date-btn"
+                aria-label="Change end date"
+                type="button"
+              >
+                <CalendarIcon size={14} />
+                <span>{formatShortDate(endDate)}</span>
+              </button>
+            </div>
             <input
-              ref={dateInputRef}
+              ref={startDateInputRef}
               type="date"
               className="trip-banner-date-input"
+              value={toInputDate(startDate)}
+              max={toInputDate(endDate)}
               onChange={handleDateChange}
+            />
+            <input
+              ref={endDateInputRef}
+              type="date"
+              className="trip-banner-date-input"
+              value={toInputDate(endDate)}
+              min={toInputDate(startDate)}
+              onChange={handleEndDateChange}
             />
           </>
         ) : (
