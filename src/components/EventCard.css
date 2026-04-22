@@ -5,7 +5,19 @@
 }
 
 .event-card--hotel-continuation {
-  @apply px-4 py-2.5 rounded-xl bg-emerald-50/70 border-2 border-emerald-100;
+  @apply px-4 py-2 rounded-xl bg-emerald-50 border-2 border-emerald-200 shadow-none;
+}
+
+.event-card--hotel-continuation:hover {
+  @apply bg-emerald-50 border-emerald-200;
+}
+
+.event-card--hotel-checkout {
+  @apply border-2 border-emerald-200;
+}
+
+.event-card--hotel-checkout:hover {
+  @apply bg-emerald-50 border-emerald-200;
 }
 
 .event-card:hover {
@@ -51,6 +63,14 @@
 
 .event-card-continuation-copy {
   @apply min-w-0;
+}
+
+.event-card-continuation-name {
+  @apply font-semibold text-emerald-800 text-sm leading-snug truncate;
+}
+
+.event-card-hotel-label {
+  @apply text-[10px] uppercase tracking-[0.14em] font-semibold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5;
 }
 
 .event-card-body {

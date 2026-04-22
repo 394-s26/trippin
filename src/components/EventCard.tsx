@@ -9,7 +9,7 @@ import './EventCard.css';
 
 interface EventCardProps {
   event: Event;
-  variant?: 'default' | 'hotel-continuation';
+  variant?: 'default' | 'hotel-continuation' | 'hotel-checkout';
   onSelect?: () => void;
   isSelected?: boolean;
   allSelections?: UserSelection[];
@@ -24,34 +24,30 @@ const TYPE_ICONS: Record<Event['type'], ReactElement> = {
   Food: <FoodIcon size={24} />,
 };
 
-const formatDateLabel = (date: Date): string =>
-  new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
+const hasExplicitTime = (date: Date): boolean => {
+  const d = new Date(date);
+  return d.getHours() !== 0 || d.getMinutes() !== 0;
+};
 
-const EventCard = ({ event, variant = 'default', onSelect, isSelected = false, allSelections = [], currentUserId, tripUsers = [] }: EventCardProps) => {
-  const timeFmt = (d: Date) => new Date(d).toLocaleTimeString('en-US', {
+const formatTime = (date: Date): string =>
+  new Date(date).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
   });
-  const startTime = timeFmt(event.startDate);
-  const time = event.type === 'Hotel'
-    ? event.endDate
-      ? `${formatDateLabel(event.startDate)} - ${formatDateLabel(event.endDate)}`
-      : formatDateLabel(event.startDate)
-    : event.endDate
-      ? `${startTime} – ${timeFmt(event.endDate)}`
-      : startTime;
 
+const EventCard = ({ event, variant = 'default', onSelect, isSelected = false, allSelections = [], currentUserId, tripUsers = [] }: EventCardProps) => {
   const otherSelectors = allSelections.filter(
     s => s.uid !== currentUserId && s.selectedIds.includes(event.id),
   );
   const firstOther = pickFirstSelector(allSelections, event.id, currentUserId);
 
   const useOtherBorder = !!firstOther && !isSelected;
-  const variantClass = variant === 'hotel-continuation' ? ' event-card--hotel-continuation' : '';
+  const variantClass = variant === 'hotel-continuation'
+    ? ' event-card--hotel-continuation'
+    : variant === 'hotel-checkout'
+      ? ' event-card--hotel-checkout'
+      : '';
   const cardClass = isSelected
     ? `event-card event-card--selected${variantClass}`
     : useOtherBorder
@@ -68,8 +64,7 @@ const EventCard = ({ event, variant = 'default', onSelect, isSelected = false, a
               {TYPE_ICONS[event.type]}
             </span>
             <div className="event-card-continuation-copy">
-              <h3 className="event-card-name">{event.name}</h3>
-              <p className="event-card-meta">Stay continues</p>
+              <h3 className="event-card-continuation-name">{event.name}</h3>
             </div>
           </div>
           {otherSelectors.length > 0 && (
@@ -89,12 +84,29 @@ const EventCard = ({ event, variant = 'default', onSelect, isSelected = false, a
     );
   }
 
+  const isHotelCheckout = variant === 'hotel-checkout';
+  const isHotelCheckin = event.type === 'Hotel' && variant === 'default';
+  const hotelTimeSource = isHotelCheckout ? event.endDate ?? event.startDate : event.startDate;
+  const hotelHasTime = (isHotelCheckin || isHotelCheckout) && hasExplicitTime(hotelTimeSource);
+
+  const time = (() => {
+    if (isHotelCheckin || isHotelCheckout) {
+      return hotelHasTime ? formatTime(hotelTimeSource) : null;
+    }
+    return event.endDate
+      ? `${formatTime(event.startDate)} – ${formatTime(event.endDate)}`
+      : formatTime(event.startDate);
+  })();
+
+  const hotelLabel = isHotelCheckout ? 'Check-out' : isHotelCheckin ? 'Check-in' : null;
+
   return (
     <div className={cardClass} style={cardStyle} onClick={onSelect}>
       <div className="event-card-header">
         <div className="event-card-body">
           <div className="event-card-time-row">
-            <span className="event-card-time">{time}</span>
+            {time && <span className="event-card-time">{time}</span>}
+            {hotelLabel && <span className="event-card-hotel-label">{hotelLabel}</span>}
             {otherSelectors.length > 0 && (
               <div className="event-card-selectors">
                 {otherSelectors.map(s => (
@@ -112,7 +124,7 @@ const EventCard = ({ event, variant = 'default', onSelect, isSelected = false, a
           {event.location && (
             <p className="event-card-meta">{event.location}</p>
           )}
-          {event.cost != null && (
+          {event.cost != null && !isHotelCheckout && (
             <p className="event-card-meta">${event.cost.toFixed(2)}</p>
           )}
         </div>

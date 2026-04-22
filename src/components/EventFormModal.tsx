@@ -50,7 +50,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripStartDate, tri
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [hotelStartDate, setHotelStartDate] = useState('');
+  const [hotelCheckinTime, setHotelCheckinTime] = useState('');
   const [hotelEndDate, setHotelEndDate] = useState('');
+  const [hotelCheckoutTime, setHotelCheckoutTime] = useState('');
   const [dateValue, setDateValue] = useState('');
   const [timezone, setTimezone] = useState('America/Chicago');
   const [cost, setCost] = useState('');
@@ -73,6 +75,8 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripStartDate, tri
     const defaultDate = toDateInputValue(dayDate ?? tripStartDate);
     setHotelStartDate(defaultDate);
     setHotelEndDate(defaultDate);
+    setHotelCheckinTime('');
+    setHotelCheckoutTime('');
   }, [isOpen, dayDate, tripStartDate]);
 
   useEffect(() => {
@@ -99,7 +103,19 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripStartDate, tri
 
     if (isHotel) {
       eventDate = parseDateInputValue(hotelStartDate);
+      if (hotelCheckinTime) {
+        const [h, m] = hotelCheckinTime.split(':').map(Number);
+        eventDate.setHours(h, m, 0, 0);
+      } else {
+        eventDate.setHours(0, 0, 0, 0);
+      }
       eventEndDate = parseDateInputValue(hotelEndDate || hotelStartDate);
+      if (hotelCheckoutTime) {
+        const [h, m] = hotelCheckoutTime.split(':').map(Number);
+        eventEndDate.setHours(h, m, 0, 0);
+      } else {
+        eventEndDate.setHours(0, 0, 0, 0);
+      }
     } else if (dayDate) {
       eventDate = new Date(dayDate);
       if (startTime) {
@@ -132,7 +148,9 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripStartDate, tri
     setStartTime('');
     setEndTime('');
     setHotelStartDate('');
+    setHotelCheckinTime('');
     setHotelEndDate('');
+    setHotelCheckoutTime('');
     setDateValue('');
     setTimezone('America/Chicago');
     setCost('');
@@ -201,40 +219,68 @@ const EventFormModal = ({ isOpen, onClose, onSubmit, dayDate, tripStartDate, tri
 
           {/* Start / End inputs */}
           {isHotel ? (
-            <div className="time-row">
-              <div className="time-field">
-                <label htmlFor="hotel-start-date" className="form-label">Start Date</label>
-                <input
-                  id="hotel-start-date"
-                  type="date"
-                  value={hotelStartDate}
-                  onChange={(e) => {
-                    const nextStart = e.target.value;
-                    setHotelStartDate(nextStart);
-                    if (!hotelEndDate || hotelEndDate < nextStart) {
-                      setHotelEndDate(nextStart);
-                    }
-                  }}
-                  min={tripStartValue || undefined}
-                  max={tripEndValue || undefined}
-                  className="form-input"
-                  required
-                />
+            <>
+              <div className="time-row">
+                <div className="time-field">
+                  <label htmlFor="hotel-start-date" className="form-label">Check-in Date</label>
+                  <input
+                    id="hotel-start-date"
+                    type="date"
+                    value={hotelStartDate}
+                    onChange={(e) => {
+                      const nextStart = e.target.value;
+                      setHotelStartDate(nextStart);
+                      if (!hotelEndDate || hotelEndDate < nextStart) {
+                        setHotelEndDate(nextStart);
+                      }
+                    }}
+                    min={tripStartValue || undefined}
+                    max={tripEndValue || undefined}
+                    className="form-input"
+                    required
+                  />
+                </div>
+                <div className="time-field">
+                  <label htmlFor="hotel-checkin-time" className="form-label">
+                    Check-in Time <span className="normal-case font-normal text-gray-400">(optional)</span>
+                  </label>
+                  <input
+                    id="hotel-checkin-time"
+                    type="time"
+                    value={hotelCheckinTime}
+                    onChange={(e) => setHotelCheckinTime(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
               </div>
-              <div className="time-field">
-                <label htmlFor="hotel-end-date" className="form-label">End Date</label>
-                <input
-                  id="hotel-end-date"
-                  type="date"
-                  value={hotelEndDate}
-                  onChange={(e) => setHotelEndDate(e.target.value)}
-                  min={hotelStartDate || tripStartValue || undefined}
-                  max={tripEndValue || undefined}
-                  className="form-input"
-                  required
-                />
+              <div className="time-row">
+                <div className="time-field">
+                  <label htmlFor="hotel-end-date" className="form-label">Check-out Date</label>
+                  <input
+                    id="hotel-end-date"
+                    type="date"
+                    value={hotelEndDate}
+                    onChange={(e) => setHotelEndDate(e.target.value)}
+                    min={hotelStartDate || tripStartValue || undefined}
+                    max={tripEndValue || undefined}
+                    className="form-input"
+                    required
+                  />
+                </div>
+                <div className="time-field">
+                  <label htmlFor="hotel-checkout-time" className="form-label">
+                    Check-out Time <span className="normal-case font-normal text-gray-400">(optional)</span>
+                  </label>
+                  <input
+                    id="hotel-checkout-time"
+                    type="time"
+                    value={hotelCheckoutTime}
+                    onChange={(e) => setHotelCheckoutTime(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
               </div>
-            </div>
+            </>
           ) : dayDate ? (
             <div className="time-row">
               <div className="time-field">

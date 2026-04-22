@@ -25,7 +25,7 @@ const makeEvent = (overrides: Partial<Event>): Event => ({
 });
 
 describe('buildItineraryDays', () => {
-  it('adds hotel continuation rows on covered trip days after check-in', () => {
+  it('adds hotel continuation on every covered day and a checkout card on the last day', () => {
     const days = [
       makeDay('day-1', new Date(2026, 3, 12, 0, 0)),
       makeDay('day-2', new Date(2026, 3, 13, 0, 0)),
@@ -37,8 +37,8 @@ describe('buildItineraryDays', () => {
       type: 'Hotel',
       name: 'Lakeside Inn',
       dayId: 'day-1',
-      startDate: new Date(2026, 3, 12, 12, 0),
-      endDate: new Date(2026, 3, 14, 12, 0),
+      startDate: new Date(2026, 3, 12, 15, 0),
+      endDate: new Date(2026, 3, 14, 11, 0),
     });
 
     const activity = makeEvent({
@@ -50,10 +50,12 @@ describe('buildItineraryDays', () => {
 
     const itineraryDays = buildItineraryDays(days, [hotel, activity]);
 
-    expect(itineraryDays[0].events.map(event => event.variant)).toEqual(['default']);
+    expect(itineraryDays[0].events.map(event => event.variant)).toEqual(['hotel-continuation', 'default']);
+    expect(itineraryDays[0].events[0].event.id).toBe('hotel-1');
+    expect(itineraryDays[0].events[1].event.id).toBe('hotel-1');
     expect(itineraryDays[1].events.map(event => event.variant)).toEqual(['hotel-continuation', 'default']);
-    expect(itineraryDays[2].events.map(event => event.variant)).toEqual(['hotel-continuation']);
-    expect(itineraryDays[2].events[0].event.id).toBe('hotel-1');
+    expect(itineraryDays[2].events.map(event => event.variant)).toEqual(['hotel-continuation', 'hotel-checkout']);
+    expect(itineraryDays[2].events[1].event.id).toBe('hotel-1');
   });
 });
 
