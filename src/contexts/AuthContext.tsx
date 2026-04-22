@@ -9,7 +9,7 @@ import {
   updatePassword,
   deleteUser,
 } from 'firebase/auth';
-import { deleteDoc, doc, getDoc, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import {
   signInWithGoogle,
@@ -47,53 +47,27 @@ const createAppUser = async (appUser: AppUser) => {
 
 const normalizeUsername = (value: string) => value.trim().replace(/\s+/g, '').toLowerCase();
 
-const reserveUsername = async (input: { uid: string; nextUsername: string; prevUsername?: string | null }) => {
-  const nextUsername = normalizeUsername(input.nextUsername);
-  if (!nextUsername) throw new Error('Please choose a username.');
-  const prev =
-    input.prevUsername && normalizeUsername(input.prevUsername) !== nextUsername
-      ? normalizeUsername(input.prevUsername)
-      : null;
-
-  await runTransaction(db, async (tx) => {
-    const nextRef = doc(db, 'usernames', nextUsername);
-    const prevRef = prev ? doc(db, 'usernames', prev) : null;
-
-    // Firestore transactions require ALL reads before ANY writes.
-    const prevSnap = prevRef ? await tx.get(prevRef) : null;
-    const nextSnap = await tx.get(nextRef);
-
-    if (nextSnap.exists() && nextSnap.data()?.uid !== input.uid) {
-      throw new Error('That username is already taken.');
-    }
-
-    // Only create the reservation doc if it doesn't exist yet.
-    // If it already exists for this user, `set` would be an **update**, and our rules disallow updates on `usernames/*`.
-    if (!nextSnap.exists()) {
-      tx.set(nextRef, { uid: input.uid }, { merge: false });
-    }
-
-    if (prevRef && prevSnap?.exists() && prevSnap.data()?.uid === input.uid) {
-      tx.delete(prevRef);
-    }
-  });
+const checkUsernameAvailable = async (nextUsername: string, uid: string): Promise<void> => {
+  const normalized = normalizeUsername(nextUsername);
+  if (!normalized) throw new Error('Please choose a username.');
+  const snap = await getDocs(query(collection(db, 'users'), where('username', '==', normalized)));
+  if (snap.docs.some((d) => d.id !== uid)) throw new Error('That username is already taken.');
 };
 
-const reserveFirstAvailableUsername = async (base: string, uid: string) => {
+const findFirstAvailableUsername = async (base: string, uid: string): Promise<string> => {
   const normalized = normalizeUsername(base);
   const candidates = [normalized, `${normalized}${Math.floor(Math.random() * 9000) + 1000}`];
   for (const candidate of candidates) {
     if (!candidate) continue;
     try {
-      await reserveUsername({ uid, nextUsername: candidate });
+      await checkUsernameAvailable(candidate, uid);
       return candidate;
     } catch {
       // try next
     }
   }
-  // last resort: uid suffix
   const fallback = `${normalized || 'user'}${uid.slice(0, 6)}`;
-  await reserveUsername({ uid, nextUsername: fallback });
+  await checkUsernameAvailable(fallback, uid);
   return fallback;
 };
 
@@ -106,7 +80,7 @@ const ensureUserProfileExists = async (firebaseUser: FirebaseUser): Promise<void
   const lastName = rest.join(' ');
   let username = '';
   try {
-    username = await reserveFirstAvailableUsername(firebaseUser.displayName ?? 'user', firebaseUser.uid);
+    username = await findFirstAvailableUsername(firebaseUser.displayName ?? 'user', firebaseUser.uid);
   } catch {
     username = normalizeUsername(`user_${firebaseUser.uid.slice(0, 8)}`);
     await setDoc(
@@ -138,7 +112,6 @@ const ensureUserProfileExists = async (firebaseUser: FirebaseUser): Promise<void
 
 const restoreUserProfileAfterFailedDeletion = async (profile: AppUser) => {
   await setDoc(doc(db, 'users', profile.uid), profile);
-  await reserveUsername({ uid: profile.uid, nextUsername: profile.username });
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -188,7 +161,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isNewUser = true;
       const [firstName, ...rest] = (firebaseUser.displayName ?? '').split(' ');
       const lastName = rest.join(' ');
-      const username = await reserveFirstAvailableUsername(firebaseUser.displayName ?? 'user', firebaseUser.uid);
+      const username = await findFirstAvailableUsername(firebaseUser.displayName ?? 'user', firebaseUser.uid);
       const newAppUser: AppUser = {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
@@ -224,6 +197,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     username,
     photoFile,
   }: EmailRegistrationInput): Promise<string | null> => {
+    await checkUsernameAvailable(username, '');
+
     const firebaseUser = await signUpWithEmail(email, password);
     let photoURL: string | null = null;
 
@@ -234,9 +209,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.warn('Profile photo upload failed during signup. Continuing without photo.', error);
       }
     }
-
-    // Reserve username (transactional) before writing the user doc.
-    await reserveUsername({ uid: firebaseUser.uid, nextUsername: username });
 
     const newAppUser: AppUser = {
       uid: firebaseUser.uid,
@@ -286,14 +258,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateUsername = async (nextUsername: string) => {
     if (!user) throw new Error('You must be logged in.');
-    const prev = appUser?.username ?? null;
     const firebaseUser = requireFirebaseUser();
     const existing = await getDoc(doc(db, 'users', user.uid));
     if (!existing.exists()) {
       await ensureUserProfileExists(firebaseUser);
     }
     const normalized = normalizeUsername(nextUsername);
-    await reserveUsername({ uid: user.uid, nextUsername: normalized, prevUsername: prev });
+    await checkUsernameAvailable(normalized, user.uid);
     await updateDoc(doc(db, 'users', user.uid), { username: normalized });
     await refreshAppUser(user.uid);
   };
@@ -341,8 +312,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         ? (userDocSnap.data() as AppUser)
         : appUser;
 
-    const usernameKey = backupProfile?.username ? normalizeUsername(backupProfile.username) : null;
-
     try {
       // Avatar/trip cleanup should never block account deletion (Storage rules/network issues).
       deleteUserAvatars(uid).catch((err) => console.warn('Avatar cleanup skipped/failed:', err));
@@ -350,7 +319,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await Promise.all([
         deleteUserOwnedTrips(uid),
         deleteDoc(doc(db, 'users', uid)),
-        usernameKey ? deleteDoc(doc(db, 'usernames', usernameKey)) : Promise.resolve(),
       ]);
 
       await deleteUser(current);
