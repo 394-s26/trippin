@@ -3,7 +3,7 @@
 // Events store a dayId and are deleted by dayId when a day is removed.
 
 import { db } from './firebase';
-import { collection, doc, setDoc, updateDoc, getDocs, onSnapshot, query, orderBy, writeBatch, Timestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, getDocs, onSnapshot, query, orderBy, writeBatch, Timestamp, FirestoreError } from 'firebase/firestore';
 import { Day } from '../types/day';
 import { toDate } from '../utilities/timestamps';
 import { hasActionPermission, PermissionError } from './permissionService';
@@ -71,17 +71,26 @@ export const deleteDaysBatch = async (uid: string, tripId: string, dayIds: strin
 
 // Subscribes to all days for a trip, ordered by date. Returns an unsubscribe function.
 // The callback receives days without events — callers are responsible for merging events.
+const defaultDaysSnapshotError = (tripId: string) => (err: FirestoreError) => {
+  console.error('[subscribeToDays]', tripId, err.code, err.message);
+};
+
 export const subscribeToDays = (
   tripId: string,
-  callback: (days: Omit<Day, 'events'>[]) => void
+  callback: (days: Omit<Day, 'events'>[]) => void,
+  onError: (err: FirestoreError) => void = defaultDaysSnapshotError(tripId)
 ): (() => void) => {
   const q = query(daysCol(tripId), orderBy('date'));
-  return onSnapshot(q, snapshot => {
-    callback(
-      snapshot.docs.map(d => {
-        const data = d.data() as StoredDay;
-        return { id: data.id, tripId: data.tripId, date: toDate(data.date), label: data.label };
-      })
-    );
-  });
+  return onSnapshot(
+    q,
+    snapshot => {
+      callback(
+        snapshot.docs.map(d => {
+          const data = d.data() as StoredDay;
+          return { id: data.id, tripId: data.tripId, date: toDate(data.date), label: data.label };
+        })
+      );
+    },
+    onError
+  );
 };

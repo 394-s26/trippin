@@ -37,7 +37,7 @@ const TripPage = () => {
   const navigate = useNavigate();
   const { appUser } = useAuth();
   const { trip, loading, error, permissionDenied, can, updateTripName, updateBannerImage, updateStartAndEndDate, deleteTrip } = useTrip(id!);
-  const { days, adjustTripLength } = useDays(id!);
+  const { days, adjustTripLength } = useDays(id!, { seedWithTrip: trip });
   const { events } = useItinerary(id!);
   const { mySelectedIds, allSelections, toggleSelection, deselectAll } = useSessionSelections(id!, appUser?.uid);
   const { setLastViewedTrip } = useLastViewedTrip();
@@ -315,7 +315,6 @@ const TripPage = () => {
               allSelections={allSelections}
               currentUserId={appUser?.uid}
               tripUsers={tripUsers}
-              canAddEvent={can('add_event')}
               totalTripUsers={totalTripUsers}
               canAddEvent={canCreateEvent || canProposeCreateEvent}
               addEventLabel={canCreateEvent ? 'Event' : 'Suggest Event'}

@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, onSnapshot, orderBy, query, runTransaction, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, onSnapshot, orderBy, query, runTransaction, Timestamp, updateDoc, where, FirestoreError } from 'firebase/firestore';
 import { Event, EventSuggestion, SuggestionType, SuggestionVote } from '../types/event';
 import { hasActionPermission, PermissionError } from './permissionService';
 import { resolveCreateEventSuggestionMode } from '../utilities/eventSuggestions';
@@ -260,8 +260,14 @@ export const subscribeToEvents = (tripId: string, callback: (events: Event[]) =>
     where('tripId', '==', tripId),
     orderBy('startDate', 'asc')
   );
-  return onSnapshot(q, (snapshot) => {
-    const events: Event[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
-    callback(events);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const events: Event[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
+      callback(events);
+    },
+    (err: FirestoreError) => {
+      console.error('[subscribeToEvents]', tripId, err.code, err.message);
+    }
+  );
 };
