@@ -4,6 +4,7 @@ import { sliceEventForDay } from '../utilities/eventOverlapsDay';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
 import { UserSelection } from '../hooks/useSessionSelections';
+import { Event, SuggestionVote } from '../types/event';
 import './ItineraryList.css';
 
 interface ItineraryListProps {
@@ -14,6 +15,7 @@ interface ItineraryListProps {
   allSelections?: UserSelection[];
   currentUserId?: string;
   tripUsers?: AppUser[];
+  totalTripUsers?: number;
   canAddEvent?: boolean;
 }
 
@@ -67,6 +69,10 @@ const ItineraryList = ({
                     )}
                     currentUserId={currentUserId}
                     tripUsers={tripUsers}
+                    totalTripUsers={totalTripUsers}
+                    onVoteSuggestion={onVoteSuggestion}
+                    canApproveSuggestion={canApproveSuggestion}
+                    onApproveSuggestion={onApproveSuggestion}
                   />
                 );
               })

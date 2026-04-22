@@ -16,6 +16,42 @@
   @apply flex flex-col gap-4;
 }
 
+.suggestion-toggle-card {
+  @apply flex items-center justify-between gap-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3;
+}
+
+.suggestion-toggle-card--locked {
+  @apply bg-green-100 border-green-200;
+}
+
+.suggestion-toggle-title {
+  @apply text-sm font-semibold text-primary;
+}
+
+.suggestion-toggle-copy {
+  @apply mt-1 text-xs text-green-900/70 leading-relaxed;
+}
+
+.suggestion-toggle-switch {
+  @apply relative shrink-0 h-8 w-14 rounded-full bg-green-200 transition-colors duration-150;
+}
+
+.suggestion-toggle-switch:disabled {
+  @apply cursor-not-allowed opacity-90;
+}
+
+.suggestion-toggle-switch--on {
+  @apply bg-primary;
+}
+
+.suggestion-toggle-knob {
+  @apply absolute top-1 left-1 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-150;
+}
+
+.suggestion-toggle-switch--on .suggestion-toggle-knob {
+  transform: translateX(1.5rem);
+}
+
 .event-modal-fieldset {
   @apply flex flex-col gap-4 border-0 p-0 m-0 min-w-0;
 }

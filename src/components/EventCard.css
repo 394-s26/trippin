@@ -8,8 +8,16 @@
   @apply absolute left-0 top-0 bottom-0 w-1.5;
 }
 
+.event-card--suggestion {
+  @apply bg-[#f6fbf4] border-[#dcead6];
+}
+
 .event-card:hover {
   @apply bg-green-50 border-green-50;
+}
+
+.event-card--suggestion:hover {
+  @apply bg-[#eef7e9] border-[#dcead6];
 }
 
 .event-card--selected {
@@ -52,6 +60,10 @@
   @apply flex items-center gap-1;
 }
 
+.event-card-proposed-badge {
+  @apply text-[10px] uppercase tracking-[0.18em] font-semibold rounded-full px-2.5 py-1 bg-primary text-white;
+}
+
 .event-card-name {
   @apply font-semibold text-gray-900 text-sm leading-snug;
 }
@@ -82,4 +94,102 @@
 
 .event-card-icon {
   @apply text-gray-300 shrink-0 mt-0.5;
+}
+
+.event-card-vote {
+  @apply mt-4 pt-4 border-t border-[#dcead6];
+}
+
+.event-card-vote-title {
+  @apply text-[11px] uppercase tracking-[0.18em] font-semibold text-primary mb-3;
+}
+
+.event-card-vote-actions {
+  @apply flex flex-col gap-2;
+}
+
+.event-card-vote-btn {
+  --vote-fill: 0%;
+  @apply relative overflow-hidden flex items-center gap-3 w-full rounded-2xl px-4 py-3 text-left border border-transparent bg-white text-gray-700 transition-colors duration-150;
+}
+
+.event-card-vote-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: var(--vote-fill);
+  transition: width 150ms ease;
+}
+
+.event-card-vote-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+.event-card-vote-btn--yes {
+  @apply border-green-200 text-primary;
+}
+
+.event-card-vote-btn--yes::before {
+  background: linear-gradient(90deg, rgba(45, 90, 39, 0.22), rgba(45, 90, 39, 0.12));
+}
+
+.event-card-vote-btn--no {
+  @apply border-red-100 text-gray-700;
+}
+
+.event-card-vote-btn--no::before {
+  background: linear-gradient(90deg, rgba(180, 35, 24, 0.18), rgba(180, 35, 24, 0.08));
+}
+
+.event-card-vote-btn--active {
+  @apply ring-2 ring-offset-0;
+}
+
+.event-card-vote-btn--yes.event-card-vote-btn--active {
+  @apply ring-green-300;
+}
+
+.event-card-vote-btn--no.event-card-vote-btn--active {
+  @apply ring-red-200;
+}
+
+.event-card-vote-btn-icon {
+  @apply flex items-center justify-center w-9 h-9 rounded-full bg-white/80 border border-white/70 shrink-0;
+}
+
+.event-card-vote-btn-label {
+  @apply flex-1 min-w-0 text-sm font-semibold;
+}
+
+.event-card-vote-btn-count {
+  @apply text-sm font-bold;
+}
+
+.event-card-vote-voters {
+  @apply flex items-center;
+}
+
+.event-card-vote-voters > * + * {
+  margin-left: -0.5rem;
+}
+
+.event-card-approve-btn {
+  @apply mt-3 w-full rounded-2xl px-4 py-3 text-sm font-semibold bg-primary text-white transition-colors duration-150;
+}
+
+.event-card-approve-btn:hover {
+  @apply bg-green-800;
+}
+
+.event-card-consensus-track {
+  @apply mt-3 h-2 rounded-full bg-gray-200 overflow-hidden;
+}
+
+.event-card-consensus-fill {
+  @apply block h-full rounded-full;
+}
+
+.event-card-consensus-text {
+  @apply mt-2 text-right text-xs font-medium text-gray-500;
 }
