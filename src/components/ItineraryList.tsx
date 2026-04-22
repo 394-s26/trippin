@@ -17,6 +17,10 @@ interface ItineraryListProps {
   tripUsers?: AppUser[];
   totalTripUsers?: number;
   canAddEvent?: boolean;
+  addEventLabel?: string;
+  onVoteSuggestion?: (event: Event, vote: SuggestionVote) => void;
+  canApproveSuggestion?: boolean;
+  onApproveSuggestion?: (event: Event) => void;
 }
 
 const ItineraryList = ({
@@ -26,8 +30,13 @@ const ItineraryList = ({
   selectedEventIds = [],
   allSelections = [],
   currentUserId,
-  tripUsers,
+  tripUsers = [],
+  totalTripUsers = 0,
   canAddEvent = false,
+  addEventLabel = 'Event',
+  onVoteSuggestion,
+  canApproveSuggestion = false,
+  onApproveSuggestion,
 }: ItineraryListProps) => {
   return (
     <div className="itinerary-list">

@@ -2,7 +2,7 @@ import { CSSProperties } from 'react';
 import { Event, SuggestionVote } from '../types/event';
 import { AppUser } from '../types/auth';
 import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
-import { LocationPinIcon } from '../services/svgIcons';
+import { LocationPinIcon, CheckIcon, XIcon } from '../services/svgIcons';
 import { UserSelection } from '../hooks/useSessionSelections';
 import { pickFirstSelector } from '../utilities/pickFirstSelector';
 import { getSuggestionVoteSummary } from '../utilities/eventSuggestions';
