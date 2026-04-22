@@ -3,18 +3,18 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import AppHeader from '../components/AppHeader';
 import TripBanner from '../components/TripBanner';
 import ItineraryList from '../components/ItineraryList';
 import EventFormModal from '../components/EventFormModal';
 import BudgetModal from '../components/BudgetModal';
 import TripShareBar from '../components/TripShareBar';
 import { SelectionActionBar } from '../components/SelectionActionBar';
+import { TripDateModal } from '../components/TripDateModal';
 import { Event } from '../types/event';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
 import useTrip from '../hooks/useTrip';
-import useDays from '../hooks/useDays';
+import { useDays } from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
 import { useEventLock } from '../hooks/useEventLock';
@@ -36,8 +36,8 @@ const TripPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { appUser } = useAuth();
-  const { trip, loading, error, permissionDenied, can, updateTripName, updateBannerImage, updateEndDate, deleteTrip } = useTrip(id!);
-  const { days, addDay, renameDayLabel, removeDay, changeStartDate } = useDays(id!);
+  const { trip, loading, error, permissionDenied, can, updateTripName, updateBannerImage, updateStartAndEndDate, deleteTrip } = useTrip(id!);
+  const { days, adjustTripLength } = useDays(id!);
   const { events } = useItinerary(id!);
   const { mySelectedIds, allSelections, toggleSelection, deselectAll } = useSessionSelections(id!, appUser?.uid);
   const { setLastViewedTrip } = useLastViewedTrip();
@@ -46,6 +46,7 @@ const TripPage = () => {
 
   const [activeDay, setActiveDay] = useState<{ id: string; date: Date } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDateModal, setShowDateModal] = useState(false);
   const [tripName, setTripName] = useState('New Trip');
   const [bannerImage, setBannerImage] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -108,26 +109,9 @@ const TripPage = () => {
     });
   }, [memberUidsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleChangeStartDate = (newStartDate: Date) => {
-    changeStartDate(newStartDate);
-  };
-
-  const handleAddDay = async () => {
-    const lastDate = days[days.length - 1]?.date ?? new Date();
-    await addDay(lastDate);
-    const newDayDate = new Date(lastDate);
-    newDayDate.setDate(newDayDate.getDate() + 1);
-    if (trip?.endDate && newDayDate > trip.endDate) {
-      await updateEndDate(newDayDate);
-    }
-  };
-
-  const handleUpdateDayLabel = (dayId: string, label: string) => {
-    renameDayLabel(dayId, label);
-  };
-
-  const handleDeleteDay = (dayId: string) => {
-    removeDay(dayId);
+  const handleChangeDates = async (newStart: Date, newEnd: Date) => {
+    await adjustTripLength(newStart, newEnd);
+    await updateStartAndEndDate(newStart, newEnd);
   };
 
   const handleChangeName = (newName: string) => {
@@ -204,7 +188,6 @@ const TripPage = () => {
     return (
       <div className="home-wrapper">
         <div className="home-container">
-          <AppHeader />
           <main className="home-main">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               <p style={{ color: '#6b7280' }}>Loading trip…</p>
@@ -218,7 +201,6 @@ const TripPage = () => {
   const noAccessView = (
     <div className="home-wrapper">
       <div className="home-container">
-        <AppHeader />
         <main className="home-main">
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem' }}>
             <p style={{ color: '#6b7280' }}>You do not have permission to view this trip.</p>
@@ -238,7 +220,6 @@ const TripPage = () => {
     return (
       <div className="home-wrapper">
         <div className="home-container">
-          <AppHeader />
           <main className="home-main">
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1rem' }}>
               <p style={{ color: '#6b7280' }}>{error ?? 'Trip not found'}</p>
@@ -260,7 +241,6 @@ const TripPage = () => {
   return (
     <div className="home-wrapper" onClick={() => { if (mySelectedIds.length > 0) deselectAll(); }}>
       <div className="home-container">
-        <AppHeader />
         <main className="home-main" ref={scrollRef}>
           <div className="home-content">
             <TripBanner
@@ -273,14 +253,14 @@ const TripPage = () => {
               permissions={trip.permissions ?? {}}
               canChangeName={can('change_trip_name')}
               canChangeBanner={can('change_banner')}
-              canChangeStartDate={can('change_start_date')}
+              canChangeDates={can('change_start_date') && can('change_end_date')}
               canDelete={can('delete_trip')}
               canManageMembers={true}
               canRemoveMembers={can('remove_member')}
               canChangeRole={can('change_member_role')}
               onChangeName={handleChangeName}
               onChangeImage={handleChangeBannerImage}
-              onChangeStartDate={handleChangeStartDate}
+              onOpenDatePicker={() => setShowDateModal(true)}
               onDelete={() => setShowDeleteConfirm(true)}
             />
             <TripShareBar
@@ -306,22 +286,26 @@ const TripPage = () => {
             />
             <ItineraryList
               days={daysWithEvents}
-              onAddDay={handleAddDay}
-              onUpdateDayLabel={handleUpdateDayLabel}
-              onDeleteDay={handleDeleteDay}
               onAddEvent={(day) => setActiveDay({ id: day.id, date: day.date })}
-              selectedEventIds={mySelectedIds}
               onSelectEvent={toggleSelection}
+              selectedEventIds={mySelectedIds}
               allSelections={allSelections}
               currentUserId={appUser?.uid}
               tripUsers={tripUsers}
               canAddEvent={can('add_event')}
-              canAddDay={can('add_day')}
-              canEditDay={can('edit_day')}
-              canDeleteDay={can('delete_day')}
             />
           </div>
         </main>
+
+        <TripDateModal
+          isOpen={showDateModal}
+          onClose={() => setShowDateModal(false)}
+          currentStartDate={trip.startDate ?? days[0]?.date ?? new Date()}
+          currentEndDate={trip.endDate ?? days[days.length - 1]?.date ?? new Date()}
+          days={days}
+          events={events}
+          onConfirm={handleChangeDates}
+        />
 
         {deleteConfirmIds && createPortal(
           <div className="overlay-bottom">

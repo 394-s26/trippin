@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, FormEvent, ChangeEvent } from 'react';
-import AppHeader from '../components/AppHeader';
 import { useAuth } from '../contexts/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 import './ProfilePage.css';
@@ -181,7 +180,6 @@ const ProfilePage = () => {
   return (
     <div className="page-wrapper">
       <div className="page-container">
-        <AppHeader />
         <main className="profile-page-main">
             <h2 className="profile-page-title">Profile</h2>
 

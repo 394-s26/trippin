@@ -1,7 +1,12 @@
 @reference "../index.css";
 
+
 .app-header {
-  @apply flex justify-between items-center px-5 py-4 bg-white border-b border-gray-100;
+  @apply fixed top-0 left-1/2 -translate-x-1/2 z-40 w-1/2 bg-white flex;
+}
+
+.app-header-inner {
+  @apply flex justify-between px-12 py-4 w-full bg-white border-b border-gray-100;
 }
 
 .app-header-logo {

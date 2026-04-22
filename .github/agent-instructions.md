@@ -32,7 +32,7 @@ Additional conventions:
 ### Expected Patterns
 - All SVG icons should first be defined in `src/services/svgIcons.tsx` and imported to the relevant place they will be used.
 - This site has a permissions system. For each action that a user can perform on a trip (e.g. adding an event, editing a day) that will modify the firebase data, a new permission for that action should be defined as a string in `src/config/permissions.json` and assigned to at least the owner user. If you are creating a new button in the front-end, or creating a new firestore service in `/services`, keep this in mind in your implementation.
-- For all overlays, use the pre-defined classes in `src/styles/global.css` to create the overlay background and cards. Use the pre-defined sizing as well.
+- For all overlays, use the pre-defined classes in `src/styles/global.css` to create the overlay background and cards. Use the pre-defined sizing as well. In addition, use createPortal to ensure the overlay remains over top of all elements in the site when open.
 - For all user avatar profile pictures, use the `src/components/UserAvatar.tsx` component, along with its predefined sizing.
 
 ---

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AppHeader from '../components/AppHeader';
 import TripScroller from '../components/TripScroller';
 import NewTripModal from '../components/NewTripModal';
 import { createTrip } from '../services/firestoreTripService';
@@ -45,7 +44,6 @@ const HomePage = () => {
   return (
     <div className="home-page-wrapper">
       <div className="home-page-container">
-        <AppHeader />
         <main className="home-page-main">
           <div className="home-page-section">
             <div className="home-page-section-header">

@@ -3,7 +3,7 @@
 // Events store a dayId and are deleted by dayId when a day is removed.
 
 import { db } from './firebase';
-import { collection, doc, setDoc, updateDoc, getDocs, onSnapshot, query, orderBy, where, writeBatch, Timestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, getDocs, onSnapshot, query, orderBy, writeBatch, Timestamp } from 'firebase/firestore';
 import { Day } from '../types/day';
 import { toDate } from '../utilities/timestamps';
 import { hasActionPermission, PermissionError } from './permissionService';
@@ -42,15 +42,30 @@ export const deleteDay = async (uid: string, tripId: string, dayId: string): Pro
   const allowed = await hasActionPermission(uid, tripId, 'delete_day');
   if (!allowed) throw new PermissionError('delete_day');
   const eventsSnapshot = await getDocs(
-    query(
-      collection(db, 'events'),
-      where('dayId', '==', dayId)
-    )
+    collection(db, 'trips', tripId, 'days', dayId, 'events')
   );
 
   const batch = writeBatch(db);
   eventsSnapshot.docs.forEach(d => batch.delete(d.ref));
   batch.delete(doc(daysCol(tripId), dayId));
+  await batch.commit();
+};
+
+// Deletes multiple days and all their events in a single batch write.
+// Checks delete_day permission once before proceeding.
+export const deleteDaysBatch = async (uid: string, tripId: string, dayIds: string[]): Promise<void> => {
+  if (dayIds.length === 0) return;
+  const allowed = await hasActionPermission(uid, tripId, 'delete_day');
+  if (!allowed) throw new PermissionError('delete_day');
+
+  const batch = writeBatch(db);
+  for (const dayId of dayIds) {
+    const eventsSnapshot = await getDocs(
+      collection(db, 'trips', tripId, 'days', dayId, 'events')
+    );
+    eventsSnapshot.docs.forEach(d => batch.delete(d.ref));
+    batch.delete(doc(daysCol(tripId), dayId));
+  }
   await batch.commit();
 };
 
