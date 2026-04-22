@@ -179,11 +179,10 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="profile-page-wrapper">
-      <div className="profile-page-container">
+    <div className="page-wrapper">
+      <div className="page-container">
         <AppHeader />
         <main className="profile-page-main">
-          <div className="profile-page-card">
             <h2 className="profile-page-title">Profile</h2>
 
             {(error || success) && (
@@ -294,7 +293,7 @@ const ProfilePage = () => {
               <h3>Password</h3>
               {!hasPasswordProvider ? (
                 <p className="profile-page-muted">
-                  You signed in with Google. Password changes aren’t available unless you add an email/password sign-in method.
+                  You signed in with Google. Password changes aren’t available.
                 </p>
               ) : (
                 <form onSubmit={handleChangePassword} className="profile-page-form">
@@ -346,7 +345,6 @@ const ProfilePage = () => {
                 {deleting ? 'Deleting…' : 'Delete my account'}
               </button>
             </section>
-          </div>
         </main>
       </div>
     </div>

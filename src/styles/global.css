@@ -52,6 +52,20 @@ html, body, #root {
   @apply w-full max-w-sm;
 }
 
+/* ── Page layout ──────────────────────────────────────────
+   Shared wrapper/container used by home, trip, profile, etc.
+   wrapper  = full-viewport gray backdrop, horizontally centered
+   container = the centered column: neutral bg, full height, shadow
+─────────────────────────────────────────────────────────── */
+
+.page-wrapper {
+  @apply min-h-screen bg-gray-200 flex justify-center;
+}
+
+.page-container {
+  @apply w-full md:w-1/2 bg-neutral min-h-screen flex flex-col relative shadow-2xl md:z-20;
+}
+
 /* ── Brand identity ──────────────────────────────────────── */
 
 /* Reusable brand logo text — use this anywhere Trippin branding appears

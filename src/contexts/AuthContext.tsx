@@ -20,6 +20,7 @@ import {
   clearLoginTime,
 } from '../services/authService';
 import { deleteUserAvatars, uploadUserAvatar } from '../services/storageService';
+import { deleteUserOwnedTrips } from '../services/firestoreTripService';
 import { acceptPendingInvites } from '../services/inviteService';
 import { User, AppUser, EmailRegistrationInput } from '../types/auth';
 
@@ -343,10 +344,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const usernameKey = backupProfile?.username ? normalizeUsername(backupProfile.username) : null;
 
     try {
-      // Avatar cleanup should never block account deletion (Storage rules/network issues).
+      // Avatar/trip cleanup should never block account deletion (Storage rules/network issues).
       deleteUserAvatars(uid).catch((err) => console.warn('Avatar cleanup skipped/failed:', err));
 
       await Promise.all([
+        deleteUserOwnedTrips(uid),
         deleteDoc(doc(db, 'users', uid)),
         usernameKey ? deleteDoc(doc(db, 'usernames', usernameKey)) : Promise.resolve(),
       ]);

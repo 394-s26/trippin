@@ -1,4 +1,4 @@
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, deleteObject, listAll } from "firebase/storage";
 import { storage } from "./firebase";
 
 export const uploadTripBanner = async (file: File, tripId: string): Promise<string> => {
@@ -25,6 +25,16 @@ export const uploadUserAvatar = async (uid: string, file: File): Promise<string>
     return await getDownloadURL(storageRef);
   } catch (error) {
     throw new Error("Failed to upload profile photo: " + (error instanceof Error ? error.message : String(error)));
+  }
+};
+
+export const deleteTripBanners = async (tripId: string): Promise<void> => {
+  try {
+    const folderRef = ref(storage, `tripBanners/${tripId}`);
+    const { items } = await listAll(folderRef);
+    await Promise.allSettled(items.map((item) => deleteObject(item)));
+  } catch {
+    // Ignore if folder doesn't exist or rules deny listing.
   }
 };
 
