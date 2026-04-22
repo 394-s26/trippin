@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+import clsx from 'clsx';
 import { Event, SuggestionVote } from '../types/event';
 import { AppUser } from '../types/auth';
 import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
@@ -78,11 +79,15 @@ const EventCard = ({
   } = getSuggestionVoteSummary(event, totalTripUsers);
 
   const useOtherBorder = !!firstOther && !isSelected;
-  const cardClass = isSelected
-    ? `event-card${isSuggestion ? ' event-card--suggestion' : ''} event-card--selected`
-    : useOtherBorder
-      ? `event-card${isSuggestion ? ' event-card--suggestion' : ''} event-card--selected-session`
-      : `event-card${isSuggestion ? ' event-card--suggestion' : ''}`;
+  const cardClass = clsx('event-card', {
+    // Selection Logic
+    'event-card--selected': isSelected,
+    'event-card--selected-session': !isSelected && useOtherBorder,
+  
+    // Suggestion Logic
+    'event-card--suggestion': isSuggestion && suggestionType !== 'delete',
+    'event-card--delete-suggestion': isSuggestion && suggestionType === 'delete',
+  });
   const cardStyle = (useOtherBorder ? { borderColor: firstOther.color } : undefined) as CSSProperties | undefined;
   const consensusFillStyle = {
     width: `${consensusRatio * 100}%`,
@@ -91,7 +96,7 @@ const EventCard = ({
   const yesStyle = { ['--vote-fill' as string]: `${yesRatio * 100}%` } as CSSProperties;
   const noStyle = { ['--vote-fill' as string]: `${noRatio * 100}%` } as CSSProperties;
   const voteTitle = suggestionType === 'delete' ? 'Vote: should we remove this?' : 'Vote: should we do this?';
-  const proposalBadge = suggestionType === 'delete' ? 'Delete Proposal' : 'Proposed';
+  const proposalBadge = suggestionType === 'delete' ? 'Proposed' : 'Proposed';
 
   const lookupUser = (uid: string): AppUser | null =>
     tripUsers.find(u => u.uid === uid) ?? null;
@@ -112,7 +117,7 @@ const EventCard = ({
               <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
             )}
             {isSuggestion && (
-              <span className="event-card-proposed-badge">{proposalBadge}</span>
+              <span className={`event-card-proposed-badge ${suggestionType === 'delete' ? 'delete' : 'create'}`}>{suggestionType === 'delete' ? 'Proposed' : 'Proposed'}</span>
             )}
             {otherSelectors.length > 0 && (
               <div className="event-card-selectors">

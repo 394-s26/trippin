@@ -12,12 +12,20 @@
   @apply bg-[#f6fbf4] border-[#dcead6];
 }
 
+.event-card--delete-suggestion {
+  @apply bg-[#fbf4f4] border-[#ead6d6];
+}
+
 .event-card:hover {
   @apply bg-green-50 border-green-50;
 }
 
 .event-card--suggestion:hover {
   @apply bg-[#eef7e9] border-[#dcead6];
+}
+
+.event-card--delete-suggestion:hover {
+  @apply bg-[#f7e9e9] border-[#ead6d6];
 }
 
 .event-card--selected {
@@ -61,8 +69,12 @@
 }
 
 .event-card-proposed-badge {
-  @apply text-[10px] uppercase tracking-[0.18em] font-semibold rounded-full px-2.5 py-1 bg-primary text-white;
+  @apply text-[10px] uppercase tracking-[0.18em] font-semibold rounded-full px-2.5 py-1 text-white;
 }
+
+.event-card-proposed-badge.create { @apply bg-primary; }
+
+.event-card-proposed-badge.delete { @apply bg-red-800; }
 
 .event-card-name {
   @apply font-semibold text-gray-900 text-sm leading-snug;
