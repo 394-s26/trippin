@@ -79,6 +79,12 @@ const TripPage = () => {
     lock: 'acquired' | 'readonly';
     holderName?: string;
   } | null>(null);
+  const [dateAdjustConfirm, setDateAdjustConfirm] = useState<{
+    kind: 'start' | 'end';
+    nextDate: Date;
+    removedDays: number;
+    removedEvents: number;
+  } | null>(null);
   // Snapshot of event IDs pending deletion confirmation. Captured up-front so
   // the SelectionActionBar's overlay auto-deselect doesn't erase them mid-flow.
   const [deleteConfirmIds, setDeleteConfirmIds] = useState<string[] | null>(null);
@@ -116,6 +122,14 @@ const TripPage = () => {
 
   const tripDayRefs = days.map(d => ({ id: d.id, date: d.date }));
 
+  const computeRemovedDays = (nextStartDate: Date, nextEndDate: Date) => {
+    const normalizedStart = new Date(nextStartDate);
+    normalizedStart.setHours(0, 0, 0, 0);
+    const normalizedEnd = new Date(nextEndDate);
+    normalizedEnd.setHours(0, 0, 0, 0);
+    return daysWithEvents.filter((day) => day.date < normalizedStart || day.date > normalizedEnd);
+  };
+
   useEffect(() => {
     if (trip && !initialized) {
       setTripName(trip.name);
@@ -141,6 +155,19 @@ const TripPage = () => {
 
   const handleChangeStartDate = async (newStartDate: Date) => {
     if (trip?.endDate && newStartDate > trip.endDate) return;
+    if (trip?.endDate) {
+      const removedDays = computeRemovedDays(newStartDate, trip.endDate);
+      const removedEvents = removedDays.reduce((sum, day) => sum + day.events.length, 0);
+      if (removedEvents > 0) {
+        setDateAdjustConfirm({
+          kind: 'start',
+          nextDate: newStartDate,
+          removedDays: removedDays.length,
+          removedEvents,
+        });
+        return;
+      }
+    }
     await updateStartDate(newStartDate);
     if (trip?.endDate) {
       await syncDaysToRange(newStartDate, trip.endDate);
@@ -149,10 +176,35 @@ const TripPage = () => {
 
   const handleChangeEndDate = async (newEndDate: Date) => {
     if (trip?.startDate && newEndDate < trip.startDate) return;
+    if (trip?.startDate) {
+      const removedDays = computeRemovedDays(trip.startDate, newEndDate);
+      const removedEvents = removedDays.reduce((sum, day) => sum + day.events.length, 0);
+      if (removedEvents > 0) {
+        setDateAdjustConfirm({
+          kind: 'end',
+          nextDate: newEndDate,
+          removedDays: removedDays.length,
+          removedEvents,
+        });
+        return;
+      }
+    }
     await updateEndDate(newEndDate);
     if (trip?.startDate) {
       await syncDaysToRange(trip.startDate, newEndDate);
     }
+  };
+
+  const handleConfirmDateAdjust = async () => {
+    if (!dateAdjustConfirm || !trip) return;
+    if (dateAdjustConfirm.kind === 'start') {
+      await updateStartDate(dateAdjustConfirm.nextDate);
+      await syncDaysToRange(dateAdjustConfirm.nextDate, trip.endDate);
+    } else {
+      await updateEndDate(dateAdjustConfirm.nextDate);
+      await syncDaysToRange(trip.startDate, dateAdjustConfirm.nextDate);
+    }
+    setDateAdjustConfirm(null);
   };
 
   const handleAddDay = async () => {
@@ -406,6 +458,25 @@ const TripPage = () => {
                 Delete
               </button>
               <button onClick={() => setDeleteConfirmIds(null)} className="delete-cancel-btn">
+                Cancel
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {dateAdjustConfirm && createPortal(
+          <div className="overlay-bottom">
+            <div className="overlay-scrim" onClick={() => setDateAdjustConfirm(null)} />
+            <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 flex flex-col gap-3 animate-slide-up">
+              <h2 className="delete-confirm-title">Adjust Trip Dates?</h2>
+              <p className="delete-confirm-body">
+                This change removes {dateAdjustConfirm.removedDays} {dateAdjustConfirm.removedDays === 1 ? 'day-section' : 'day-sections'} and will delete {dateAdjustConfirm.removedEvents} {dateAdjustConfirm.removedEvents === 1 ? 'event' : 'events'}. This cannot be undone.
+              </p>
+              <button onClick={handleConfirmDateAdjust} className="delete-confirm-btn">
+                Adjust Dates
+              </button>
+              <button onClick={() => setDateAdjustConfirm(null)} className="delete-cancel-btn">
                 Cancel
               </button>
             </div>

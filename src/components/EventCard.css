@@ -85,6 +85,10 @@
   @apply text-gray-400 text-xs mt-0.5;
 }
 
+.event-card-conflict {
+  @apply text-[11px] font-semibold text-orange-700 bg-orange-100 rounded-full px-2 py-0.5;
+}
+
 .event-card-location-link {
   @apply text-gray-500 hover:text-primary transition-colors;
 }

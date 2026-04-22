@@ -14,6 +14,7 @@ import './EventCard.css';
 interface EventCardProps {
   event: Event;
   daySlice?: EventDaySlice;
+  conflictWithEventName?: string | null;
   onSelect?: () => void;
   isSelected?: boolean;
   allSelections?: UserSelection[];
@@ -31,6 +32,7 @@ const EventCard = ({
   onSelect,
   isSelected = false,
   allSelections = [],
+  conflictWithEventName = null,
   currentUserId,
   tripUsers = [],
   totalTripUsers = 0,
@@ -116,6 +118,11 @@ const EventCard = ({
         <div className="event-card-body">
           <div className="event-card-time-row">
             <span className="event-card-time">{time}</span>
+            {conflictWithEventName && (
+              <span className="event-card-conflict">
+                Time conflict with "{conflictWithEventName}"
+              </span>
+            )}
             {showSpanPill && (
               <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
             )}

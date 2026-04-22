@@ -85,6 +85,23 @@ const ItineraryList = ({
         const isEditing = editingDay === day.id;
         const isConfirmingDelete = confirmDeleteId === day.id;
         const dayEvents = day.events;
+        const daySlices = dayEvents.map((event) => ({
+          event,
+          slice: sliceEventForDay(event, day),
+        }));
+        const conflictByEventId = new Map<string, string>();
+        for (let i = 0; i < daySlices.length; i += 1) {
+          const a = daySlices[i];
+          if (!a.slice || a.slice.isAllDay || a.event.allDay) continue;
+          for (let j = i + 1; j < daySlices.length; j += 1) {
+            const b = daySlices[j];
+            if (!b.slice || b.slice.isAllDay || b.event.allDay) continue;
+            const overlaps = a.slice.sliceStart < b.slice.sliceEnd && b.slice.sliceStart < a.slice.sliceEnd;
+            if (!overlaps) continue;
+            if (!conflictByEventId.has(a.event.id)) conflictByEventId.set(a.event.id, b.event.name || '(no name)');
+            if (!conflictByEventId.has(b.event.id)) conflictByEventId.set(b.event.id, a.event.name || '(no name)');
+          }
+        }
 
         return (
           <section
@@ -213,6 +230,7 @@ const ItineraryList = ({
                     key={event.id}
                     event={event}
                     daySlice={sliceEventForDay(event, day) ?? undefined}
+                    conflictWithEventName={conflictByEventId.get(event.id) ?? null}
                     onSelect={() => onSelectEvent?.(event.id)}
                     isSelected={selectedEventIds.includes(event.id)}
                     allSelections={allSelections}
