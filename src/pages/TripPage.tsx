@@ -61,7 +61,7 @@ const TripPage = () => {
   const navigate = useNavigate();
   const { appUser } = useAuth();
   const { trip, loading, error, permissionDenied, can, updateTripName, updateBannerImage, updateStartDate, updateEndDate, deleteTrip } = useTrip(id!);
-  const { days, addDay, renameDayLabel, removeDay, changeStartDate } = useDays(id!);
+  const { days, addDay, renameDayLabel, removeDay, syncDaysToRange } = useDays(id!);
   const { events } = useItinerary(id!);
   const { mySelectedIds, allSelections, toggleSelection, deselectAll } = useSessionSelections(id!, appUser?.uid);
   const { setLastViewedTrip } = useLastViewedTrip();
@@ -139,14 +139,20 @@ const TripPage = () => {
     });
   }, [memberUidsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleChangeStartDate = (newStartDate: Date) => {
+  const handleChangeStartDate = async (newStartDate: Date) => {
     if (trip?.endDate && newStartDate > trip.endDate) return;
-    updateStartDate(newStartDate);
-    changeStartDate(newStartDate);
+    await updateStartDate(newStartDate);
+    if (trip?.endDate) {
+      await syncDaysToRange(newStartDate, trip.endDate);
+    }
   };
 
-  const handleChangeEndDate = (newEndDate: Date) => {
-    updateEndDate(newEndDate);
+  const handleChangeEndDate = async (newEndDate: Date) => {
+    if (trip?.startDate && newEndDate < trip.startDate) return;
+    await updateEndDate(newEndDate);
+    if (trip?.startDate) {
+      await syncDaysToRange(trip.startDate, newEndDate);
+    }
   };
 
   const handleAddDay = async () => {
@@ -373,9 +379,9 @@ const TripPage = () => {
               tripUsers={tripUsers}
               totalTripUsers={totalTripUsers}
               canAddEvent={canCreateEvent || canProposeCreateEvent}
-              canAddDay={can('add_day')}
-              canEditDay={can('edit_day')}
-              canDeleteDay={can('delete_day')}
+              canAddDay={false}
+              canEditDay={false}
+              canDeleteDay={false}
               addEventLabel={canCreateEvent ? 'Event' : 'Suggest Event'}
               onVoteSuggestion={handleVoteSuggestion}
               canApproveSuggestion={canApproveSuggestion}

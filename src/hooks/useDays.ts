@@ -48,7 +48,43 @@ const useDays = (tripId: string) => {
         );
     };
 
-    return { days, addDay, renameDayLabel, removeDay, changeStartDate };
+    const syncDaysToRange = async (startDate: Date, endDate: Date): Promise<void> => {
+        const normalizedStart = new Date(startDate);
+        normalizedStart.setHours(0, 0, 0, 0);
+        const normalizedEnd = new Date(endDate);
+        normalizedEnd.setHours(0, 0, 0, 0);
+        if (normalizedEnd < normalizedStart) return;
+
+        const targetDates: Date[] = [];
+        const cursor = new Date(normalizedStart);
+        while (cursor <= normalizedEnd) {
+            targetDates.push(new Date(cursor));
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        const isSameCalendarDay = (a: Date, b: Date) =>
+            a.getFullYear() === b.getFullYear()
+            && a.getMonth() === b.getMonth()
+            && a.getDate() === b.getDate();
+
+        const sortedDays = [...days].sort((a, b) => a.date.getTime() - b.date.getTime());
+        const dayMatchesTarget = (dayDate: Date) => targetDates.some((targetDate) => isSameCalendarDay(dayDate, targetDate));
+
+        const createMissing = targetDates
+            .filter((targetDate) => !sortedDays.some((day) => isSameCalendarDay(day.date, targetDate)))
+            .map((targetDate) => {
+                const label = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
+                return createDay(uid, tripId, targetDate, label);
+            });
+
+        const deleteOverflow = sortedDays
+            .filter((day) => !dayMatchesTarget(day.date))
+            .map((day) => deleteDayDoc(uid, tripId, day.id));
+
+        await Promise.all([...createMissing, ...deleteOverflow]);
+    };
+
+    return { days, addDay, renameDayLabel, removeDay, changeStartDate, syncDaysToRange };
 };
 
 export default useDays;
