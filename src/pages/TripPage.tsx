@@ -155,6 +155,23 @@ const TripPage = () => {
     return daysWithEvents.filter((day) => day.date < normalizedStart || day.date > normalizedEnd);
   };
 
+  const expandLodgingSeriesIds = (seedIds: string[]): string[] => {
+    const seedSet = new Set(seedIds);
+    const expanded = new Set<string>(seedIds);
+    const seedEvents = events.filter((event) => seedSet.has(event.id));
+    seedEvents.forEach((event) => {
+      if (EVENT_CATEGORY[event.type] !== 'Lodging' || !LODGING_SUFFIX_REGEX.test(event.name)) return;
+      const base = getLodgingSeriesBaseName(event.name);
+      events.forEach((candidate) => {
+        if (EVENT_CATEGORY[candidate.type] !== 'Lodging') return;
+        if (candidate.type !== event.type) return;
+        if (getLodgingSeriesBaseName(candidate.name) !== base) return;
+        expanded.add(candidate.id);
+      });
+    });
+    return Array.from(expanded);
+  };
+
   useEffect(() => {
     if (trip && !initialized) {
       setTripName(trip.name);
@@ -222,6 +239,17 @@ const TripPage = () => {
 
   const handleConfirmDateAdjust = async () => {
     if (!dateAdjustConfirm || !trip) return;
+    if (appUser) {
+      const removedDays = dateAdjustConfirm.kind === 'start'
+        ? computeRemovedDays(dateAdjustConfirm.nextDate, trip.endDate)
+        : computeRemovedDays(trip.startDate, dateAdjustConfirm.nextDate);
+      const removedIds = removedDays.flatMap((day) => day.events.map((event) => event.id));
+      const expandedRemovedIds = expandLodgingSeriesIds(removedIds);
+      const removedEvents = events.filter((event) => expandedRemovedIds.includes(event.id));
+      await Promise.all(
+        removedEvents.map((event) => deleteEvent(appUser.uid, event.tripId, event.dayId, event.id))
+      );
+    }
     if (dateAdjustConfirm.kind === 'start') {
       await updateStartDate(dateAdjustConfirm.nextDate);
       await syncDaysToRange(dateAdjustConfirm.nextDate, trip.endDate);
@@ -332,26 +360,10 @@ const TripPage = () => {
 
   const handleRequestDeleteSelected = async () => {
     if (mySelectedIds.length === 0) return;
-    const expandDeleteIds = (selectedIds: string[]) => {
-      const selectedSet = new Set(selectedIds);
-      const expanded = new Set<string>(selectedIds);
-      const selectedEvents = events.filter((e) => selectedSet.has(e.id));
-      selectedEvents.forEach((event) => {
-        if (EVENT_CATEGORY[event.type] !== 'Lodging' || !LODGING_SUFFIX_REGEX.test(event.name)) return;
-        const base = getLodgingSeriesBaseName(event.name);
-        events.forEach((candidate) => {
-          if (EVENT_CATEGORY[candidate.type] !== 'Lodging') return;
-          if (candidate.type !== event.type) return;
-          if (getLodgingSeriesBaseName(candidate.name) !== base) return;
-          expanded.add(candidate.id);
-        });
-      });
-      return Array.from(expanded);
-    };
     if (canDeleteEvent) {
-      setDeleteConfirmIds(expandDeleteIds(mySelectedIds));
+      setDeleteConfirmIds(expandLodgingSeriesIds(mySelectedIds));
     } else if (canProposeDeleteEvent && appUser) {
-      const expandedIds = expandDeleteIds(mySelectedIds);
+      const expandedIds = expandLodgingSeriesIds(mySelectedIds);
       const selected = events.filter(e => expandedIds.includes(e.id) && !e.suggestion);
       await Promise.all(selected.map(e => suggestEventDeletion(appUser.uid, e)));
       await deselectAll();
