@@ -145,6 +145,18 @@
   @apply text-gray-300 text-xs py-2;
 }
 
+.event-card-row--large-gap {
+  @apply mt-8 relative;
+}
+
+.event-card-row--large-gap::before {
+  content: '';
+  @apply absolute border-l-2 border-dashed border-gray-300;
+  left: 5%;
+  top: -2.35rem;
+  height: 2rem;
+}
+
 .empty-trip-hint {
   @apply flex flex-col items-center gap-1 pb-2;
 }

@@ -225,23 +225,37 @@ const ItineraryList = ({
             <div className="day-events">
               <div className="day-timeline" />
               {dayEvents.length > 0 ? (
-                dayEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    daySlice={sliceEventForDay(event, day) ?? undefined}
-                    conflictWithEventName={conflictByEventId.get(event.id) ?? null}
-                    onSelect={() => onSelectEvent?.(event.id)}
-                    isSelected={selectedEventIds.includes(event.id)}
-                    allSelections={allSelections}
-                    currentUserId={currentUserId}
-                    tripUsers={tripUsers}
-                    totalTripUsers={totalTripUsers}
-                    onVoteSuggestion={onVoteSuggestion}
-                    canApproveSuggestion={canApproveSuggestion}
-                    onApproveSuggestion={onApproveSuggestion}
-                  />
-                ))
+                dayEvents.map((event, eventIndex) => {
+                  const prevSlice = daySlices[eventIndex - 1]?.slice;
+                  const currentSlice = daySlices[eventIndex]?.slice;
+                  const hasThirtyMinuteGap = !!prevSlice
+                    && !!currentSlice
+                    && !prevSlice.isAllDay
+                    && !currentSlice.isAllDay
+                    && (currentSlice.sliceStart.getTime() - prevSlice.sliceEnd.getTime()) >= (30 * 60 * 1000);
+
+                  return (
+                    <div
+                      key={event.id}
+                      className={`event-card-row${hasThirtyMinuteGap ? ' event-card-row--large-gap' : ''}`}
+                    >
+                      <EventCard
+                        event={event}
+                        daySlice={currentSlice ?? undefined}
+                        conflictWithEventName={conflictByEventId.get(event.id) ?? null}
+                        onSelect={() => onSelectEvent?.(event.id)}
+                        isSelected={selectedEventIds.includes(event.id)}
+                        allSelections={allSelections}
+                        currentUserId={currentUserId}
+                        tripUsers={tripUsers}
+                        totalTripUsers={totalTripUsers}
+                        onVoteSuggestion={onVoteSuggestion}
+                        canApproveSuggestion={canApproveSuggestion}
+                        onApproveSuggestion={onApproveSuggestion}
+                      />
+                    </div>
+                  );
+                })
               ) : (
                 <p className="day-no-events">No events yet.</p>
               )}
