@@ -9,6 +9,7 @@ import HomePage from './pages/HomePage';
 import TripPage from './pages/TripPage';
 import MapPage from './pages/MapPage';
 import MiscPage from './pages/MiscPage';
+import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
 import './index.css';
 
@@ -34,6 +35,7 @@ root.render(
             <Route path="/trip/:id" element={<TripPage />} />
             <Route path="/trip/:id/map" element={<MapPage />} />
             <Route path="/trip/:id/misc" element={<MiscPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

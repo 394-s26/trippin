@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { UserIcon } from '../services/svgIcons';
 import trippinBird from '../images/trippinBird.png';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,6 +7,7 @@ import './AppHeader.css';
 
 const AppHeader = () => {
   const { appUser, logout } = useAuth();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -40,8 +41,24 @@ const AppHeader = () => {
         {menuOpen && (
           <div className="app-header-submenu">
             <span className="app-header-submenu-username">@{appUser?.username}</span>
-            <button className="app-header-submenu-item" disabled>Profile</button>
-            <button className="app-header-submenu-item app-header-submenu-logout" onClick={() => { logout(); setMenuOpen(false); }}>Log out</button>
+            <button
+              className="app-header-submenu-item"
+              onClick={() => {
+                navigate('/profile');
+                setMenuOpen(false);
+              }}
+            >
+              Profile
+            </button>
+            <button
+              className="app-header-submenu-item app-header-submenu-logout"
+              onClick={() => {
+                logout();
+                setMenuOpen(false);
+              }}
+            >
+              Log out
+            </button>
           </div>
         )}
       </div>

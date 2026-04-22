@@ -22,6 +22,19 @@ service cloud.firestore {
       allow write: if isAuthed() && request.auth.uid == userId;
     }
 
+    // Username reservations.
+    // Stored as: usernames/{username} -> { uid: <owner uid> }.
+    // Used to enforce uniqueness with a Firestore transaction.
+    match /usernames/{username} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() &&
+        request.resource.data.uid == request.auth.uid &&
+        !exists(/databases/$(database)/documents/usernames/$(username));
+      allow delete: if isAuthed() &&
+        resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
     match /trips/{tripId} {
       // Owner or anyone in shared[] can read.
       allow read: if isAuthed() && hasTripAccess(resource.data);

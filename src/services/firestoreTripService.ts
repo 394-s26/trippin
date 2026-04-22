@@ -5,8 +5,9 @@
 import { db } from './firebase';
 import { Trip, LastViewedTrip } from '../types/trip';
 import { Role, TripAction } from '../config/permissions';
-import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, or, where, arrayUnion, arrayRemove, deleteField, getDocs } from 'firebase/firestore';
+import { collection, collectionGroup, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, or, where, arrayUnion, arrayRemove, deleteField, getDocs } from 'firebase/firestore';
 import { hasActionPermission, PermissionError } from './permissionService';
+import { deleteTripBanners } from './storageService';
 
 export const firestoreTripService = {
     getTripRef: (tripId: string) => doc(db, 'trips', tripId),
@@ -63,6 +64,36 @@ export const deleteTrip = async (uid: string, tripId: string) => {
         console.error("Error deleting trip: ", error);
         throw error;
     }
+};
+
+// Deletes all trips owned by the given user, including their subcollections and related data.
+// Uses best-effort deletion (Promise.allSettled) so individual failures don't block account deletion.
+export const deleteUserOwnedTrips = async (uid: string): Promise<void> => {
+    const tripsSnap = await getDocs(query(tripsCollection, where('userId', '==', uid)));
+
+    await Promise.allSettled(
+        tripsSnap.docs.map(async (tripDoc) => {
+            const tripId = tripDoc.id;
+
+            const [eventsSnap, daysSnap, selectionsSnap, locksSnap, invitesSnap] = await Promise.all([
+                getDocs(query(collectionGroup(db, 'events'), where('tripId', '==', tripId))),
+                getDocs(collection(db, 'trips', tripId, 'days')),
+                getDocs(collection(db, 'sessions', tripId, 'selections')),
+                getDocs(collection(db, 'sessions', tripId, 'eventLocks')),
+                getDocs(query(collection(db, 'invites'), where('tripId', '==', tripId))),
+            ]);
+
+            await Promise.allSettled([
+                ...eventsSnap.docs.map(d => deleteDoc(d.ref)),
+                ...daysSnap.docs.map(d => deleteDoc(d.ref)),
+                ...selectionsSnap.docs.map(d => deleteDoc(d.ref)),
+                ...locksSnap.docs.map(d => deleteDoc(d.ref)),
+                ...invitesSnap.docs.map(d => deleteDoc(d.ref)),
+                deleteDoc(tripDoc.ref),
+                deleteTripBanners(tripId),
+            ]);
+        })
+    );
 };
 
 // Adds members to the trip. Writes to both shared[] and permissions map atomically.
