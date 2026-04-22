@@ -3,7 +3,7 @@ import { AppUser } from '../types/auth';
 import { UserIcon } from '../services/svgIcons';
 import './UserAvatar.css';
 
-type AvatarSize = 'sm' | 'md' | 'lg';
+type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 interface UserAvatarProps {
   user: AppUser | null;
@@ -15,9 +15,11 @@ interface UserAvatarProps {
 }
 
 const iconSizeMap: Record<AvatarSize, number> = {
+  xs: 6,
   sm: 10,
   md: 14,
   lg: 18,
+  xl: 22,
 };
 
 const UserAvatar = ({ user, size = 'md', bordered = false, borderColor, className = '', style }: UserAvatarProps) => {

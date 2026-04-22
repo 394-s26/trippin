@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { AuthProvider } from './contexts/AuthContext';
 import { LastViewedTripProvider } from './contexts/LastViewedTripContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AppHeader from './components/AppHeader';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import TripPage from './pages/TripPage';
@@ -16,7 +17,10 @@ import './index.css';
 const AppLayout = () => (
   <ProtectedRoute>
     <LastViewedTripProvider>
-      <Outlet />
+      <AppHeader /> {/* Fixed header inside here */}
+      <main className="pt-20">
+        <Outlet />
+      </main>
       <Navbar />
     </LastViewedTripProvider>
   </ProtectedRoute>

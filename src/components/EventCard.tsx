@@ -1,11 +1,11 @@
 import { CSSProperties } from 'react';
 import { Event, SuggestionVote } from '../types/event';
 import { AppUser } from '../types/auth';
-import { CheckIcon, XIcon } from '../services/svgIcons';
+import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
+import { LocationPinIcon } from '../services/svgIcons';
 import { UserSelection } from '../hooks/useSessionSelections';
 import { pickFirstSelector } from '../utilities/pickFirstSelector';
 import { getSuggestionVoteSummary } from '../utilities/eventSuggestions';
-import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
 import { resolveEventColor } from '../utilities/eventColors';
 import { EventDaySlice } from '../utilities/eventOverlapsDay';
 import UserAvatar from './UserAvatar';
@@ -129,19 +129,19 @@ const EventCard = ({
           </div>
           <h3 className="event-card-name">{displayName}</h3>
           {event.location && (
-            <p className="event-card-meta">
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="event-card-location-link"
-              >
-                {event.location}
-              </a>
-            </p>
+            <div className="event-card-location">
+              <LocationPinIcon size={16} className={"event-card-location--svg"} />
+              <p className="event-card-meta"> {event.location}</p>
+            </div>
           )}
           {event.cost != null && (
-            <p className="event-card-meta">${event.cost.toFixed(2)}</p>
+            <div className="event-card-meta event-card-cost">
+              {event.paidBy && (<span className="mr-2">
+                <UserAvatar key={event.paidBy} user={tripUsers.find(u => u.uid === event.paidBy) ?? null} size="sm" bordered={true} borderColor='oklch(87.2% 0.01 258.338)' />
+              </span>)}
+              <span className="dollar-symbol">$</span>
+              <p className="cost-value">{event.cost.toFixed(2)}</p>
+            </div>
           )}
         </div>
         <div className="event-card-icon">

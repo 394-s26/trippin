@@ -45,9 +45,9 @@
 }
 
 .trip-banner-date-btn {
-  @apply flex items-center gap-1.5 text-white/90 text-sm mt-1 hover:text-white transition-colors;
+  @apply cursor-pointer flex items-center gap-1.5 text-white/90 text-sm mt-1 hover:text-white transition-colors border-1 border-gray-100 rounded-full px-1.5 py-0.5;
 }
 
-.trip-banner-date-input {
-  @apply absolute opacity-0 pointer-events-none w-0 h-0;
+.trip-banner-date-btn:hover {
+  @apply bg-gray-700;
 }

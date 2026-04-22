@@ -1,54 +1,57 @@
-// Custom hook for managing the days subcollection of a trip.
-// Subscribes to trips/{tripId}/days in real-time and exposes add, rename, delete, and date-shift operations.
-
 import { useState, useEffect } from 'react';
 import { Day } from '../types/day';
 import {
-    createDay,
-    updateDayLabel as updateLabel,
-    updateDayDate,
-    deleteDay as deleteDayDoc,
-    subscribeToDays,
+  createDay,
+  updateDayDate,
+  deleteDaysBatch,
+  subscribeToDays,
 } from '../services/firestoreDayService';
 import { useAuth } from '../contexts/AuthContext';
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
 const useDays = (tripId: string) => {
-    const { appUser } = useAuth();
-    const uid = appUser?.uid ?? '';
+  const { appUser } = useAuth();
+  const uid = appUser?.uid ?? '';
 
-    const [days, setDays] = useState<Omit<Day, 'events'>[]>([]);
+  const [days, setDays] = useState<Omit<Day, 'events'>[]>([]);
 
-    useEffect(() => {
-        return subscribeToDays(tripId, setDays);
-    }, [tripId]);
+  useEffect(() => {
+    const unsubscribe = subscribeToDays(tripId, setDays);
+    return unsubscribe;
+  }, [tripId]);
 
-    const addDay = async (afterDate: Date): Promise<void> => {
-        const nextDate = new Date(afterDate);
-        nextDate.setDate(nextDate.getDate() + 1);
-        const label = nextDate.toLocaleDateString('en-US', { weekday: 'long' });
-        await createDay(uid, tripId, nextDate, label);
-    };
+  // Adjusts the days subcollection to match a new date range.
+  // Removes days from the end if the trip shortened, shifts all remaining days
+  // to the new start, then adds days at the end if the trip lengthened.
+  const adjustTripLength = async (newStartDate: Date, newEndDate: Date): Promise<void> => {
+    const newDayCount = Math.max(1, Math.round((newEndDate.getTime() - newStartDate.getTime()) / MS_PER_DAY) + 1);
+    const sorted = [...days].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    const renameDayLabel = async (dayId: string, label: string): Promise<void> => {
-        await updateLabel(uid, tripId, dayId, label);
-    };
+    const daysToRemove = sorted.slice(newDayCount);
+    const daysToKeep = sorted.slice(0, newDayCount);
 
-    const removeDay = async (dayId: string): Promise<void> => {
-        await deleteDayDoc(uid, tripId, dayId);
-    };
+    if (daysToRemove.length > 0) {
+      await deleteDaysBatch(uid, tripId, daysToRemove.map(d => d.id));
+    }
 
-    // Shifts every day's date so that day 0 falls on newStartDate.
-    const changeStartDate = async (newStartDate: Date): Promise<void> => {
-        await Promise.all(
-            days.map((day, i) => {
-                const shifted = new Date(newStartDate);
-                shifted.setDate(shifted.getDate() + i);
-                return updateDayDate(uid, tripId, day.id, shifted);
-            })
-        );
-    };
+    await Promise.all(
+      daysToKeep.map((day, i) => {
+        const shifted = new Date(newStartDate);
+        shifted.setDate(shifted.getDate() + i);
+        return updateDayDate(uid, tripId, day.id, shifted);
+      })
+    );
 
-    return { days, addDay, renameDayLabel, removeDay, changeStartDate };
+    for (let i = daysToKeep.length; i < newDayCount; i++) {
+      const newDate = new Date(newStartDate);
+      newDate.setDate(newDate.getDate() + i);
+      const label = newDate.toLocaleDateString('en-US', { weekday: 'long' });
+      await createDay(uid, tripId, newDate, label);
+    }
+  };
+
+  return { days, adjustTripLength };
 };
 
-export default useDays;
+export { useDays };

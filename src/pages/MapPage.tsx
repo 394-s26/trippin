@@ -4,11 +4,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-import AppHeader from '../components/AppHeader';
 import MapFilterPanel from '../components/MapFilterPanel';
 import DirectionsExplorer from '../components/DirectionsExplorer';
 import useTrip from '../hooks/useTrip';
-import useDays from '../hooks/useDays';
+import { useDays } from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import useMapLoadLimit from '../hooks/useMapLoadLimit';
 import { useAuth } from '../contexts/AuthContext';
@@ -201,7 +200,6 @@ const [nameQuery, setNameQuery] = useState('');
     return (
       <div className="home-wrapper">
         <div className="home-container">
-          <AppHeader />
           <main className="home-main">
             <div className="map-centered-status">Loading trip…</div>
           </main>
@@ -214,7 +212,6 @@ const [nameQuery, setNameQuery] = useState('');
     return (
       <div className="home-wrapper">
         <div className="home-container">
-          <AppHeader />
           <main className="home-main">
             <div className="map-centered-status">
               <p>You do not have permission to view this trip.</p>
@@ -230,7 +227,6 @@ const [nameQuery, setNameQuery] = useState('');
     return (
       <div className="home-wrapper">
         <div className="home-container">
-          <AppHeader />
           <main className="home-main">
             <div className="map-centered-status">
               <p>{error ?? 'Trip not found'}</p>
@@ -245,7 +241,6 @@ const [nameQuery, setNameQuery] = useState('');
   return (
     <div className="home-wrapper">
       <div className="home-container">
-        <AppHeader />
         <main className="home-main">
           {atLimit ? (
             <div className="map-limit-panel">

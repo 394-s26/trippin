@@ -13,6 +13,7 @@
 
     "change_trip_name",
     "change_start_date",
+    "change_end_date",
     "change_banner",
 
     "change_budget",
