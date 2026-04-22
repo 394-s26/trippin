@@ -85,13 +85,15 @@ const EventCard = ({
     && daySlice.totalDays > 2
     && daySlice.dayIndex > 1
     && daySlice.dayIndex < daySlice.totalDays;
+  const isLodgingStayEvent = EVENT_CATEGORY[event.type] === 'Lodging'
+    && event.name.includes('(Stay)');
 
   const cardClass = [
     'event-card',
     isSuggestion ? 'event-card--suggestion' : '',
     isSelected ? 'event-card--selected' : '',
     !isSelected && useOtherBorder ? 'event-card--selected-session' : '',
-    isLodgingMiddleDay ? 'event-card--lodging-stay' : '',
+    (isLodgingMiddleDay || isLodgingStayEvent) ? 'event-card--lodging-stay' : '',
   ].filter(Boolean).join(' ');
   const cardStyle = (useOtherBorder ? { borderColor: firstOther.color } : undefined) as CSSProperties | undefined;
   const consensusFillStyle = {

@@ -36,6 +36,23 @@ const formatDateRange = (days: Omit<Day, 'events'>[], fallbackStart?: Date, fall
   return `${fmt(days[0].date)} — ${fmt(days[days.length - 1].date)}`;
 };
 
+const sameCalendarDay = (a: Date, b: Date): boolean =>
+  a.getFullYear() === b.getFullYear()
+  && a.getMonth() === b.getMonth()
+  && a.getDate() === b.getDate();
+
+const getDayBounds = (d: Date) => {
+  const start = new Date(d);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(d);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+};
+
+const LODGING_SUFFIX_REGEX = /\s+\((Check-in|Check-out|Stay)\)$/;
+
+const getLodgingSeriesBaseName = (name: string): string => name.replace(LODGING_SUFFIX_REGEX, '').trim();
+
 const TripPage = () => {
   const sortEventsForDay = (day: Omit<Day, 'events'>, dayEvents: Event[]): Event[] => {
     return [...dayEvents].sort((a, b) => {
@@ -51,8 +68,15 @@ const TripPage = () => {
         && bSlice.totalDays > 2
         && bSlice.dayIndex > 1
         && bSlice.dayIndex < bSlice.totalDays;
+      const aIsLodgingStay = EVENT_CATEGORY[a.type] === 'Lodging'
+        && a.allDay === true
+        && a.name.includes('(Stay)');
+      const bIsLodgingStay = EVENT_CATEGORY[b.type] === 'Lodging'
+        && b.allDay === true
+        && b.name.includes('(Stay)');
 
       if (aIsMiddleLodging !== bIsMiddleLodging) return aIsMiddleLodging ? 1 : -1;
+      if (aIsLodgingStay !== bIsLodgingStay) return aIsLodgingStay ? 1 : -1;
       return 0;
     });
   };
@@ -78,6 +102,7 @@ const TripPage = () => {
     event: Event;
     lock: 'acquired' | 'readonly';
     holderName?: string;
+    groupedEvents?: Event[];
   } | null>(null);
   const [dateAdjustConfirm, setDateAdjustConfirm] = useState<{
     kind: 'start' | 'end';
@@ -237,17 +262,97 @@ const TripPage = () => {
     setLastViewedTrip({ tripId: id!, tripName: tripName, bannerImageUrl: url });
   };
 
+  const buildLodgingEvents = (event: Omit<Event, 'id' | 'tripId'> & { isSuggestion?: boolean }) => {
+    const start = new Date(event.startDate);
+    const end = event.endDate ? new Date(event.endDate) : new Date(event.startDate);
+    const startDay = tripDayRefs.find((d) => d.id === event.dayId)
+      ?? tripDayRefs.find((d) => sameCalendarDay(d.date, start));
+    const endDay = tripDayRefs.find((d) => {
+      const bounds = getDayBounds(d.date);
+      return end >= bounds.start && end <= bounds.end;
+    }) ?? tripDayRefs.find((d) => sameCalendarDay(d.date, end));
+    if (!startDay) return [event];
+    if (!endDay) return [event];
+
+    const middleDays = tripDayRefs.filter((d) =>
+      d.date > startDay.date && d.date < endDay.date
+    );
+
+    const checkInEvent: Omit<Event, 'id' | 'tripId'> & { isSuggestion?: boolean } = {
+      ...event,
+      name: `${event.name} (Check-in)`,
+      dayId: startDay.id,
+      startDate: start,
+      endDate: new Date(start),
+      allDay: false,
+    };
+
+    const checkOutEvent: Omit<Event, 'id' | 'tripId'> & { isSuggestion?: boolean } = {
+      ...event,
+      name: `${event.name} (Check-out)`,
+      dayId: endDay.id,
+      startDate: end,
+      endDate: end,
+      allDay: false,
+      cost: null,
+    };
+
+    const middleEvents = middleDays.map((d) => {
+      const allDayDate = new Date(d.date);
+      allDayDate.setHours(0, 0, 0, 0);
+      return {
+        ...event,
+        name: `${event.name} (Stay)`,
+        dayId: d.id,
+        startDate: allDayDate,
+        endDate: allDayDate,
+        allDay: true,
+        cost: null,
+      } as Omit<Event, 'id' | 'tripId'> & { isSuggestion?: boolean };
+    });
+
+    if (startDay.id === endDay.id) {
+      return [checkInEvent, checkOutEvent];
+    }
+
+    return [checkInEvent, ...middleEvents, checkOutEvent];
+  };
+
   const handleNewEvent = async (event: Omit<Event, 'id' | 'tripId'> & { isSuggestion?: boolean }) => {
     if (!event.dayId || !appUser) return;
+    if (EVENT_CATEGORY[event.type] === 'Lodging') {
+      const lodgingEvents = buildLodgingEvents(event);
+      await Promise.all(lodgingEvents.map((lodgingEvent) =>
+        createEvent(appUser.uid, { ...lodgingEvent, tripId: id! })
+      ));
+      return;
+    }
     await createEvent(appUser.uid, { ...event, tripId: id! });
   };
 
   const handleRequestDeleteSelected = async () => {
     if (mySelectedIds.length === 0) return;
+    const expandDeleteIds = (selectedIds: string[]) => {
+      const selectedSet = new Set(selectedIds);
+      const expanded = new Set<string>(selectedIds);
+      const selectedEvents = events.filter((e) => selectedSet.has(e.id));
+      selectedEvents.forEach((event) => {
+        if (EVENT_CATEGORY[event.type] !== 'Lodging' || !LODGING_SUFFIX_REGEX.test(event.name)) return;
+        const base = getLodgingSeriesBaseName(event.name);
+        events.forEach((candidate) => {
+          if (EVENT_CATEGORY[candidate.type] !== 'Lodging') return;
+          if (candidate.type !== event.type) return;
+          if (getLodgingSeriesBaseName(candidate.name) !== base) return;
+          expanded.add(candidate.id);
+        });
+      });
+      return Array.from(expanded);
+    };
     if (canDeleteEvent) {
-      setDeleteConfirmIds([...mySelectedIds]);
+      setDeleteConfirmIds(expandDeleteIds(mySelectedIds));
     } else if (canProposeDeleteEvent && appUser) {
-      const selected = events.filter(e => mySelectedIds.includes(e.id) && !e.suggestion);
+      const expandedIds = expandDeleteIds(mySelectedIds);
+      const selected = events.filter(e => expandedIds.includes(e.id) && !e.suggestion);
       await Promise.all(selected.map(e => suggestEventDeletion(appUser.uid, e)));
       await deselectAll();
     }
@@ -267,19 +372,70 @@ const TripPage = () => {
     if (!appUser || mySelectedIds.length !== 1 || !can('edit_event')) return;
     const target = events.find(e => e.id === mySelectedIds[0]);
     if (!target) return;
-    const result = await acquireEventLock(id!, target.id, appUser.uid);
-    if (result.acquired) {
-      setEditingEvent({ event: target, lock: 'acquired' });
-    } else {
-      const holder = tripUsers.find(u => u.uid === result.holderUid);
-      const holderName = holder ? `${holder.firstName} ${holder.lastName}`.trim() : 'Another user';
-      setEditingEvent({ event: target, lock: 'readonly', holderName });
+    const isLodgingSeries = EVENT_CATEGORY[target.type] === 'Lodging' && LODGING_SUFFIX_REGEX.test(target.name);
+    const groupedEvents = isLodgingSeries
+      ? events
+          .filter((e) => EVENT_CATEGORY[e.type] === 'Lodging'
+            && e.type === target.type
+            && getLodgingSeriesBaseName(e.name) === getLodgingSeriesBaseName(target.name))
+          .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+      : [target];
+
+    const acquiredIds: string[] = [];
+    for (const grouped of groupedEvents) {
+      const result = await acquireEventLock(id!, grouped.id, appUser.uid);
+      if (!result.acquired) {
+        await Promise.all(acquiredIds.map((lockedId) => releaseEventLock(id!, lockedId, appUser.uid)));
+        const holder = tripUsers.find(u => u.uid === result.holderUid);
+        const holderName = holder ? `${holder.firstName} ${holder.lastName}`.trim() : 'Another user';
+        setEditingEvent({ event: target, lock: 'readonly', holderName, groupedEvents });
+        return;
+      }
+      acquiredIds.push(grouped.id);
     }
+
+    if (isLodgingSeries && groupedEvents.length > 1) {
+      const checkIn = groupedEvents.find((e) => e.name.includes('(Check-in)')) ?? groupedEvents[0];
+      const checkOut = groupedEvents.find((e) => e.name.includes('(Check-out)')) ?? groupedEvents[groupedEvents.length - 1];
+      const syntheticEvent: Event = {
+        ...checkIn,
+        name: getLodgingSeriesBaseName(checkIn.name),
+        startDate: new Date(checkIn.startDate),
+        endDate: new Date(checkOut.startDate),
+        dayId: checkIn.dayId,
+        allDay: false,
+      };
+      setEditingEvent({ event: syntheticEvent, lock: 'acquired', groupedEvents });
+      return;
+    }
+
+    setEditingEvent({ event: target, lock: 'acquired', groupedEvents });
   };
 
   const handleUpdateEvent = async (updated: Omit<Event, 'id' | 'tripId'>) => {
     if (!appUser || !editingEvent || editingEvent.lock !== 'acquired') return;
-    const { event } = editingEvent;
+    const { event, groupedEvents } = editingEvent;
+    const isGroupedLodgingEdit = !!groupedEvents
+      && groupedEvents.length > 1
+      && groupedEvents.every((e) => EVENT_CATEGORY[e.type] === 'Lodging');
+
+    if (isGroupedLodgingEdit) {
+      await Promise.all(
+        groupedEvents.map((grouped) => deleteEvent(appUser.uid, grouped.tripId, grouped.dayId, grouped.id))
+      );
+      const lodgingEvents = buildLodgingEvents({
+        ...updated,
+        dayId: updated.dayId || event.dayId,
+      });
+      await Promise.all(
+        lodgingEvents.map((lodgingEvent) => createEvent(appUser.uid, { ...lodgingEvent, tripId: event.tripId }))
+      );
+      await Promise.all(groupedEvents.map((grouped) => releaseEventLock(id!, grouped.id, appUser.uid)));
+      setEditingEvent(null);
+      await deselectAll();
+      return;
+    }
+
     if (updated.dayId && updated.dayId !== event.dayId) {
       // Anchor day moved — Firestore stores events under the day's subcollection,
       // so re-create at the new path and delete the old doc.
@@ -296,7 +452,8 @@ const TripPage = () => {
   const handleCloseEdit = async () => {
     if (!appUser || !editingEvent) { setEditingEvent(null); return; }
     if (editingEvent.lock === 'acquired') {
-      await releaseEventLock(id!, editingEvent.event.id, appUser.uid);
+      const lockIds = editingEvent.groupedEvents?.map((e) => e.id) ?? [editingEvent.event.id];
+      await Promise.all(lockIds.map((lockId) => releaseEventLock(id!, lockId, appUser.uid)));
     }
     setEditingEvent(null);
   };
@@ -451,8 +608,8 @@ const TripPage = () => {
               </h2>
               <p className="delete-confirm-body">
                 {deleteConfirmIds.length === 1
-                  ? 'This event will be permanently deleted. This cannot be undone.'
-                  : `These ${deleteConfirmIds.length} events will be permanently deleted. This cannot be undone.`}
+                  ? 'This event will be permanently deleted. If it belongs to a lodging stay series, linked check-in/stay/check-out events will also be deleted. This cannot be undone.'
+                  : `These ${deleteConfirmIds.length} events will be permanently deleted. Lodging stay series are deleted together (check-in/stay/check-out). This cannot be undone.`}
               </p>
               <button onClick={handleConfirmDeleteSelected} className="delete-confirm-btn">
                 Delete

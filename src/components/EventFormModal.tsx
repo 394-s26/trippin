@@ -154,6 +154,7 @@ const EventFormModal = ({
   const showSuggestionToggle = canCreateEvent || canProposeEvent;
 
   const filteredTypes = ALL_EVENT_TYPES.filter(t => EVENT_CATEGORY[t] === category);
+  const isLodgingType = EVENT_CATEGORY[type] === 'Lodging';
   const startDay = tripDays.find(d => d.id === startDayId);
   const endDay = tripDays.find(d => d.id === endDayId);
 
@@ -258,6 +259,14 @@ const EventFormModal = ({
     return () => document.removeEventListener('mousedown', handler);
   }, [paidByOpen, startDayOpen, endDayOpen]);
 
+  // Only lodging events can span multiple days. If the user switches away from
+  // lodging, force the end day to stay anchored to the start day.
+  useEffect(() => {
+    if (isLodgingType) return;
+    if (!startDayId || !endDayId) return;
+    if (endDayId !== startDayId) setEndDayId(startDayId);
+  }, [isLodgingType, startDayId, endDayId]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -350,28 +359,9 @@ const EventFormModal = ({
   const wouldExceedBudget = tripBudget != null && tripBudget > 0 && tripSpent != null && (tripSpent + costNum) > tripBudget;
   const submitLabel = mode === 'edit' ? 'Save Changes' : isSuggestion ? 'Submit Suggestion' : 'Add Event';
 
-  // When the start time changes, force the end to be exactly one hour after.
+  // Start and end times are independent; changing start should not mutate end.
   const handleStartTimeChange = (next: string) => {
     setStartTime(next);
-    const startMins = toMinutes(next);
-    if (startMins == null) return;
-    const totalEnd = startMins + 60;
-    if (totalEnd < 24 * 60) {
-      setEndTime(shiftTime(next, 60));
-      setEndDayId(prev => (prev === startDayId ? prev : startDayId));
-      return;
-    }
-    // Crossed midnight. Roll forward if there's a next trip day; else cap.
-    const startIdx = tripDays.findIndex(d => d.id === startDayId);
-    if (startIdx >= 0 && startIdx + 1 < tripDays.length) {
-      const wrapped = totalEnd - 24 * 60;
-      const pad = (n: number) => String(n).padStart(2, '0');
-      setEndTime(`${pad(Math.floor(wrapped / 60))}:${pad(wrapped % 60)}`);
-      setEndDayId(tripDays[startIdx + 1].id);
-    } else {
-      setEndTime('23:45');
-      setEndDayId(startDayId);
-    }
   };
 
   // Editing end time directly: respect what the user picked, but if it lands
@@ -418,7 +408,8 @@ const EventFormModal = ({
     e.preventDefault();
     if (tripDays.length === 0) return;
     const sDay = tripDays.find(d => d.id === startDayId) ?? tripDays[0];
-    const eDay = tripDays.find(d => d.id === endDayId) ?? sDay;
+    const rawEndDay = tripDays.find(d => d.id === endDayId) ?? sDay;
+    const eDay = isLodgingType ? rawEndDay : sDay;
 
     let eventStart: Date;
     let eventEnd: Date;
@@ -671,7 +662,7 @@ const EventFormModal = ({
                         type="button"
                         className="date-chip"
                         onClick={() => setEndDayOpen(o => !o)}
-                        disabled={readOnly || allDay || tripDays.length === 0}
+                        disabled={readOnly || allDay || tripDays.length === 0 || !isLodgingType}
                         aria-haspopup="listbox"
                         aria-expanded={endDayOpen}
                       >
