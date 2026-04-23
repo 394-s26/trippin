@@ -172,6 +172,16 @@ const TripPage = () => {
     return Array.from(expanded);
   };
 
+  const computeRemovalImpact = (nextStartDate: Date, nextEndDate: Date) => {
+    const removedDays = computeRemovedDays(nextStartDate, nextEndDate);
+    const removedIds = removedDays.flatMap((day) => day.events.map((event) => event.id));
+    const expandedRemovedIds = expandLodgingSeriesIds(removedIds);
+    return {
+      removedDaysCount: removedDays.length,
+      removedEventsCount: expandedRemovedIds.length,
+    };
+  };
+
   useEffect(() => {
     if (trip && !initialized) {
       setTripName(trip.name);
@@ -198,14 +208,13 @@ const TripPage = () => {
   const handleChangeStartDate = async (newStartDate: Date) => {
     if (trip?.endDate && newStartDate > trip.endDate) return;
     if (trip?.endDate) {
-      const removedDays = computeRemovedDays(newStartDate, trip.endDate);
-      const removedEvents = removedDays.reduce((sum, day) => sum + day.events.length, 0);
-      if (removedEvents > 0) {
+      const { removedDaysCount, removedEventsCount } = computeRemovalImpact(newStartDate, trip.endDate);
+      if (removedEventsCount > 0) {
         setDateAdjustConfirm({
           kind: 'start',
           nextDate: newStartDate,
-          removedDays: removedDays.length,
-          removedEvents,
+          removedDays: removedDaysCount,
+          removedEvents: removedEventsCount,
         });
         return;
       }
@@ -219,14 +228,13 @@ const TripPage = () => {
   const handleChangeEndDate = async (newEndDate: Date) => {
     if (trip?.startDate && newEndDate < trip.startDate) return;
     if (trip?.startDate) {
-      const removedDays = computeRemovedDays(trip.startDate, newEndDate);
-      const removedEvents = removedDays.reduce((sum, day) => sum + day.events.length, 0);
-      if (removedEvents > 0) {
+      const { removedDaysCount, removedEventsCount } = computeRemovalImpact(trip.startDate, newEndDate);
+      if (removedEventsCount > 0) {
         setDateAdjustConfirm({
           kind: 'end',
           nextDate: newEndDate,
-          removedDays: removedDays.length,
-          removedEvents,
+          removedDays: removedDaysCount,
+          removedEvents: removedEventsCount,
         });
         return;
       }

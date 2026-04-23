@@ -56,6 +56,11 @@ const ItineraryList = ({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [openMenuDayId, setOpenMenuDayId] = useState<string | null>(null);
   const menuRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+  const dayHeaderDateFormatter = useRef(new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }));
 
   useEffect(() => {
     if (!openMenuDayId) return;
@@ -133,9 +138,15 @@ const ItineraryList = ({
                   </>
                 ) : (
                   <>
-                    <span className="day-label-text">
-                      {day.label}
-                    </span>
+                    <div className="day-label-title">
+                      <span className="day-label-text">
+                        {day.label}
+                      </span>
+                      <span className="day-label-date">
+                        {' - '}
+                        {dayHeaderDateFormatter.current.format(day.date)}
+                      </span>
+                    </div>
 
                     {/* Right-aligned action buttons */}
                     <div className="day-actions">

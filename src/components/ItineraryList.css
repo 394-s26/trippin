@@ -36,6 +36,14 @@
   @apply text-primary font-bold text-base truncate;
 }
 
+.day-label-title {
+  @apply flex items-baseline gap-1 min-w-0;
+}
+
+.day-label-date {
+  @apply text-sm font-medium text-gray-500 truncate;
+}
+
 .day-actions {
   @apply ml-auto flex items-center gap-2 shrink-0 relative;
 }
