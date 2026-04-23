@@ -177,8 +177,8 @@ const EventFormModal = ({
     if (!isOpen || mode !== 'create' || tripDays.length === 0) return;
     const initialId = initialDayId ?? tripDays[0].id;
     const defaults = computeSmartDefaults();
-    setStartDayId(prev => prev || initialId);
-    setEndDayId(prev => prev || initialId);
+    setStartDayId(initialId);
+    setEndDayId(initialId);
     setStartTime(prev => prev || defaults.start);
     setEndTime(prev => prev || defaults.end);
     setAllDay(false);
