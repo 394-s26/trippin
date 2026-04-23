@@ -12,6 +12,10 @@
   @apply border-2;
 }
 
+.user-avatar-xs {
+  @apply w-4 h-4;
+}
+
 .user-avatar-sm {
   @apply w-6 h-6;
 }
@@ -22,6 +26,10 @@
 
 .user-avatar-lg {
   @apply w-10 h-10;
+}
+
+.user-avatar-xl {
+  @apply w-12 h-12;
 }
 
 .user-avatar-default {

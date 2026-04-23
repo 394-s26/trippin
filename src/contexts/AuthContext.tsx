@@ -123,29 +123,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setLoginTime();
-        setUser({
-          uid: firebaseUser.uid,
-          displayName: firebaseUser.displayName,
-          email: firebaseUser.email,
-          photoURL: firebaseUser.photoURL,
-          providerIds: firebaseUser.providerData.map((p) => p.providerId),
-        });
-        let userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        if (!userDoc.exists()) {
-          try {
-            await ensureUserProfileExists(firebaseUser);
-            userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          } catch (e) {
-            console.error('Failed to restore missing user profile document.', e);
+      try {
+        if (firebaseUser) {
+          setLoginTime();
+          setUser({
+            uid: firebaseUser.uid,
+            displayName: firebaseUser.displayName,
+            email: firebaseUser.email,
+            photoURL: firebaseUser.photoURL,
+            providerIds: firebaseUser.providerData.map((p) => p.providerId),
+          });
+          let userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (!userDoc.exists()) {
+            try {
+              await ensureUserProfileExists(firebaseUser);
+              userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+            } catch (e) {
+              console.error('Failed to restore missing user profile document.', e);
+            }
           }
+          setAppUser(userDoc.exists() ? (userDoc.data() as AppUser) : null);
+        } else {
+          clearLoginTime();
+          setUser(null);
+          setAppUser(null);
         }
-        setAppUser(userDoc.exists() ? (userDoc.data() as AppUser) : null);
-      } else {
-        clearLoginTime();
-        setUser(null);
-        setAppUser(null);
+      } catch (error) {
+        console.warn('Failed to load user profile from Firestore.', error);
       }
       setLoading(false);
     });
@@ -220,10 +224,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     await createAppUser(newAppUser);
     setAppUser(newAppUser);
-    // Await so we can redirect new users directly to their invited trip
+    // Best-effort invite acceptance: signup should succeed even if invite lookup fails.
     if (firebaseUser.email) {
-      const tripIds = await acceptPendingInvites(firebaseUser.uid, firebaseUser.email);
-      return tripIds[0] ?? null;
+      try {
+        const tripIds = await acceptPendingInvites(firebaseUser.uid, firebaseUser.email);
+        return tripIds[0] ?? null;
+      } catch (error) {
+        console.warn('Invite acceptance failed during signup. Continuing to app home.', error);
+      }
     }
     return null;
   };

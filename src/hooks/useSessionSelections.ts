@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp, FirestoreError } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
 const SESSION_COLORS = [
@@ -38,19 +38,31 @@ export function useSessionSelections(tripId: string, userId: string | undefined)
     const color = colorRef.current;
     const docRef = doc(db, 'sessions', tripId, 'selections', userId);
 
-    setDoc(docRef, { uid: userId, color, selectedIds: [], lastActive: serverTimestamp() });
+    void setDoc(docRef, { uid: userId, color, selectedIds: [], lastActive: serverTimestamp() }).catch(
+      (err: FirestoreError) => {
+        console.error('[useSessionSelections] setDoc', tripId, err?.code, err?.message);
+      }
+    );
 
     const colRef = collection(db, 'sessions', tripId, 'selections');
-    const unsub = onSnapshot(colRef, (snap) => {
-      const selections: UserSelection[] = snap.docs.map(d => d.data() as UserSelection);
-      setAllSelections(selections);
-      const mine = selections.find(s => s.uid === userId);
-      if (mine) setMySelectedIds(mine.selectedIds);
-    });
+    const unsub = onSnapshot(
+      colRef,
+      (snap) => {
+        const selections: UserSelection[] = snap.docs.map(d => d.data() as UserSelection);
+        setAllSelections(selections);
+        const mine = selections.find(s => s.uid === userId);
+        if (mine) setMySelectedIds(mine.selectedIds);
+      },
+      (err: FirestoreError) => {
+        console.error('[useSessionSelections] onSnapshot selections', tripId, err?.code, err?.message);
+      }
+    );
 
     return () => {
       unsub();
-      deleteDoc(docRef);
+      void deleteDoc(docRef).catch(() => {
+        /* best-effort: doc may be gone (e.g. after trip delete) or rules may deny */
+      });
     };
   }, [tripId, userId]);
 

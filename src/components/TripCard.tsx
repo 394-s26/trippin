@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 import { Trip } from '../types/trip';
-import useDays from '../hooks/useDays';
+import { useDays } from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import greenBg from '../images/green_bg.jpg';
 import { toDate } from '../utilities/timestamps';

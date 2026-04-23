@@ -59,7 +59,3 @@
 .trip-banner-date-btn:focus-visible {
   @apply outline-none ring-2 ring-white/90 ring-offset-1 ring-offset-black/40;
 }
-
-.trip-banner-date-input {
-  @apply absolute opacity-0 pointer-events-none w-0 h-0;
-}

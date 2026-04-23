@@ -30,6 +30,10 @@
   @apply text-primary bg-green-50;
 }
 
+.selection-bar-btn--edit:not(:disabled):hover {
+  @apply bg-green-100;
+}
+
 .selection-bar-btn--delete {
   @apply text-red-500 bg-red-50;
 }
@@ -47,6 +51,12 @@
 }
 
 /* ===== Desktop: right-side slide-out ===== */
+
+@media (max-width: 767px) {
+  .selection-bar {
+    @apply fixed bottom-4 left-1/2 -translate-x-1/2 z-40 min-w-101 justify-center;
+  }
+}
 
 @media (min-width: 768px) {
   .selection-bar-wrapper {

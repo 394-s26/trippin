@@ -15,6 +15,13 @@ service cloud.firestore {
       return isTripOwner(tripData) || request.auth.uid in tripData.shared;
     }
 
+    // Subcollection rules use get() on the parent trip; require exists to avoid
+    // evaluating hasTripAccess on a missing parent document.
+    function canAccessParentTrip(tripId) {
+      return exists(/databases/$(database)/documents/trips/$(tripId)) &&
+        hasTripAccess(get(/databases/$(database)/documents/trips/$(tripId)).data);
+    }
+
     // Users — any authenticated user can read (needed for email lookup),
     // but only the account owner can write their own document.
     match /users/{userId} {
@@ -88,14 +95,12 @@ service cloud.firestore {
 
       // Days subcollection — owner or shared users.
       match /days/{dayId} {
-        allow read, write: if isAuthed() &&
-          hasTripAccess(get(/databases/$(database)/documents/trips/$(tripId)).data);
+        allow read, write: if isAuthed() && canAccessParentTrip(tripId);
       }
 
       // Events nested under days — owner or shared users.
       match /days/{dayId}/events/{eventId} {
-        allow read, write: if isAuthed() &&
-          hasTripAccess(get(/databases/$(database)/documents/trips/$(tripId)).data);
+        allow read, write: if isAuthed() && canAccessParentTrip(tripId);
       }
     }
 
@@ -108,11 +113,10 @@ service cloud.firestore {
     // Any trip member can read all selections for that trip.
     // A user can only write their own selection document.
     match /sessions/{tripId}/selections/{userId} {
-      allow read: if isAuthed() &&
-        hasTripAccess(get(/databases/$(database)/documents/trips/$(tripId)).data);
+      allow read: if isAuthed() && canAccessParentTrip(tripId);
       allow write: if isAuthed() &&
         request.auth.uid == userId &&
-        hasTripAccess(get(/databases/$(database)/documents/trips/$(tripId)).data);
+        canAccessParentTrip(tripId);
     }
 
     // Event edit locks — prevent concurrent edits across users.
@@ -129,11 +133,12 @@ service cloud.firestore {
         return isTripOwner(tripData()) ||
           tripData().permissions[request.auth.uid] == 'manager';
       }
-      allow read: if isAuthed() && hasTripAccess(tripData());
+      allow read: if isAuthed() && canAccessParentTrip(tripId);
       allow create, update: if isAuthed() &&
+        canAccessParentTrip(tripId) &&
         canEditEvents() &&
         request.resource.data.uid == request.auth.uid;
-      allow delete: if isAuthed() && canEditEvents();
+      allow delete: if isAuthed() && canAccessParentTrip(tripId) && canEditEvents();
     }
 
     // Pending invites for users who haven't signed up yet.
