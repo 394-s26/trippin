@@ -183,6 +183,14 @@
   @apply bg-green-800;
 }
 
+.event-card-approve-btn--danger {
+  @apply bg-red-600;
+}
+
+.event-card-approve-btn--danger:hover {
+  @apply bg-red-700;
+}
+
 .event-card-consensus-track {
   @apply mt-3 h-2 rounded-full bg-gray-200 overflow-hidden;
 }

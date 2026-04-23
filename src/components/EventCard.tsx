@@ -4,7 +4,7 @@ import { AppUser } from '../types/auth';
 import { CheckIcon, XIcon } from '../services/svgIcons';
 import { UserSelection } from '../hooks/useSessionSelections';
 import { pickFirstSelector } from '../utilities/pickFirstSelector';
-import { getSuggestionVoteSummary } from '../utilities/eventSuggestions';
+import { getSuggestionVoteSummary, getSuggestionVoteThreshold } from '../utilities/eventSuggestions';
 import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
 import { resolveEventColor } from '../utilities/eventColors';
 import { EventDaySlice } from '../utilities/eventOverlapsDay';
@@ -24,6 +24,7 @@ interface EventCardProps {
   onVoteSuggestion?: (event: Event, vote: SuggestionVote) => void;
   canApproveSuggestion?: boolean;
   onApproveSuggestion?: (event: Event) => void;
+  onDeleteSuggestion?: (event: Event) => void;
 }
 
 const EventCard = ({
@@ -39,6 +40,7 @@ const EventCard = ({
   onVoteSuggestion,
   canApproveSuggestion = false,
   onApproveSuggestion,
+  onDeleteSuggestion,
 }: EventCardProps) => {
   const timeFmt = (d: Date) => new Date(d).toLocaleTimeString('en-US', {
     hour: 'numeric',
@@ -110,6 +112,12 @@ const EventCard = ({
   const yesVoterUids = event.suggestion?.votes.yes ?? [];
   const noVoterUids = event.suggestion?.votes.no ?? [];
   const approveLabel = suggestionType === 'delete' ? 'Approve deletion' : 'Approve event';
+  const voteThreshold = getSuggestionVoteThreshold(totalUsers);
+  const canCommunityApproveEvent = suggestionType !== 'delete' && yesVotes >= voteThreshold;
+  const canCommunityDeleteEvent = suggestionType !== 'delete' && noVotes >= voteThreshold;
+  const showApproveButton = suggestionType === 'delete'
+    ? canApproveSuggestion
+    : (canApproveSuggestion || canCommunityApproveEvent);
 
   return (
     <div className={cardClass} style={cardStyle} data-event-id={event.id} onClick={(e) => { e.stopPropagation(); onSelect?.(); }}>
@@ -216,13 +224,22 @@ const EventCard = ({
             </button>
           </div>
 
-          {canApproveSuggestion && (
+          {showApproveButton && (
             <button
               type="button"
               className="event-card-approve-btn"
               onClick={() => onApproveSuggestion?.(event)}
             >
               {approveLabel}
+            </button>
+          )}
+          {canCommunityDeleteEvent && (
+            <button
+              type="button"
+              className="event-card-approve-btn event-card-approve-btn--danger"
+              onClick={() => onDeleteSuggestion?.(event)}
+            >
+              Delete event
             </button>
           )}
 

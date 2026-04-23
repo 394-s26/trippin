@@ -28,6 +28,7 @@ interface ItineraryListProps {
   onVoteSuggestion?: (event: Event, vote: SuggestionVote) => void;
   canApproveSuggestion?: boolean;
   onApproveSuggestion?: (event: Event) => void;
+  onDeleteSuggestion?: (event: Event) => void;
 }
 
 const ItineraryList = ({
@@ -50,6 +51,7 @@ const ItineraryList = ({
   onVoteSuggestion,
   canApproveSuggestion = false,
   onApproveSuggestion,
+  onDeleteSuggestion,
 }: ItineraryListProps) => {
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -263,6 +265,7 @@ const ItineraryList = ({
                         onVoteSuggestion={onVoteSuggestion}
                         canApproveSuggestion={canApproveSuggestion}
                         onApproveSuggestion={onApproveSuggestion}
+                        onDeleteSuggestion={onDeleteSuggestion}
                       />
                     </div>
                   );

@@ -18,7 +18,7 @@ import useDays from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
 import { useEventLock } from '../hooks/useEventLock';
-import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, approveSuggestion } from '../services/firestoreEventsService';
+import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, resolveSuggestionByVote } from '../services/firestoreEventsService';
 import { eventOverlapsDay, sliceEventForDay } from '../utilities/eventOverlapsDay';
 import { EVENT_CATEGORY } from '../types/event';
 import { useAuth } from '../contexts/AuthContext';
@@ -485,7 +485,12 @@ const TripPage = () => {
 
   const handleApproveSuggestion = async (event: Event) => {
     if (!appUser || !event.suggestion) return;
-    await approveSuggestion(appUser.uid, event);
+    await resolveSuggestionByVote(appUser.uid, event, 'approve');
+  };
+
+  const handleDeleteSuggestion = async (event: Event) => {
+    if (!appUser || !event.suggestion) return;
+    await resolveSuggestionByVote(appUser.uid, event, 'delete');
   };
 
   if (loading) {
@@ -615,6 +620,7 @@ const TripPage = () => {
               onVoteSuggestion={handleVoteSuggestion}
               canApproveSuggestion={canApproveSuggestion}
               onApproveSuggestion={handleApproveSuggestion}
+              onDeleteSuggestion={handleDeleteSuggestion}
             />
           </div>
         </main>
