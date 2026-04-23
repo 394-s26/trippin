@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Event, EVENT_CATEGORY, EventCategory } from '../types/event';
+import { Event, EVENT_CATEGORY } from '../types/event';
 import { AppUser } from '../types/auth';
-import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
 import { UserIcon } from '../services/svgIcons';
-import { EVENT_COLORS } from '../utilities/eventColors';
 import UserAvatar from './UserAvatar';
 import TimeSelect, { toMinutes } from './TimeSelect';
 import TimezoneModal from './TimezoneModal';
@@ -56,8 +54,19 @@ const computeSmartDefaults = (): { start: string; end: string } => {
   return { start: fmt(startMins), end: fmt(endMins) };
 };
 
-const ALL_EVENT_TYPES = Object.keys(EVENT_CATEGORY) as Event['type'][];
-const CATEGORIES: EventCategory[] = ['Transportation', 'Lodging', 'Activity', 'Attraction', 'Food & Drink'];
+type FormCategory = 'Transportation' | 'Lodging' | 'Event';
+const CATEGORIES: FormCategory[] = ['Transportation', 'Lodging', 'Event'];
+const DEFAULT_TYPE_BY_FORM_CATEGORY: Record<FormCategory, Event['type']> = {
+  Transportation: 'Car',
+  Lodging: 'Hotel',
+  Event: 'Hiking',
+};
+const toFormCategory = (eventType: Event['type']): FormCategory => {
+  const sourceCategory = EVENT_CATEGORY[eventType];
+  if (sourceCategory === 'Transportation') return 'Transportation';
+  if (sourceCategory === 'Lodging') return 'Lodging';
+  return 'Event';
+};
 
 // Full IANA time zone list when the runtime supports it; otherwise a sensible
 // fallback covering common regions. `Intl.supportedValuesOf` is available in
@@ -123,7 +132,7 @@ const EventFormModal = ({
   lockHolderName,
 }: EventFormModalProps) => {
   const readOnly = mode === 'readonly';
-  const [category, setCategory] = useState<EventCategory>('Activity');
+  const [category, setCategory] = useState<FormCategory>('Event');
   const [type, setType] = useState<Event['type']>('Hiking');
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
@@ -153,17 +162,13 @@ const EventFormModal = ({
   const suggestionOnly = !canCreateEvent && canProposeEvent;
   const showSuggestionToggle = canCreateEvent || canProposeEvent;
 
-  const filteredTypes = ALL_EVENT_TYPES.filter(t => EVENT_CATEGORY[t] === category);
   const isLodgingType = EVENT_CATEGORY[type] === 'Lodging';
   const startDay = tripDays.find(d => d.id === startDayId);
   const endDay = tripDays.find(d => d.id === endDayId);
 
-  const handleCategoryChange = (cat: EventCategory) => {
+  const handleCategoryChange = (cat: FormCategory) => {
     setCategory(cat);
-    const typesInCat = ALL_EVENT_TYPES.filter(t => EVENT_CATEGORY[t] === cat);
-    if (typesInCat.length > 0 && !typesInCat.includes(type)) {
-      setType(typesInCat[0]);
-    }
+    setType(DEFAULT_TYPE_BY_FORM_CATEGORY[cat]);
   };
 
   useEffect(() => {
@@ -189,7 +194,7 @@ const EventFormModal = ({
   // Pre-populate from initialEvent in edit/readonly modes.
   useEffect(() => {
     if (!isOpen || !initialEvent) return;
-    setCategory(EVENT_CATEGORY[initialEvent.type]);
+    setCategory(toFormCategory(initialEvent.type));
     setType(initialEvent.type);
     setName(initialEvent.name);
     setLocation(initialEvent.location ?? '');
@@ -445,7 +450,7 @@ const EventFormModal = ({
     });
 
     if (mode === 'create') {
-      setCategory('Activity');
+      setCategory('Event');
       setType('Hiking');
       setName('');
       setLocation('');
@@ -554,29 +559,6 @@ const EventFormModal = ({
                   {cat}
                 </button>
               ))}
-            </div>
-          </div>
-
-          {/* Type icon grid */}
-          <div>
-            <label className="form-label">Type</label>
-            <div className="type-grid">
-              {filteredTypes.map((t) => {
-                const IconComponent = EVENT_TYPE_ICONS[t];
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    className={`type-grid-item${type === t ? ' type-grid-item--selected' : ''}`}
-                    onClick={() => setType(t)}
-                  >
-                    <span className="type-grid-icon">
-                      {IconComponent && <IconComponent size={28} />}
-                    </span>
-                    <span className="type-grid-label">{t}</span>
-                  </button>
-                );
-              })}
             </div>
           </div>
 
@@ -741,41 +723,6 @@ const EventFormModal = ({
               if (end != null) setEndTimezone(end);
             }}
           />
-
-          {/* Color label */}
-          <div>
-            <label className="form-label">Label</label>
-            <div className="color-swatch-row">
-              <button
-                type="button"
-                className={`color-swatch color-swatch--none${color == null ? ' color-swatch--selected' : ''}`}
-                onClick={() => setColor(null)}
-                aria-label="No color"
-                aria-pressed={color == null}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="5" y1="19" x2="19" y2="5" />
-                </svg>
-              </button>
-              {EVENT_COLORS.map((c) => (
-                <button
-                  key={c.token}
-                  type="button"
-                  className={`color-swatch${color === c.token ? ' color-swatch--selected' : ''}`}
-                  style={{ backgroundColor: c.hex }}
-                  onClick={() => setColor(c.token)}
-                  aria-label={c.label}
-                  aria-pressed={color === c.token}
-                >
-                  {color === c.token && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* Cost & Paid By */}
           <div className="cost-paidby-row">
