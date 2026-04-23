@@ -150,6 +150,8 @@ const EventFormModal = ({
   const startDayRef = useRef<HTMLDivElement>(null);
   const endDayRef = useRef<HTMLDivElement>(null);
 
+  const autocompleteRef = useRef<any>(null);
+
   const suggestionOnly = !canCreateEvent && canProposeEvent;
   const showSuggestionToggle = canCreateEvent || canProposeEvent;
 
@@ -281,9 +283,13 @@ const EventFormModal = ({
         el.style.display = "block";
         el.style.width = "100%";
 
-        if (location) {
+        autocompleteRef.current = el;
+
+        // Use initialEvent directly if location state hasn't updated yet
+        if (initialEvent?.location)
+          el.value = initialEvent.location;
+        else if (location)
           el.value = location;
-        }
 
         locationContainerRef.current.innerHTML = "";
         locationContainerRef.current.appendChild(el);
@@ -325,7 +331,15 @@ const EventFormModal = ({
               setLat(undefined);
               setLng(undefined);
             }
-            el.value = placeName;
+
+            setName((currentName) => {
+              // If the name is truly empty or just whitespace, use the place name
+              if (!currentName || currentName.trim() === "") {
+                return placeName;
+              }
+              return currentName;  // Otherwise, keep what the user already typed
+            });
+            el.value = placeAddress;
           }
         };
 
@@ -345,6 +359,8 @@ const EventFormModal = ({
       }
     };
   }, [isOpen]);
+
+
 
   const costNum = cost !== '' ? parseFloat(cost) : 0;
   const wouldExceedBudget = tripBudget != null && tripBudget > 0 && tripSpent != null && (tripSpent + costNum) > tripBudget;
