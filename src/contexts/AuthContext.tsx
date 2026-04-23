@@ -201,9 +201,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     username,
     photoFile,
   }: EmailRegistrationInput): Promise<string | null> => {
-    await checkUsernameAvailable(username, '');
-
     const firebaseUser = await signUpWithEmail(email, password);
+    let resolvedUsername = normalizeUsername(username);
+    try {
+      await checkUsernameAvailable(resolvedUsername, firebaseUser.uid);
+    } catch {
+      // Account is already created at this point, so pick a safe unique fallback
+      // instead of failing signup with a Firestore permission/availability error.
+      resolvedUsername = await findFirstAvailableUsername(resolvedUsername || 'user', firebaseUser.uid);
+    }
+
     let photoURL: string | null = null;
 
     if (photoFile) {
@@ -219,7 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email: firebaseUser.email,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      username: normalizeUsername(username),
+      username: resolvedUsername,
       photoURL,
     };
     await createAppUser(newAppUser);
