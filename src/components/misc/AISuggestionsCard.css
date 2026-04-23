@@ -1,0 +1,97 @@
+@reference "../../index.css";
+
+.misc-ai-preview {
+  @apply flex flex-col gap-1 text-left w-full;
+}
+
+.misc-ai-preview-row {
+  @apply flex items-center gap-2;
+}
+
+.misc-ai-preview-dot {
+  @apply w-1.5 h-1.5 rounded-full bg-primary shrink-0;
+}
+
+.misc-ai-preview-title {
+  @apply text-xs text-gray-700 truncate;
+}
+
+.misc-ai-preview-hint {
+  @apply mt-auto text-[10px] text-gray-400 uppercase tracking-wider;
+}
+
+.misc-ai-blurb {
+  @apply text-xs text-gray-500;
+}
+
+/* Inline list inside the expanded card (no portal / modal). */
+.misc-ai-list {
+  @apply flex flex-col gap-2;
+}
+
+.misc-ai-list--inline {
+  @apply flex-1 min-h-0 overflow-y-auto pr-1;
+}
+
+.misc-ai-inline-error {
+  @apply text-xs text-red-500;
+}
+
+.misc-ai-item {
+  @apply flex items-start gap-3 p-3 bg-gray-50 rounded-xl;
+}
+
+.misc-ai-item-body {
+  @apply flex-1 flex flex-col gap-1 min-w-0;
+}
+
+.misc-ai-item-header {
+  @apply flex flex-col gap-0.5;
+}
+
+.misc-ai-item-type {
+  @apply text-[10px] uppercase tracking-wider text-primary font-semibold;
+}
+
+.misc-ai-item-title {
+  @apply text-sm font-medium text-gray-900;
+}
+
+.misc-ai-item-desc {
+  @apply text-xs text-gray-500;
+}
+
+.misc-ai-add-btn {
+  @apply flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-medium hover:bg-primary-light disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0;
+}
+
+/* Day/time picker popup */
+
+.misc-ai-picker-layer {
+  z-index: 60;
+}
+
+.misc-ai-picker-title {
+  @apply text-sm text-gray-700 font-medium;
+}
+
+.misc-ai-picker-label {
+  @apply flex flex-col gap-1;
+}
+
+.misc-ai-picker-label > span {
+  @apply text-xs text-gray-500 font-medium;
+}
+
+.misc-ai-picker-input {
+  @apply w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-900;
+  outline: none;
+}
+
+.misc-ai-picker-input:focus {
+  @apply border-primary;
+}
+
+.misc-ai-confirm-btn {
+  @apply w-full py-3 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-light disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
+}

@@ -102,6 +102,32 @@ service cloud.firestore {
       match /days/{dayId}/events/{eventId} {
         allow read, write: if isAuthed() && canAccessParentTrip(tripId);
       }
+
+      // Misc page — collaborative notes (singleton doc at /notes/current).
+      // Any trip member can read/write; the soft-edit lock is enforced at
+      // the app layer via transactions.
+      match /notes/{noteId} {
+        allow read, write: if isAuthed() && canAccessParentTrip(tripId);
+      }
+
+      // Misc page — tic-tac-toe game state (singleton doc at /game/current).
+      // Any trip member can read; any member can create an invite or act on
+      // their own game. Move validation is enforced app-side via transactions.
+      match /game/{gameId} {
+        allow read, write: if isAuthed() && canAccessParentTrip(tripId);
+      }
+
+      // Misc page — trip photos. Any member can upload (create) and read.
+      // Update is disabled (photos are immutable). Delete is restricted to
+      // the uploader.
+      match /photos/{photoId} {
+        allow read: if isAuthed() && canAccessParentTrip(tripId);
+        allow create: if isAuthed() && canAccessParentTrip(tripId) &&
+          request.resource.data.uploaderUid == request.auth.uid;
+        allow update: if false;
+        allow delete: if isAuthed() && canAccessParentTrip(tripId) &&
+          resource.data.uploaderUid == request.auth.uid;
+      }
     }
 
     // Wildcard rule required for collectionGroup("events") queries.

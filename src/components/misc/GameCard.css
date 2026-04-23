@@ -1,0 +1,107 @@
+@reference "../../index.css";
+
+.misc-game-summary {
+  @apply flex flex-col items-start gap-1 text-left;
+}
+
+.misc-game-status {
+  @apply text-sm font-medium text-gray-900;
+}
+
+.misc-game-sub {
+  @apply text-xs text-gray-500;
+}
+
+.misc-game-error {
+  @apply text-xs text-red-500;
+}
+
+.misc-game-invite-actions {
+  @apply flex gap-2 mt-1;
+}
+
+.misc-game-invite-accept {
+  @apply px-3 py-1 rounded-full bg-primary text-white text-xs font-medium hover:bg-primary-light transition-colors;
+}
+
+.misc-game-invite-decline {
+  @apply px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 transition-colors;
+}
+
+/* Opponent picker list */
+
+.misc-game-opponent-list {
+  @apply flex flex-col gap-1 max-h-[40vh] overflow-y-auto;
+}
+
+.misc-game-opponent-btn {
+  @apply w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors text-left;
+}
+
+/* Active game popup */
+
+.misc-game-players {
+  @apply flex items-center justify-between gap-2;
+}
+
+.misc-game-player {
+  @apply flex flex-col items-center gap-0.5 flex-1 p-2 rounded-xl bg-gray-50 transition-all;
+}
+
+.misc-game-player--active {
+  @apply bg-primary/10 ring-2 ring-primary;
+}
+
+.misc-game-player-symbol {
+  @apply text-xl font-bold text-primary;
+}
+
+.misc-game-player-name {
+  @apply text-xs text-gray-700 truncate max-w-[8rem];
+}
+
+.misc-game-vs {
+  @apply text-xs text-gray-400 px-1;
+}
+
+.misc-game-board {
+  @apply grid grid-cols-3 gap-2 mx-auto;
+  width: 15rem;
+  height: 15rem;
+}
+
+.misc-game-cell {
+  @apply flex items-center justify-center text-2xl font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors disabled:cursor-not-allowed disabled:hover:bg-gray-100;
+}
+
+.misc-game-cell--X {
+  @apply text-primary;
+}
+
+.misc-game-cell--O {
+  @apply text-brand;
+}
+
+.misc-game-cell--empty {
+  @apply text-transparent;
+}
+
+.misc-game-state-line {
+  @apply text-center text-sm text-gray-700;
+}
+
+.misc-game-result {
+  @apply font-semibold text-primary;
+}
+
+.misc-game-actions {
+  @apply flex gap-2;
+}
+
+.misc-game-reset-btn {
+  @apply flex-1 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition-colors;
+}
+
+.misc-game-end-btn {
+  @apply flex-1 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors;
+}

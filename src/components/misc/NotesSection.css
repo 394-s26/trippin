@@ -1,0 +1,55 @@
+@reference "../../index.css";
+
+.misc-notes-section {
+  @apply bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-3;
+}
+
+.misc-section-header {
+  @apply flex items-center justify-between gap-2;
+}
+
+.misc-section-title {
+  @apply text-base font-semibold text-gray-900;
+}
+
+.misc-notes-meta {
+  @apply flex items-center gap-2;
+}
+
+.misc-notes-editor-tag {
+  @apply text-xs text-gray-500 italic;
+}
+
+.misc-notes-edit-btn,
+.misc-notes-done-btn {
+  @apply flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full transition-colors;
+}
+
+.misc-notes-edit-btn {
+  @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
+}
+
+.misc-notes-done-btn {
+  @apply bg-primary text-white hover:bg-primary-light;
+}
+
+.misc-notes-textarea {
+  @apply w-full min-h-[180px] rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-900 resize-y;
+  outline: none;
+}
+
+.misc-notes-textarea--editing {
+  @apply bg-white border-primary;
+}
+
+.misc-notes-textarea:focus {
+  @apply border-primary;
+}
+
+.misc-notes-error {
+  @apply text-xs text-red-500;
+}
+
+.misc-notes-loading {
+  @apply text-sm text-gray-400;
+}
