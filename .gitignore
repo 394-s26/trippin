@@ -245,3 +245,5 @@ $RECYCLE.BIN/
 
 # Compiled JS output from tsc (use dist/ instead)
 src/**/*.js
+
+CLAUDE.md

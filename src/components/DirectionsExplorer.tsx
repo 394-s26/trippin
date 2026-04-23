@@ -7,8 +7,8 @@ import { fetchDirections, DirectionsResult } from '../services/mapboxDirectionsS
 import { RouteIcon, XIcon } from '../services/svgIcons';
 import './DirectionsExplorer.css';
 
-const ROUTE_SOURCE_ID = 'directions-route-source';
-const ROUTE_LAYER_ID = 'directions-route-layer';
+const ROUTE_SOURCE_PREFIX = 'directions-route-source';
+const ROUTE_LAYER_PREFIX = 'directions-route-layer';
 const MAX_WAYPOINTS = 25;
 
 const formatDistance = (meters: number): string => {
@@ -38,14 +38,13 @@ const DirectionsExplorer = ({
   accessToken,
 }: DirectionsExplorerProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeDayId, setActiveDayId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
+  const [activeDayIds, setActiveDayIds] = useState<Set<string>>(new Set());
+  const [loadingDayIds, setLoadingDayIds] = useState<Set<string>>(new Set());
+  const [routeInfoMap, setRouteInfoMap] = useState<Map<string, { distance: number; duration: number }>>(new Map());
+  const [errorMap, setErrorMap] = useState<Map<string, string>>(new Map());
 
-  const routeLabelRef = useRef<mapboxgl.Marker | null>(null);
+  const routeLabelRefs = useRef<Map<string, mapboxgl.Marker>>(new Map());
 
-  // Group mappable events by dayId, each list sorted by startDate ascending.
   const eventsByDay = useMemo(() => {
     const map = new Map<string, Array<Event & { lat: number; lng: number }>>();
     mappableEvents.forEach(e => {
@@ -59,148 +58,160 @@ const DirectionsExplorer = ({
     return map;
   }, [mappableEvents]);
 
-  // Only days that have at least 2 events with coordinates qualify.
   const qualifyingDays = useMemo(
     () => days.filter(d => (eventsByDay.get(d.id)?.length ?? 0) >= 2),
     [days, eventsByDay],
   );
 
-  const clearRoute = useCallback(() => {
-    if (routeLabelRef.current) {
-      routeLabelRef.current.remove();
-      routeLabelRef.current = null;
+  const clearDayRoute = useCallback((dayId: string) => {
+    const label = routeLabelRefs.current.get(dayId);
+    if (label) {
+      label.remove();
+      routeLabelRefs.current.delete(dayId);
     }
     const map = mapRef.current;
     if (!map) return;
+    const layerId = `${ROUTE_LAYER_PREFIX}-${dayId}`;
+    const sourceId = `${ROUTE_SOURCE_PREFIX}-${dayId}`;
     try {
-      if (map.getLayer(ROUTE_LAYER_ID)) map.removeLayer(ROUTE_LAYER_ID);
-      if (map.getSource(ROUTE_SOURCE_ID)) map.removeSource(ROUTE_SOURCE_ID);
+      if (map.getLayer(layerId)) map.removeLayer(layerId);
+      if (map.getSource(sourceId)) map.removeSource(sourceId);
     } catch {
-      // Map may have already been removed during cleanup.
+      // Map may have been removed during cleanup.
     }
   }, [mapRef]);
 
-  const drawRoute = useCallback(
-    (
-      map: mapboxgl.Map,
-      geometry: DirectionsResult['geometry'],
-      distance: number,
-      duration: number,
-    ) => {
-      clearRoute();
+  const clearAllRoutes = useCallback(() => {
+    routeLabelRefs.current.forEach((_, dayId) => clearDayRoute(dayId));
+    routeLabelRefs.current.clear();
+  }, [clearDayRoute]);
 
-      map.addSource(ROUTE_SOURCE_ID, {
-        type: 'geojson',
-        data: { type: 'Feature', properties: {}, geometry },
-      });
+  const drawDayRoute = useCallback((
+    map: mapboxgl.Map,
+    dayId: string,
+    geometry: DirectionsResult['geometry'],
+    distance: number,
+    duration: number,
+  ) => {
+    clearDayRoute(dayId);
 
-      const lineLayer: mapboxgl.LineLayer = {
-        id: ROUTE_LAYER_ID,
-        type: 'line',
-        source: ROUTE_SOURCE_ID,
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#2D5A27', 'line-width': 5, 'line-opacity': 0.85 },
-      };
+    const sourceId = `${ROUTE_SOURCE_PREFIX}-${dayId}`;
+    const layerId = `${ROUTE_LAYER_PREFIX}-${dayId}`;
 
-      // Add on top of all base-map layers so the route is visible over roads.
-      map.addLayer(lineLayer);
+    map.addSource(sourceId, {
+      type: 'geojson',
+      data: { type: 'Feature', properties: {}, geometry },
+    });
 
-      // Place a pill label at the geometric midpoint of the route.
-      const coords = geometry.coordinates;
-      const [midLng, midLat] = coords[Math.floor(coords.length / 2)];
-      const el = document.createElement('div');
-      el.className = 'directions-route-pill';
-      el.innerHTML =
-        `<span>${formatDistance(distance)}</span>` +
-        `<span class="directions-route-pill-sep">·</span>` +
-        `<span>${formatDuration(duration)}</span>`;
+    const lineLayer: mapboxgl.LineLayer = {
+      id: layerId,
+      type: 'line',
+      source: sourceId,
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#2D5A27', 'line-width': 5, 'line-opacity': 0.85 },
+    };
+    map.addLayer(lineLayer);
 
-      routeLabelRef.current = new mapboxgl.Marker({ element: el, anchor: 'bottom-left' })
+    const coords = geometry.coordinates;
+    const [midLng, midLat] = coords[Math.floor(coords.length / 2)];
+    const el = document.createElement('div');
+    el.className = 'directions-route-pill';
+    el.innerHTML =
+      `<span>${formatDistance(distance)}</span>` +
+      `<span class="directions-route-pill-sep">·</span>` +
+      `<span>${formatDuration(duration)}</span>`;
+
+    routeLabelRefs.current.set(
+      dayId,
+      new mapboxgl.Marker({ element: el, anchor: 'bottom-left' })
         .setLngLat([midLng, midLat])
-        .addTo(map);
-    },
-    [clearRoute],
-  );
+        .addTo(map),
+    );
+  }, [clearDayRoute]);
 
-  // Fetch and draw the route whenever the active day changes.
+  // Fetch and draw routes for all active days whenever the selection changes.
   useEffect(() => {
-    if (!activeDayId) {
-      clearRoute();
-      setRouteInfo(null);
+    if (activeDayIds.size === 0) {
+      clearAllRoutes();
+      setRouteInfoMap(new Map());
       return;
     }
-
-    const dayEvents = eventsByDay.get(activeDayId);
-    if (!dayEvents || dayEvents.length < 2) {
-      clearRoute();
-      return;
-    }
-
-    const waypoints: [number, number][] = dayEvents
-      .slice(0, MAX_WAYPOINTS)
-      .map(e => [e.lng, e.lat]);
 
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
-    fetchDirections(waypoints, 'driving', accessToken)
-      .then(result => {
-        if (cancelled) return;
-        const map = mapRef.current;
-        if (!map) return;
+    clearAllRoutes();
+    setErrorMap(new Map());
+    setLoadingDayIds(new Set(
+      [...activeDayIds].filter(id => (eventsByDay.get(id)?.length ?? 0) >= 2),
+    ));
 
-        const applyRoute = () => {
+    [...activeDayIds].forEach(dayId => {
+      const dayEvents = eventsByDay.get(dayId);
+      if (!dayEvents || dayEvents.length < 2) return;
+
+      const waypoints: [number, number][] = dayEvents
+        .slice(0, MAX_WAYPOINTS)
+        .map(e => [e.lng, e.lat]);
+
+      fetchDirections(waypoints, 'driving', accessToken)
+        .then(result => {
           if (cancelled) return;
-          drawRoute(map, result.geometry, result.distance, result.duration);
+          const map = mapRef.current;
+          if (!map) return;
 
-          // Fit the map viewport to the full extent of the route.
-          const coords = result.geometry.coordinates;
-          if (coords.length > 0) {
-            const bounds = new mapboxgl.LngLatBounds();
-            coords.forEach(([lng, lat]) => bounds.extend([lng, lat] as [number, number]));
-            map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 800 });
+          const apply = () => {
+            if (cancelled) return;
+            drawDayRoute(map, dayId, result.geometry, result.distance, result.duration);
+
+            const coords = result.geometry.coordinates;
+            if (coords.length > 0) {
+              const bounds = new mapboxgl.LngLatBounds();
+              coords.forEach(([lng, lat]) => bounds.extend([lng, lat] as [number, number]));
+              map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 800 });
+            }
+
+            setRouteInfoMap(prev => new Map(prev).set(dayId, { distance: result.distance, duration: result.duration }));
+            setLoadingDayIds(prev => { const s = new Set(prev); s.delete(dayId); return s; });
+          };
+
+          if (!map.isStyleLoaded()) {
+            map.once('style.load', apply);
+          } else {
+            apply();
           }
-        };
-
-        // If the map style is still loading, wait for it before adding layers.
-        if (!map.isStyleLoaded()) {
-          map.once('style.load', applyRoute);
-        } else {
-          applyRoute();
-        }
-
-        setRouteInfo({ distance: result.distance, duration: result.duration });
-        setLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setError((err instanceof Error ? err.message : null) ?? 'Failed to fetch directions');
-        setLoading(false);
-      });
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          const msg = (err instanceof Error ? err.message : null) ?? 'Failed to fetch directions';
+          setErrorMap(prev => new Map(prev).set(dayId, msg));
+          setLoadingDayIds(prev => { const s = new Set(prev); s.delete(dayId); return s; });
+        });
+    });
 
     return () => {
       cancelled = true;
-      clearRoute();
+      clearAllRoutes();
     };
-  }, [activeDayId, eventsByDay, accessToken, mapRef, clearRoute, drawRoute]);
+  }, [activeDayIds, eventsByDay, accessToken, mapRef, clearAllRoutes, drawDayRoute]);
 
-  // Deselect the active day and clear the route when the panel is closed.
   useEffect(() => {
     if (!isOpen) {
-      setActiveDayId(null);
-      setError(null);
+      setActiveDayIds(new Set());
+      setErrorMap(new Map());
     }
   }, [isOpen]);
 
   const handleDayClick = (dayId: string) => {
-    setActiveDayId(prev => (prev === dayId ? null : dayId));
-    setError(null);
+    setActiveDayIds(prev => {
+      const s = new Set(prev);
+      s.has(dayId) ? s.delete(dayId) : s.add(dayId);
+      return s;
+    });
+    setErrorMap(prev => { const m = new Map(prev); m.delete(dayId); return m; });
   };
 
   return (
     <div className={`directions-explorer${isOpen ? ' directions-explorer--open' : ''}`}>
-      {/* Panel card — slides up above the toggle button */}
       <div className="directions-explorer-card">
         <div className="directions-explorer-header">
           <h2 className="directions-explorer-title">Directions Explorer</h2>
@@ -223,13 +234,17 @@ const DirectionsExplorer = ({
             <ul className="directions-day-list">
               {qualifyingDays.map(day => {
                 const dayEvents = eventsByDay.get(day.id) ?? [];
-                const isActive = activeDayId === day.id;
+                const isActive = activeDayIds.has(day.id);
+                const isLoading = loadingDayIds.has(day.id);
+                const routeInfo = routeInfoMap.get(day.id) ?? null;
+                const error = errorMap.get(day.id) ?? null;
                 const dateLabel = day.date.toLocaleDateString('en-US', {
                   weekday: 'short',
                   month: 'short',
                   day: 'numeric',
                 });
                 const stopCount = Math.min(dayEvents.length, MAX_WAYPOINTS);
+
                 return (
                   <li key={day.id}>
                     <button
@@ -245,11 +260,11 @@ const DirectionsExplorer = ({
                         </span>
                       </div>
 
-                      {isActive && loading && (
+                      {isActive && isLoading && (
                         <span className="directions-spinner" aria-label="Loading route…" />
                       )}
 
-                      {isActive && !loading && routeInfo && (
+                      {isActive && !isLoading && routeInfo && (
                         <div className="directions-route-badge">
                           <span>{formatDistance(routeInfo.distance)}</span>
                           <span>{formatDuration(routeInfo.duration)}</span>
@@ -268,7 +283,6 @@ const DirectionsExplorer = ({
         </div>
       </div>
 
-      {/* Toggle button — always visible */}
       <button
         type="button"
         className={`directions-explorer-toggle${isOpen ? ' directions-explorer-toggle--active' : ''}`}
