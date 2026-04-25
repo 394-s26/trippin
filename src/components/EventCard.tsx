@@ -127,7 +127,7 @@ const EventCard = ({
       <div className="event-card-header">
         <div className="event-card-body">
           <div className="event-card-time-row">
-            <span className="event-card-time">{time}</span>
+            {!daySlice?.isAllDay && <span className="event-card-time">{time}</span>}
             {conflictWithEventName && (
               <span className="event-card-conflict">
                 Time conflict with "{conflictWithEventName}"
@@ -153,7 +153,7 @@ const EventCard = ({
             )}
           </div>
           <h3 className="event-card-name">{displayName}</h3>
-          {event.location && (
+          {event.location && !isLodgingStayEvent && (
             <div className="event-card-location">
               <LocationPinIcon size={16} className={"event-card-location--svg"} />
               <p className="event-card-meta"> {event.location}</p>

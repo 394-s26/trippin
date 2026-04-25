@@ -58,6 +58,9 @@ const TripPage = () => {
     return [...dayEvents].sort((a, b) => {
       const aSlice = sliceEventForDay(a, day);
       const bSlice = sliceEventForDay(b, day);
+      const aIsStay = EVENT_CATEGORY[a.type] === 'Lodging' && a.name.includes('(Stay)');
+      const bIsStay = EVENT_CATEGORY[b.type] === 'Lodging' && b.name.includes('(Stay)');
+      if (aIsStay !== bIsStay) return aIsStay ? -1 : 1;
       const aIsMiddleLodging = EVENT_CATEGORY[a.type] === 'Lodging'
         && !!aSlice
         && aSlice.totalDays > 2
@@ -68,15 +71,7 @@ const TripPage = () => {
         && bSlice.totalDays > 2
         && bSlice.dayIndex > 1
         && bSlice.dayIndex < bSlice.totalDays;
-      const aIsLodgingStay = EVENT_CATEGORY[a.type] === 'Lodging'
-        && a.allDay === true
-        && a.name.includes('(Stay)');
-      const bIsLodgingStay = EVENT_CATEGORY[b.type] === 'Lodging'
-        && b.allDay === true
-        && b.name.includes('(Stay)');
-
       if (aIsMiddleLodging !== bIsMiddleLodging) return aIsMiddleLodging ? 1 : -1;
-      if (aIsLodgingStay !== bIsLodgingStay) return aIsLodgingStay ? 1 : -1;
       return 0;
     });
   };
