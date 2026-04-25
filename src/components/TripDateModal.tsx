@@ -24,7 +24,6 @@ const toInputDate = (d: Date): string => {
 
 const parseInputDate = (s: string): Date => new Date(`${s}T00:00:00`);
 
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 const TripDateModal = ({
   isOpen,
@@ -47,13 +46,17 @@ const TripDateModal = ({
 
   if (!isOpen) return null;
 
-  const newDayCount =
-    startVal && endVal
-      ? Math.max(1, Math.round((parseInputDate(endVal).getTime() - parseInputDate(startVal).getTime()) / MS_PER_DAY) + 1)
-      : 0;
+  const newStart = startVal ? parseInputDate(startVal) : null;
+  const newEnd = endVal ? parseInputDate(endVal) : null;
 
   const sorted = [...days].sort((a, b) => a.date.getTime() - b.date.getTime());
-  const removedDays = newDayCount > 0 ? sorted.slice(newDayCount) : sorted;
+  const removedDays = newStart && newEnd
+    ? sorted.filter(d => {
+        const dayDate = new Date(d.date);
+        dayDate.setHours(0, 0, 0, 0);
+        return dayDate < newStart || dayDate > newEnd;
+      })
+    : sorted;
   const removedDayIdSet = new Set(removedDays.map(d => d.id));
   const eventsAtRisk = events.filter(e => removedDayIdSet.has(e.dayId));
 
