@@ -266,12 +266,21 @@ const EventFormModal = ({
     return () => document.removeEventListener('mousedown', handler);
   }, [paidByOpen, startDayOpen, endDayOpen]);
 
-  // Only lodging events can span multiple days. If the user switches away from
-  // lodging, force the end day to stay anchored to the start day.
+  const tripDaysRef = useRef(tripDays);
+  tripDaysRef.current = tripDays;
+
+  // Non-lodging events can span at most 2 days (start day + the next day).
+  // If the user switches away from lodging or the start day moves, clamp the
+  // end day so it is no more than 1 day after the start day.
   useEffect(() => {
     if (isLodgingType) return;
     if (!startDayId || !endDayId) return;
-    if (endDayId !== startDayId) setEndDayId(startDayId);
+    const days = tripDaysRef.current;
+    const startIdx = days.findIndex(d => d.id === startDayId);
+    const endIdx = days.findIndex(d => d.id === endDayId);
+    if (startIdx >= 0 && endIdx > startIdx + 1) {
+      setEndDayId(days[startIdx + 1]?.id ?? startDayId);
+    }
   }, [isLodgingType, startDayId, endDayId]);
 
   useEffect(() => {
@@ -383,10 +392,18 @@ const EventFormModal = ({
   // Start and end times are independent; changing start should not mutate end.
   const handleStartTimeChange = (next: string) => {
     setStartTime(next);
+    const prevStartMins = toMinutes(startTime);
+    const prevEndMins = toMinutes(endTime);
+    const nextMins = toMinutes(next);
+    if (prevStartMins != null && prevEndMins != null && nextMins != null) {
+      const gap = prevEndMins - prevStartMins;
+      setEndTime(shiftTime(next, gap));
+    }
   };
 
-  // Editing end time directly: respect what the user picked, but if it lands
-  // before start on the same day, snap forward to start + 15 min.
+  // Editing end time directly: if it lands before start and there is a later
+  // day available within the allowed range, advance the end day by one.
+  // Otherwise snap forward to start + 15 min on the same day.
   const handleEndTimeChange = (next: string) => {
     const startMins = toMinutes(startTime);
     const nextMins = toMinutes(next);
@@ -395,8 +412,16 @@ const EventFormModal = ({
       return;
     }
     if (startDayId === endDayId && nextMins <= startMins) {
-      setEndTime(shiftTime(startTime, 15));
-      return;
+      const days = tripDaysRef.current;
+      const startIdx = days.findIndex(d => d.id === startDayId);
+      const maxIdx = isLodgingType ? days.length - 1 : startIdx + 1;
+      const nextDay = startIdx >= 0 && startIdx < maxIdx ? days[startIdx + 1] : null;
+      if (nextDay) {
+        setEndDayId(nextDay.id);
+      } else {
+        setEndTime(shiftTime(startTime, 15));
+        return;
+      }
     }
     setEndTime(next);
   };
@@ -430,7 +455,7 @@ const EventFormModal = ({
     if (tripDays.length === 0) return;
     const sDay = tripDays.find(d => d.id === startDayId) ?? tripDays[0];
     const rawEndDay = tripDays.find(d => d.id === endDayId) ?? sDay;
-    const eDay = isLodgingType ? rawEndDay : sDay;
+    const eDay = rawEndDay;
 
     let eventStart: Date;
     let eventEnd: Date;
@@ -660,7 +685,7 @@ const EventFormModal = ({
                         type="button"
                         className="date-chip"
                         onClick={() => setEndDayOpen(o => !o)}
-                        disabled={readOnly || allDay || tripDays.length === 0 || !isLodgingType}
+                        disabled={readOnly || allDay || tripDays.length === 0}
                         aria-haspopup="listbox"
                         aria-expanded={endDayOpen}
                       >
@@ -668,19 +693,29 @@ const EventFormModal = ({
                       </button>
                       {endDayOpen && (
                         <div className="date-chip-options" role="listbox">
-                          {tripDays.map((d, i) => (
-                            <button
-                              key={d.id}
-                              type="button"
-                              role="option"
-                              aria-selected={d.id === endDayId}
-                              className={`date-chip-option${d.id === endDayId ? ' date-chip-option--selected' : ''}`}
-                              onClick={() => handleEndDayChange(d.id)}
-                            >
-                              <span className="date-chip-option-num">Day {i + 1}</span>
-                              <span className="date-chip-option-date">{formatPopoverDate(d.date)}</span>
-                            </button>
-                          ))}
+                          {tripDays
+                            .filter((d) => {
+                              if (isLodgingType) return true;
+                              const startIdx = tripDays.findIndex(x => x.id === startDayId);
+                              const dIdx = tripDays.findIndex(x => x.id === d.id);
+                              return dIdx >= startIdx && dIdx <= startIdx + 1;
+                            })
+                            .map((d) => {
+                              const i = tripDays.findIndex(x => x.id === d.id);
+                              return (
+                                <button
+                                  key={d.id}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={d.id === endDayId}
+                                  className={`date-chip-option${d.id === endDayId ? ' date-chip-option--selected' : ''}`}
+                                  onClick={() => handleEndDayChange(d.id)}
+                                >
+                                  <span className="date-chip-option-num">Day {i + 1}</span>
+                                  <span className="date-chip-option-date">{formatPopoverDate(d.date)}</span>
+                                </button>
+                              );
+                            })}
                         </div>
                       )}
                     </div>
