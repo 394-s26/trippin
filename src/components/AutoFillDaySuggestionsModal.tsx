@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DaySuggestion } from '../types/suggestion';
 import { Event } from '../types/event';
 import { Day } from '../types/day';
@@ -117,7 +118,7 @@ const AutoFillDaySuggestionsModal = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="overlay-center" onClick={onClose}>
       <div
         className="overlay-panel overlay-panel--md rounded-2xl p-6 shadow-xl max-h-[calc(80vh-80px)] flex flex-col relative"
@@ -290,7 +291,8 @@ const AutoFillDaySuggestionsModal = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
