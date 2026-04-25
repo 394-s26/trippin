@@ -65,30 +65,80 @@ const ItineraryList = ({
 
           <div className="day-events">
             <div className="day-timeline" />
-            {day.events.length > 0 ? (
-              day.events.map(event => {
-                const slice = sliceEventForDay(event, day);
+            {day.events.length > 0 ? (() => {
+                const slices = day.events.map(e => sliceEventForDay(e, day));
+                const allDayEvents = day.events.filter((_, i) => slices[i]?.isAllDay);
+                const timedEvents = day.events.filter((_, i) => !slices[i]?.isAllDay);
+                const timedSlices = slices.filter(s => !s?.isAllDay);
+
                 return (
-                  <EventCard
-                    key={`${event.id}-${day.id}`}
-                    event={event}
-                    daySlice={slice ?? undefined}
-                    onSelect={() => onSelectEvent?.(event.id)}
-                    isSelected={selectedEventIds.includes(event.id)}
-                    allSelections={allSelections}
-                    currentUserId={currentUserId}
-                    tripUsers={tripUsers}
-                    totalTripUsers={totalTripUsers}
-                    onVoteSuggestion={onVoteSuggestion}
-                    canApproveSuggestion={canApproveSuggestion}
-                    onApproveSuggestion={onApproveSuggestion}
-                    onDeleteSuggestion={onDeleteSuggestion}
-                  />
+                  <>
+                    {allDayEvents.length > 0 && (
+                      <div className="all-day-section">
+                        <span className="all-day-section-label">All Day</span>
+                        {allDayEvents.map((event) => {
+                          const slice = slices[day.events.indexOf(event)];
+                          return (
+                            <div key={`${event.id}-${day.id}`} className="event-card-row">
+                              <EventCard
+                                event={event}
+                                daySlice={slice ?? undefined}
+                                onSelect={() => onSelectEvent?.(event.id)}
+                                isSelected={selectedEventIds.includes(event.id)}
+                                allSelections={allSelections}
+                                currentUserId={currentUserId}
+                                tripUsers={tripUsers}
+                                totalTripUsers={totalTripUsers}
+                                onVoteSuggestion={onVoteSuggestion}
+                                canApproveSuggestion={canApproveSuggestion}
+                                onApproveSuggestion={onApproveSuggestion}
+                                onDeleteSuggestion={onDeleteSuggestion}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {timedEvents.map((event, eventIndex) => {
+                      const currentSlice = timedSlices[eventIndex];
+                      const prevSlice = timedSlices[eventIndex - 1];
+                      const gapMs =
+                        !!prevSlice && !!currentSlice
+                          ? currentSlice.sliceStart.getTime() - prevSlice.sliceEnd.getTime()
+                          : 0;
+                      const gapLevel =
+                        gapMs >= 3 * 60 * 60 * 1000 ? 3
+                        : gapMs >= 2 * 60 * 60 * 1000 ? 2
+                        : gapMs >= 1 * 60 * 60 * 1000 ? 1
+                        : 0;
+
+                      return (
+                        <div
+                          key={`${event.id}-${day.id}`}
+                          className={`event-card-row${gapLevel > 0 ? ` event-card-row--large-gap--${gapLevel}` : ''}`}
+                        >
+                          <EventCard
+                            event={event}
+                            daySlice={currentSlice ?? undefined}
+                            onSelect={() => onSelectEvent?.(event.id)}
+                            isSelected={selectedEventIds.includes(event.id)}
+                            allSelections={allSelections}
+                            currentUserId={currentUserId}
+                            tripUsers={tripUsers}
+                            totalTripUsers={totalTripUsers}
+                            onVoteSuggestion={onVoteSuggestion}
+                            canApproveSuggestion={canApproveSuggestion}
+                            onApproveSuggestion={onApproveSuggestion}
+                            onDeleteSuggestion={onDeleteSuggestion}
+                          />
+                        </div>
+                      );
+                    })}
+                  </>
                 );
-              })
-            ) : (
-              <p className="day-no-events">No events yet.</p>
-            )}
+              })()
+              : <p className="day-no-events">No events yet.</p>
+            }
           </div>
         </div>
       ))}
