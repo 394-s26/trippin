@@ -8,10 +8,6 @@
   @apply rounded-2xl p-3 -mx-3 transition-colors;
 }
 
-.day-section-editing {
-  @apply bg-green-50;
-}
-
 .day-header {
   @apply flex items-center gap-3 mb-3;
 }
@@ -24,16 +20,16 @@
   @apply flex items-center gap-2 flex-1 min-w-0;
 }
 
-.day-label-input {
-  @apply flex-1 min-w-0 text-primary font-bold text-base bg-transparent border-b-2 border-primary focus:outline-none;
-}
-
-.day-confirm-btn {
-  @apply text-primary hover:text-primary-light transition-colors shrink-0 ml-auto;
-}
-
 .day-label-text {
   @apply text-primary font-bold text-base truncate;
+}
+
+.day-label-title {
+  @apply flex items-baseline gap-1 min-w-0;
+}
+
+.day-label-date {
+  @apply text-sm font-medium text-gray-500 truncate;
 }
 
 .day-actions {
@@ -149,6 +145,18 @@
   @apply text-gray-300 text-xs py-2;
 }
 
+.event-card-row--large-gap {
+  @apply mt-8 relative;
+}
+
+.event-card-row--large-gap::before {
+  content: '';
+  @apply absolute border-l-2 border-dashed border-gray-300;
+  left: 5%;
+  top: -2.35rem;
+  height: 2rem;
+}
+
 .empty-trip-hint {
   @apply flex flex-col items-center gap-1 pb-2;
 }
@@ -166,14 +174,4 @@
 @keyframes caret-bob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(5px); }
-}
-
-.add-day-btn {
-  @apply flex items-center justify-center gap-2 w-full py-3 rounded-2xl border-2 border-dashed text-primary text-sm font-medium transition-colors;
-  border-color: rgba(45, 90, 39, 0.3);
-}
-
-.add-day-btn:hover {
-  border-color: rgba(45, 90, 39, 0.6);
-  background-color: rgba(45, 90, 39, 0.05);
 }

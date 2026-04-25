@@ -5,27 +5,55 @@ import { sliceEventForDay } from '../utilities/eventOverlapsDay';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
 import { UserSelection } from '../hooks/useSessionSelections';
+import { Event, SuggestionVote } from '../types/event';
 import './ItineraryList.css';
 
 interface ItineraryListProps {
   days: Day[];
-  onAddDay: () => void;
-  onUpdateDayLabel: (dayId: string, label: string) => void;
-  onDeleteDay: (dayId: string) => void;
-  onAddEvent?: (day: Day) => void;
+  onAddDay?: () => void;
+  onUpdateDayLabel?: (dayId: string, label: string) => void;
+  onDeleteDay?: (dayId: string) => void;
+  onAddEvent: (day: Day) => void;
   onAutoFillDay?: (day: Day) => void;
-  selectedEventIds?: string[];
   onSelectEvent?: (eventId: string) => void;
+  selectedEventIds?: string[];
   allSelections?: UserSelection[];
   currentUserId?: string;
   tripUsers?: AppUser[];
+  totalTripUsers?: number;
   canAddEvent?: boolean;
   canAddDay?: boolean;
   canEditDay?: boolean;
   canDeleteDay?: boolean;
+  addEventLabel?: string;
+  onVoteSuggestion?: (event: Event, vote: SuggestionVote) => void;
+  canApproveSuggestion?: boolean;
+  onApproveSuggestion?: (event: Event) => void;
+  onDeleteSuggestion?: (event: Event) => void;
 }
 
-const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEvent, onAutoFillDay, selectedEventIds = [], onSelectEvent, allSelections = [], currentUserId, tripUsers = [], canAddEvent = false, canAddDay = false, canEditDay = false, canDeleteDay = false }: ItineraryListProps) => {
+const ItineraryList = ({
+  days,
+  onAddDay: _onAddDay,
+  onUpdateDayLabel,
+  onDeleteDay,
+  onAddEvent,
+  onAutoFillDay,
+  onSelectEvent,
+  selectedEventIds = [],
+  allSelections = [],
+  currentUserId,
+  tripUsers = [],
+  totalTripUsers = 0,
+  canAddEvent = false,
+  canEditDay = false,
+  canDeleteDay = false,
+  addEventLabel: _addEventLabel = 'Event',
+  onVoteSuggestion,
+  canApproveSuggestion = false,
+  onApproveSuggestion,
+  onDeleteSuggestion,
+}: ItineraryListProps) => {
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -48,7 +76,7 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
   };
 
   const commitEdit = (dayId: string) => {
-    if (editValue.trim()) {
+    if (editValue.trim() && onUpdateDayLabel) {
       onUpdateDayLabel(dayId, editValue.trim());
     }
     setEditingDay(null);
@@ -59,7 +87,6 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
       {days.map((day, index) => {
         const isEditing = editingDay === day.id;
         const isConfirmingDelete = confirmDeleteId === day.id;
-        const dayEvents = day.events;
 
         return (
           <section
@@ -168,7 +195,7 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
                           <div className="delete-popover-actions">
                             <button
                               onClick={() => {
-                                onDeleteDay(day.id);
+                                onDeleteDay?.(day.id);
                                 setConfirmDeleteId(null);
                               }}
                               className="delete-confirm-btn"
@@ -192,19 +219,27 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
 
             <div className="day-events">
               <div className="day-timeline" />
-              {dayEvents.length > 0 ? (
-                dayEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    daySlice={sliceEventForDay(event, day) ?? undefined}
-                    onSelect={() => onSelectEvent?.(event.id)}
-                    isSelected={selectedEventIds.includes(event.id)}
-                    allSelections={allSelections}
-                    currentUserId={currentUserId}
-                    tripUsers={tripUsers}
-                  />
-                ))
+              {day.events.length > 0 ? (
+                day.events.map((event) => {
+                  const slice = sliceEventForDay(event, day);
+                  return (
+                    <EventCard
+                      key={`${event.id}-${day.id}`}
+                      event={event}
+                      daySlice={slice ?? undefined}
+                      onSelect={() => onSelectEvent?.(event.id)}
+                      isSelected={selectedEventIds.includes(event.id)}
+                      allSelections={allSelections}
+                      currentUserId={currentUserId}
+                      tripUsers={tripUsers}
+                      totalTripUsers={totalTripUsers}
+                      onVoteSuggestion={onVoteSuggestion}
+                      canApproveSuggestion={canApproveSuggestion}
+                      onApproveSuggestion={onApproveSuggestion}
+                      onDeleteSuggestion={onDeleteSuggestion}
+                    />
+                  );
+                })
               ) : (
                 <p className="day-no-events">No events yet.</p>
               )}
@@ -213,23 +248,11 @@ const ItineraryList = ({ days, onAddDay, onUpdateDayLabel, onDeleteDay, onAddEve
         );
       })}
 
-      {/* Empty state hint */}
       {days.length === 0 && (
         <div className="empty-trip-hint">
           <p className="empty-trip-text">Your awesome trip is looking empty...</p>
           <span className="empty-trip-caret">&#8964;</span>
         </div>
-      )}
-
-      {/* Add Day button */}
-      {canAddDay && (
-        <button
-          onClick={onAddDay}
-          className="add-day-btn"
-        >
-          <PlusIcon size={18} />
-          Add Day
-        </button>
       )}
     </div>
   );

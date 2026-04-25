@@ -10,34 +10,36 @@ interface TripBannerProps {
   tripName: string;
   backgroundImage: string | null;
   dateRange: string;
+  startDate?: Date;
+  endDate?: Date;
   tripId: string;
   ownerId?: string;
   shared?: string[];
   permissions?: Record<string, Role>;
   canChangeName?: boolean;
   canChangeBanner?: boolean;
-  canChangeStartDate?: boolean;
+  canChangeDates?: boolean;
   canDelete?: boolean;
   canManageMembers?: boolean;
   canRemoveMembers?: boolean;
   canChangeRole?: boolean;
-  onChangeName?: (url: string) => void;
+  onChangeName?: (name: string) => void;
   onChangeImage?: (url: string) => void;
-  onChangeStartDate?: (date: Date) => void;
+  onOpenDatePicker?: () => void;
   onDelete?: () => void;
 }
 
 const TripBanner = ({
   tripName, backgroundImage, dateRange, tripId, ownerId, shared = [],
   permissions = {},
-  canChangeName = false, canChangeBanner = false, canChangeStartDate = false,
+  canChangeName = false, canChangeBanner = false, canChangeDates = false,
   canDelete = false, canManageMembers = false, canRemoveMembers = false, canChangeRole = false,
-  onChangeName, onChangeImage, onChangeStartDate, onDelete,
+  onChangeName, onChangeImage, onOpenDatePicker, onDelete,
 }: TripBannerProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dateInputRef = useRef<HTMLInputElement>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState(tripName);
+
   const commitNameEdit = () => {
     const trimmed = editNameValue.trim();
     if (trimmed && trimmed !== tripName) onChangeName?.(trimmed);
@@ -49,12 +51,6 @@ const TripBanner = ({
     if (file && onChangeImage) {
       const url = await uploadTripBanner(file, tripId);
       onChangeImage(url);
-    }
-  };
-
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.value && onChangeStartDate) {
-      onChangeStartDate(new Date(e.target.value + 'T00:00:00'));
     }
   };
 
@@ -108,7 +104,10 @@ const TripBanner = ({
                 value={editNameValue}
                 onChange={e => setEditNameValue(e.target.value)}
                 onBlur={commitNameEdit}
-                onKeyDown={e => { if (e.key === 'Enter') commitNameEdit(); if (e.key === 'Escape') setIsEditingName(false); }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') commitNameEdit();
+                  if (e.key === 'Escape') setIsEditingName(false);
+                }}
                 autoFocus
               />
               <button onClick={commitNameEdit} className="trip-banner-name-edit-btn trip-banner-name-confirm-btn" aria-label="Confirm name">
@@ -123,7 +122,6 @@ const TripBanner = ({
                   onClick={() => { setEditNameValue(tripName); setIsEditingName(true); }}
                   className="trip-banner-name-edit-btn"
                   aria-label="Edit trip name"
-                  style={{marginRight: '12px'}}
                 >
                   <PencilIcon size={20} />
                 </button>
@@ -131,25 +129,18 @@ const TripBanner = ({
             </>
           )}
         </div>
-        {canChangeStartDate ? (
-          <>
-            <button
-              onClick={() => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.click()}
-              className="trip-banner-date-btn"
-              aria-label="Change start date"
-            >
-              <CalendarIcon size={14} />
-              <span>{dateRange || 'None'}</span>
-            </button>
-            <input
-              ref={dateInputRef}
-              type="date"
-              className="trip-banner-date-input"
-              onChange={handleDateChange}
-            />
-          </>
+        {canChangeDates ? (
+          <button
+            onClick={onOpenDatePicker}
+            className="trip-banner-date-btn"
+            aria-label="Change trip dates"
+            type="button"
+          >
+            <CalendarIcon size={14} />
+            <span>{dateRange || 'None'}</span>
+          </button>
         ) : (
-          <div className="trip-banner-date-btn trip-banner-date-btn--readonly">
+          <div className="trip-banner-date-btn">
             <CalendarIcon size={14} />
             <span>{dateRange || 'None'}</span>
           </div>

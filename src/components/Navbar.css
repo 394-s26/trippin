@@ -8,6 +8,11 @@
   @apply flex flex-col items-center gap-1 text-xs font-medium transition-colors text-gray-400 no-underline p-1;
 }
 
+.navbar-link:hover {
+  transition: 250ms;
+  transform: scale(1.05);
+}
+
 .navbar-link:first-child {
   @apply pl-0;
 }

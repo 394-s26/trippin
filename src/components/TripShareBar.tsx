@@ -16,7 +16,8 @@ const MAX_CARD_AVATARS = 3;
 
 interface EmailPill {
   id: string;
-  email: string;
+  email?: string;
+  username?: string;
   isValidEmail: boolean;
   user: AppUser | null;
   resolving: boolean;
@@ -111,12 +112,70 @@ const TripShareBar = ({
     return snap.empty ? null : (snap.docs[0].data() as AppUser);
   };
 
+  const lookupUserByUsername = async (username: string): Promise<AppUser | null> => {
+    const snap = await getDocs(query(collection(db, 'users'), where('username', '==', username)));
+    return snap.empty ? null : (snap.docs[0].data() as AppUser);
+  };
+
   // ── Pill management ─────────────────────────────────────────────────────────
 
-  const addPill = async (email: string) => {
-    const trimmed = email.trim().toLowerCase();
+  const addPill = async (input: string) => {
+    const trimmed = input.trim().toLowerCase();
     if (!trimmed) return;
 
+    const isEmail = EMAIL_RE.test(input);
+    if (input[0] === '@') addPill_Username(input.substring(1))
+    else if (!isEmail) addPill_Username(input)
+    else addPill_Email(input)
+  }
+
+  const addPill_Username = async (username: string) => {
+    // Duplicate checks — highlight the existing row and show a brief note
+    const flashMember = (key: string) => {
+      setDuplicateError('Already added');
+      setHighlightedMember(key);
+      setTimeout(() => setHighlightedMember(null), 1500);
+    };
+
+    if (ownerUser?.username?.toLowerCase() === username) {
+      flashMember(ownerUser.uid);
+      return;
+    }
+    const existingMember = sharedUsers.find(u => u.username?.toLowerCase() === username);
+    if (existingMember) {
+      flashMember(existingMember.uid);
+      return;
+    }
+    if (pills.some(p => p.username === username)) {
+      setDuplicateError('Already added above');
+      return;
+    }
+    const existingInvite = persistedInvites.find(inv => inv.email === username);
+    if (existingInvite) {
+      flashMember(existingInvite.id);
+      return;
+    }
+
+    setDuplicateError(null);
+    const id = `${username}-${Date.now()}`;
+
+    const user = await lookupUserByUsername(username);
+    const isUnregistered = !user;
+
+    if (isUnregistered) {
+      setPills(prev => [...prev, { id, username: username, isValidEmail: false, user: null, resolving: false, isUnregistered: false }]);
+      return;
+    }
+
+    setPills(prev => [...prev, { id, username: username, isValidEmail: true, user: null, resolving: true, isUnregistered: false }]);
+    setPendingAdds(prev => [...prev, { pillId: id, email: username, user: null, role: ASSIGNABLE_ROLES[0], isInvite: false }]);
+
+    
+    setPills(prev => prev.map(p => p.id === id ? { ...p, user, resolving: false, isUnregistered } : p));
+    setPendingAdds(prev => prev.map(pa => pa.pillId === id ? { ...pa, user, isInvite: isUnregistered } : pa));
+  };
+
+  const addPill_Email = async (email: string) => {
     // Duplicate checks — highlight the existing row and show a brief note
     const flashMember = (key: string) => {
       setDuplicateError('Already added ↓');
@@ -124,38 +183,38 @@ const TripShareBar = ({
       setTimeout(() => setHighlightedMember(null), 1500);
     };
 
-    if (ownerUser?.email?.toLowerCase() === trimmed) {
+    if (ownerUser?.email?.toLowerCase() === email) {
       flashMember(ownerUser.uid);
       return;
     }
-    const existingMember = sharedUsers.find(u => u.email?.toLowerCase() === trimmed);
+    const existingMember = sharedUsers.find(u => u.email?.toLowerCase() === email);
     if (existingMember) {
       flashMember(existingMember.uid);
       return;
     }
-    if (pills.some(p => p.email === trimmed)) {
+    if (pills.some(p => p.email === email)) {
       setDuplicateError('Already added above');
       return;
     }
-    const existingInvite = persistedInvites.find(inv => inv.email === trimmed);
+    const existingInvite = persistedInvites.find(inv => inv.email === email);
     if (existingInvite) {
       flashMember(existingInvite.id);
       return;
     }
 
     setDuplicateError(null);
-    const isValidEmail = EMAIL_RE.test(trimmed);
-    const id = `${trimmed}-${Date.now()}`;
+    const isValidEmail = EMAIL_RE.test(email);
+    const id = `${email}-${Date.now()}`;
 
     if (!isValidEmail) {
-      setPills(prev => [...prev, { id, email: trimmed, isValidEmail: false, user: null, resolving: false, isUnregistered: false }]);
+      setPills(prev => [...prev, { id, email: email, isValidEmail: false, user: null, resolving: false, isUnregistered: false }]);
       return;
     }
 
-    setPills(prev => [...prev, { id, email: trimmed, isValidEmail: true, user: null, resolving: true, isUnregistered: false }]);
-    setPendingAdds(prev => [...prev, { pillId: id, email: trimmed, user: null, role: ASSIGNABLE_ROLES[0], isInvite: false }]);
+    setPills(prev => [...prev, { id, email: email, isValidEmail: true, user: null, resolving: true, isUnregistered: false }]);
+    setPendingAdds(prev => [...prev, { pillId: id, email: email, user: null, role: ASSIGNABLE_ROLES[0], isInvite: false }]);
 
-    const user = await lookupUserByEmail(trimmed);
+    const user = await lookupUserByEmail(email);
     const isUnregistered = !user;
     setPills(prev => prev.map(p => p.id === id ? { ...p, user, resolving: false, isUnregistered } : p));
     setPendingAdds(prev => prev.map(pa => pa.pillId === id ? { ...pa, user, isInvite: isUnregistered } : pa));
@@ -429,7 +488,7 @@ const TripShareBar = ({
   );
 
   // ── Modal ────────────────────────────────────────────────────────────────────
-  const modal = showModal && (
+  const modal = showModal && createPortal(
     <div className="overlay-center" onClick={closeModal}>
       <div className="share-modal" onClick={e => e.stopPropagation()}>
       <div className="overlay-panel overlay-panel--md rounded-2xl p-6 shadow-xl flex flex-col">
@@ -481,11 +540,9 @@ const TripShareBar = ({
                     <UserAvatar user={pill.user} size="sm" className="share-modal-pill-avatar" />
                   )}
                   <span className="share-modal-pill-label">
-                    {pill.resolving
-                      ? pill.email
-                      : pill.user
-                        ? `${pill.user.firstName} ${pill.user.lastName}`.trim()
-                        : pill.email}
+                  {pill.resolving || !pill.user
+                    ? (pill.email || pill.username)
+                    : `${pill.user.firstName} ${pill.user.lastName}`.trim()}
                   </span>
                   <button
                     className="share-modal-pill-remove"
@@ -500,7 +557,7 @@ const TripShareBar = ({
                 value={inputValue}
                 onChange={e => { setInputValue(e.target.value); setDuplicateError(null); }}
                 onKeyDown={handleKeyDown}
-                placeholder={pills.length === 0 ? 'Enter email address...' : ''}
+                placeholder={pills.length === 0 ? 'Enter @username OR email address...' : ''}
                 autoFocus
               />
             </div>
@@ -742,7 +799,8 @@ const TripShareBar = ({
         )}
       </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 
   // ── Banner remove popover ────────────────────────────────────────────────────

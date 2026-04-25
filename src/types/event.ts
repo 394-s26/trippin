@@ -1,23 +1,36 @@
-// This file defines TypeScript interfaces for event data structures.
-// Each event kind is its own interface extending BaseEvent, forming a discriminated union on `type`.
+export type SuggestionType = 'create' | 'delete';
+export type SuggestionVote = 'yes' | 'no';
+
+export interface EventSuggestionVotes {
+  yes: string[];
+  no: string[];
+}
+
+export interface EventSuggestion {
+  type: SuggestionType;
+  createdBy: string;
+  votes: EventSuggestionVotes;
+  targetEventId?: string;
+}
 
 interface BaseEvent {
   id: string;
-  tripId: string;        // ID of the trip this event belongs to
-  dayId: string;         // ID of the day this event belongs to
+  tripId: string;
+  dayId: string;
   name: string;
-  cost?: number | null; // Optional — omit from card when null
+  cost?: number | null;
   startDate: Date;
   endDate?: Date | null;
   location?: string;
   lat?: number;
   lng?: number;
   timezone?: string;
-  endTimezone?: string | null; // Optional separate end-time zone; null = same as `timezone`
-  paidBy?: string | null; // UID of the user responsible for paying; null = unassigned
-  color?: string | null; // Color label token from EVENT_COLORS; null = no color
-  allDay?: boolean; // True = day-bounded event; start/end Dates carry no meaningful time
-  imageUrl?: string | null; // Optional thumbnail (e.g. from auto-fill day suggestions)
+  endTimezone?: string | null;
+  paidBy?: string | null;
+  color?: string | null;
+  allDay?: boolean;
+  imageUrl?: string | null;
+  suggestion?: EventSuggestion | null;
 }
 
 // Transportation-specific event types
@@ -27,7 +40,7 @@ export interface BusEvent extends BaseEvent { type: 'Bus'; }
 export interface CarEvent extends BaseEvent { type: 'Car'; }
 export interface BoatEvent extends BaseEvent { type: 'Boat'; }
 
-// Location-specific event types
+// Lodging-specific event types
 export interface HotelEvent extends BaseEvent { type: 'Hotel'; }
 export interface AirbnbEvent extends BaseEvent { type: 'Airbnb'; }
 export interface CampingEvent extends BaseEvent { type: 'Camping'; }
@@ -41,7 +54,7 @@ export interface SkiingEvent extends BaseEvent { type: 'Skiing'; }
 export interface ShoppingEvent extends BaseEvent { type: 'Shopping'; }
 export interface SightseeingEvent extends BaseEvent { type: 'Sightseeing'; }
 
-// Location-specific activity event types
+// Attraction-specific event types
 export interface MuseumEvent extends BaseEvent { type: 'Museum'; }
 export interface TourEvent extends BaseEvent { type: 'Tour'; }
 export interface GameEvent extends BaseEvent { type: 'Game'; }
@@ -51,8 +64,7 @@ export interface ParkEvent extends BaseEvent { type: 'Park'; }
 export interface ZooEvent extends BaseEvent { type: 'Zoo'; }
 export interface AquariumEvent extends BaseEvent { type: 'Aquarium'; }
 
-
-// Food related events
+// Food & Drink event types
 export interface RestaurantEvent extends BaseEvent { type: 'Restaurant'; }
 export interface CafeEvent extends BaseEvent { type: 'Cafe'; }
 export interface BarEvent extends BaseEvent { type: 'Bar'; }
@@ -120,4 +132,5 @@ export interface EventUpdate {
   color?: string | null;
   allDay?: boolean;
   imageUrl?: string | null;
+  suggestion?: EventSuggestion | null;
 }

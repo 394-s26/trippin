@@ -1,0 +1,61 @@
+@reference "../index.css";
+
+.trip-date-modal {
+  @apply rounded-2xl p-6 flex flex-col gap-5;
+}
+
+.trip-date-modal-title {
+  @apply text-lg font-bold text-gray-800;
+}
+
+.trip-date-modal-fields {
+  @apply flex flex-col gap-3;
+}
+
+.trip-date-field {
+  @apply flex flex-col gap-1;
+}
+
+.trip-date-label {
+  @apply text-sm font-semibold text-gray-600;
+}
+
+.trip-date-input {
+  @apply w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2;
+  --tw-ring-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+}
+
+.trip-date-warning {
+  @apply flex items-start gap-2 rounded-xl px-3 py-3 border border-amber-200;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.trip-date-warning-text {
+  @apply text-xs leading-snug;
+}
+
+.trip-date-info-text {
+  @apply text-xs text-gray-400;
+}
+
+.trip-date-modal-actions {
+  @apply flex flex-col gap-2 mt-1;
+}
+
+.trip-date-confirm-btn {
+  @apply w-full text-white font-semibold text-sm py-2.5 rounded-xl transition-colors;
+  background: var(--color-primary);
+}
+
+.trip-date-confirm-btn:hover:not(:disabled) {
+  background: var(--color-primary-light);
+}
+
+.trip-date-confirm-btn:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.trip-date-cancel-btn {
+  @apply w-full text-gray-500 hover:text-gray-700 font-medium text-sm py-2 transition-colors;
+}

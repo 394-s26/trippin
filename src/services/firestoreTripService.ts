@@ -5,7 +5,7 @@
 import { db } from './firebase';
 import { Trip, LastViewedTrip } from '../types/trip';
 import { Role, TripAction } from '../config/permissions';
-import { collection, collectionGroup, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, or, where, arrayUnion, arrayRemove, deleteField, getDocs } from 'firebase/firestore';
+import { collection, collectionGroup, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, or, where, arrayUnion, arrayRemove, deleteField, getDocs, writeBatch, Timestamp } from 'firebase/firestore';
 import { hasActionPermission, PermissionError } from './permissionService';
 import { deleteTripBanners } from './storageService';
 
@@ -30,6 +30,25 @@ export const createTrip = async (uid: string, tripData: Omit<Trip, 'id'>): Promi
             permissions: { [uid]: 'owner' },
         };
         await setDoc(newDocRef, trip);
+
+        const start = new Date(trip.startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(trip.endDate);
+        end.setHours(0, 0, 0, 0);
+        const batch = writeBatch(db);
+        const cursor = new Date(start);
+        while (cursor <= end) {
+            const dayRef = doc(collection(db, 'trips', newDocRef.id, 'days'));
+            batch.set(dayRef, {
+                id: dayRef.id,
+                tripId: newDocRef.id,
+                date: Timestamp.fromDate(new Date(cursor)),
+                label: cursor.toLocaleDateString('en-US', { weekday: 'long' }),
+            });
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        await batch.commit();
         return newDocRef.id;
     } catch (error) {
         console.error("Error creating trip: ", error);

@@ -391,6 +391,20 @@ const normalizeUsername = (value: string) => value.trim().replace(/\s+/g, '').to
 
 
 const parseFirebaseError = (err: unknown): string => {
+  const errorMessage =
+    err && typeof err === 'object' && 'message' in err
+      ? String((err as { message?: unknown }).message ?? '')
+      : '';
+
+  const normalizedMessage = errorMessage.toLowerCase();
+
+  if (
+    normalizedMessage.includes('err_blocked_by_client') ||
+    normalizedMessage.includes('blocked by client')
+  ) {
+    return 'A browser extension is blocking Firebase requests. Please disable ad/privacy blockers for this site and try again.';
+  }
+
   if (err && typeof err === 'object' && 'code' in err) {
     const code = (err as { code: string }).code;
     switch (code) {
@@ -408,6 +422,12 @@ const parseFirebaseError = (err: unknown): string => {
         return 'Too many attempts. Please try again later.';
       case 'auth/popup-closed-by-user':
         return 'Sign-in popup was closed. Please try again.';
+      case 'permission-denied':
+      case 'firestore/permission-denied':
+        return 'You do not have permission to complete that action.';
+      case 'unavailable':
+      case 'firestore/unavailable':
+        return 'Network error while contacting Firebase. Please check your connection (or browser blockers) and try again.';
       default:
         return 'Something went wrong. Please try again.';
     }

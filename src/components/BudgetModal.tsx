@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import useTrip from '../hooks/useTrip';
 import { PencilIcon, ChevronsUpDownIcon } from '../services/svgIcons';
 import { Event } from '../types/event';
@@ -153,7 +154,7 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
       </div>
 
       {/* ── Budget Edit Modal ───────────────────────────────────── */}
-      {isBudgetOpen && (
+      {isBudgetOpen && createPortal(
         <div className="overlay-bottom">
           <div className="overlay-scrim" onClick={() => setIsBudgetOpen(false)} />
           <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 animate-slide-up">
@@ -182,11 +183,12 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Split Method Modal ──────────────────────────────────── */}
-      {isShareOpen && (
+      {isShareOpen && createPortal(
         <div className="overlay-center" onClick={() => setIsShareOpen(false)}>
           <div className="overlay-panel overlay-panel--sm rounded-2xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h2 className="budget-modal-title">Split Method</h2>
@@ -208,7 +210,8 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
                   <span className="split-option-title">{opt.title}</span>
                   <span className="split-option-desc">{opt.desc}</span>
                 </button>
-              ))}
+              )
+            )}
             </div>
 
             {/* Config editor — percentage (owner/manager only) */}
@@ -370,7 +373,8 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
               Done
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

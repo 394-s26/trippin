@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { PencilIcon, TrashIcon, XIcon } from '../services/svgIcons';
 import './SelectionActionBar.css';
 
@@ -10,6 +11,7 @@ interface SelectionActionBarProps {
   onDeselectAll: () => void;
   canEdit: boolean;
   canDelete: boolean;
+  canSuggestDelete?: boolean;
   scrollContainer: HTMLElement | null;
 }
 
@@ -53,6 +55,7 @@ const SelectionActionBar = ({
   onDeselectAll,
   canEdit,
   canDelete,
+  canSuggestDelete = false,
   scrollContainer,
 }: SelectionActionBarProps) => {
   const overlayOpen = useOverlayPresent();
@@ -132,7 +135,10 @@ const SelectionActionBar = ({
       ? 'Select a single event to edit'
       : undefined;
 
-  return (
+  const canDeleteSelection = canDelete || canSuggestDelete;
+  const deleteLabel = canSuggestDelete && !canDelete ? 'Suggest Delete' : 'Delete';
+
+  return createPortal(
     <div
       ref={wrapperRef}
       className="selection-bar-wrapper"
@@ -161,15 +167,16 @@ const SelectionActionBar = ({
 
         <button
           onClick={onDelete}
-          disabled={!canDelete}
+          disabled={!canDeleteSelection}
           className="selection-bar-btn selection-bar-btn--delete"
-          aria-label="Delete selected events"
+          aria-label={deleteLabel}
         >
-          <span className="selection-bar-btn-label">Delete</span>
+          <span className="selection-bar-btn-label">{deleteLabel}</span>
           <span className="selection-bar-btn-icon"><TrashIcon size={16} /></span>
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -87,9 +87,17 @@ const useTrip = (tripId: string) => {
         }
     };
 
-    const updateEndDate = async (endDate: Date) => {
+    const updateStartAndEndDate = async (startDate: Date, endDate: Date) => {
         try {
-            await updateTrip(uid, tripId, { endDate }, 'change_start_date');
+            await updateTrip(uid, tripId, { startDate, endDate }, 'change_start_date');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+        }
+    };
+
+    const updateStartDate = async (startDate: Date) => {
+        try {
+            await updateTrip(uid, tripId, { startDate }, 'change_start_date');
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         }
@@ -103,7 +111,7 @@ const useTrip = (tripId: string) => {
         }
     };
 
-    return { trip, loading, error, permissionDenied, can, updateTripName, updateBudget, updateSplitMethod, updateBannerImage, updateEndDate, deleteTrip };
+    return { trip, loading, error, permissionDenied, can, updateTripName, updateBudget, updateSplitMethod, updateBannerImage, updateStartAndEndDate, deleteTrip };
 };
 
 export default useTrip;
