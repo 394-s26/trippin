@@ -69,16 +69,20 @@ export interface CafeEvent extends BaseEvent { type: 'Cafe'; }
 export interface BarEvent extends BaseEvent { type: 'Bar'; }
 export interface ClubEvent extends BaseEvent { type: 'Club'; }
 
+// Uncategorized
+export interface NoneEvent extends BaseEvent { type: 'None'; }
+
 // Union of all event kinds. Use `event.type` to narrow to a specific kind.
 export type Event =
   | FlightEvent | TrainEvent | BusEvent | CarEvent | BoatEvent
   | HotelEvent | AirbnbEvent | CampingEvent
   | HikingEvent | SwimmingEvent | RaftingEvent | SurfingEvent | SkiingEvent | ShoppingEvent | SightseeingEvent
   | MuseumEvent | TourEvent | GameEvent | ConcertEvent | BeachEvent | ParkEvent | ZooEvent | AquariumEvent
-  | RestaurantEvent | CafeEvent | BarEvent | ClubEvent;
+  | RestaurantEvent | CafeEvent | BarEvent | ClubEvent
+  | NoneEvent;
 
 // Category grouping derived from event type — no extra data stored in Firestore.
-export type EventCategory = 'Transportation' | 'Lodging' | 'Activity' | 'Attraction' | 'Food & Drink';
+export type EventCategory = 'Transportation' | 'Lodging' | 'Activity' | 'Attraction' | 'Food & Drink' | 'None';
 
 export const EVENT_CATEGORY: Record<Event['type'], EventCategory> = {
   Flight: 'Transportation',
@@ -112,6 +116,8 @@ export const EVENT_CATEGORY: Record<Event['type'], EventCategory> = {
   Cafe: 'Food & Drink',
   Bar: 'Food & Drink',
   Club: 'Food & Drink',
+
+  None: 'None',
 };
 
 // Partial update type used for Firestore updateDoc calls.

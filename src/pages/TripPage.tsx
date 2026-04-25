@@ -58,6 +58,9 @@ const TripPage = () => {
     return [...dayEvents].sort((a, b) => {
       const aSlice = sliceEventForDay(a, day);
       const bSlice = sliceEventForDay(b, day);
+      const aIsStay = EVENT_CATEGORY[a.type] === 'Lodging' && a.name.includes('(Stay)');
+      const bIsStay = EVENT_CATEGORY[b.type] === 'Lodging' && b.name.includes('(Stay)');
+      if (aIsStay !== bIsStay) return aIsStay ? -1 : 1;
       const aIsMiddleLodging = EVENT_CATEGORY[a.type] === 'Lodging'
         && !!aSlice
         && aSlice.totalDays > 2
@@ -68,15 +71,7 @@ const TripPage = () => {
         && bSlice.totalDays > 2
         && bSlice.dayIndex > 1
         && bSlice.dayIndex < bSlice.totalDays;
-      const aIsLodgingStay = EVENT_CATEGORY[a.type] === 'Lodging'
-        && a.allDay === true
-        && a.name.includes('(Stay)');
-      const bIsLodgingStay = EVENT_CATEGORY[b.type] === 'Lodging'
-        && b.allDay === true
-        && b.name.includes('(Stay)');
-
       if (aIsMiddleLodging !== bIsMiddleLodging) return aIsMiddleLodging ? 1 : -1;
-      if (aIsLodgingStay !== bIsLodgingStay) return aIsLodgingStay ? 1 : -1;
       return 0;
     });
   };
@@ -114,6 +109,8 @@ const TripPage = () => {
   // Snapshot of event IDs pending deletion confirmation. Captured up-front so
   // the SelectionActionBar's overlay auto-deselect doesn't erase them mid-flow.
   const [deleteConfirmIds, setDeleteConfirmIds] = useState<string[] | null>(null);
+  // When set, the confirm popup will reject this suggestion instead of deleting real events.
+  const [pendingSuggestionDelete, setPendingSuggestionDelete] = useState<Event | null>(null);
 
   const canCreateEvent = can('add_event');
   const canProposeCreateEvent = can('propose_create_event');
@@ -331,12 +328,17 @@ const TripPage = () => {
 
   const handleConfirmDeleteSelected = async () => {
     if (!appUser || !deleteConfirmIds) return;
-    const selected = events.filter(e => deleteConfirmIds.includes(e.id));
-    await Promise.all(
-      selected.map(e => deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)),
-    );
+    if (pendingSuggestionDelete) {
+      await resolveSuggestionByVote(appUser.uid, pendingSuggestionDelete, 'delete');
+      setPendingSuggestionDelete(null);
+    } else {
+      const selected = events.filter(e => deleteConfirmIds.includes(e.id));
+      await Promise.all(
+        selected.map(e => deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)),
+      );
+      await deselectAll();
+    }
     setDeleteConfirmIds(null);
-    await deselectAll();
   };
 
   const handleEditSelected = async () => {
@@ -439,9 +441,10 @@ const TripPage = () => {
     await resolveSuggestionByVote(appUser.uid, event, 'approve');
   };
 
-  const handleDeleteSuggestion = async (event: Event) => {
+  const handleDeleteSuggestion = (event: Event) => {
     if (!appUser || !event.suggestion) return;
-    await resolveSuggestionByVote(appUser.uid, event, 'delete');
+    setPendingSuggestionDelete(event);
+    setDeleteConfirmIds([event.id]);
   };
 
   if (loading) {
@@ -577,20 +580,35 @@ const TripPage = () => {
 
         {deleteConfirmIds && createPortal(
           <div className="overlay-bottom">
-            <div className="overlay-scrim" onClick={() => setDeleteConfirmIds(null)} />
+            <div className="overlay-scrim" onClick={() => { setDeleteConfirmIds(null); setPendingSuggestionDelete(null); }} />
             <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 flex flex-col gap-3 animate-slide-up">
               <h2 className="delete-confirm-title">
                 Delete {deleteConfirmIds.length} {deleteConfirmIds.length === 1 ? 'event' : 'events'}?
               </h2>
-              <p className="delete-confirm-body">
-                {deleteConfirmIds.length === 1
-                  ? 'This event will be permanently deleted. If it belongs to a lodging stay series, linked check-in/stay/check-out events will also be deleted. This cannot be undone.'
-                  : `These ${deleteConfirmIds.length} events will be permanently deleted. Lodging stay series are deleted together (check-in/stay/check-out). This cannot be undone.`}
-              </p>
-              <button onClick={handleConfirmDeleteSelected} className="delete-confirm-btn">
+              <div className="delete-confirm-body">
+                <p>
+                  {deleteConfirmIds.length === 1
+                    ? 'This event will be permanently deleted.'
+                    : `These ${deleteConfirmIds.length} events will be permanently deleted.`}
+                </p>
+                {(() => {
+                  const selectedEvents = events.filter(e => deleteConfirmIds.includes(e.id));
+                  const hasMultiDay = selectedEvents.some(e =>
+                    (e.endDate && new Date(e.endDate).toDateString() !== new Date(e.startDate).toDateString())
+                    || (EVENT_CATEGORY[e.type] === 'Lodging' && LODGING_SUFFIX_REGEX.test(e.name))
+                  );
+                  return hasMultiDay ? (
+                    <p className="delete-confirm-multiday-warning">
+                      Since this is a multi-day event, linked events will also be deleted!
+                    </p>
+                  ) : null;
+                })()}
+                <p><strong>This cannot be undone.</strong></p>
+              </div>
+              <button onClick={handleConfirmDeleteSelected} className="submit-btn red">
                 Delete
               </button>
-              <button onClick={() => setDeleteConfirmIds(null)} className="delete-cancel-btn">
+              <button onClick={() => { setDeleteConfirmIds(null); setPendingSuggestionDelete(null); }} className="cancel-btn">
                 Cancel
               </button>
             </div>
@@ -606,7 +624,7 @@ const TripPage = () => {
               <p className="delete-confirm-body">
                 This change removes {dateAdjustConfirm.removedDays} {dateAdjustConfirm.removedDays === 1 ? 'day-section' : 'day-sections'} and will delete {dateAdjustConfirm.removedEvents} {dateAdjustConfirm.removedEvents === 1 ? 'event' : 'events'}. This cannot be undone.
               </p>
-              <button onClick={handleConfirmDateAdjust} className="delete-confirm-btn">
+              <button onClick={handleConfirmDateAdjust} className="submit-btn red">
                 Adjust Dates
               </button>
               <button onClick={() => setDateAdjustConfirm(null)} className="delete-cancel-btn">
@@ -654,10 +672,10 @@ const TripPage = () => {
               <p className="delete-confirm-body">
                 "{tripName}" will be permanently deleted. This cannot be undone.
               </p>
-              <button onClick={handleDeleteConfirmed} className="delete-confirm-btn">
+              <button onClick={handleDeleteConfirmed} className="submit-btn red">
                 Delete
               </button>
-              <button onClick={() => setShowDeleteConfirm(false)} className="delete-cancel-btn">
+              <button onClick={() => setShowDeleteConfirm(false)} className="cancel-btn">
                 Cancel
               </button>
             </div>
