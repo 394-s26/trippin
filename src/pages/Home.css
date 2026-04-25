@@ -21,7 +21,11 @@
 }
 
 .delete-confirm-body {
-  @apply text-sm text-gray-500;
+  @apply text-sm text-gray-500 flex flex-col gap-1;
+}
+
+.delete-confirm-multiday-warning {
+  @apply font-medium text-orange-600;
 }
 
 .delete-confirm-btn {
