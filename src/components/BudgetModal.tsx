@@ -175,10 +175,10 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
                   min={0}
                 />
               </div>
-              <button type="submit" className="budget-submit-btn">
+              <button type="submit" className="mt-5 submit-btn">
                 Confirm
               </button>
-              <button type="button" onClick={() => setIsBudgetOpen(false)} className="budget-cancel-btn">
+              <button type="button" onClick={() => setIsBudgetOpen(false)} className="cancel-btn">
                 Cancel
               </button>
             </form>
@@ -369,7 +369,7 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
               </div>
             )}
 
-            <button type="button" onClick={() => setIsShareOpen(false)} className="split-done-btn">
+            <button type="button" onClick={() => setIsShareOpen(false)} className="submit-btn">
               Done
             </button>
           </div>

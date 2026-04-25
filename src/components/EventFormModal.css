@@ -373,10 +373,6 @@
   @apply text-primary font-semibold;
 }
 
-.event-modal-submit-btn {
-  @apply w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm mt-1;
-}
-
 /* ── When block (chip-based date / time row) ──────────────── */
 
 .when-block {

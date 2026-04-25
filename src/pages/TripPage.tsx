@@ -605,10 +605,10 @@ const TripPage = () => {
                 })()}
                 <p><strong>This cannot be undone.</strong></p>
               </div>
-              <button onClick={handleConfirmDeleteSelected} className="delete-confirm-btn">
+              <button onClick={handleConfirmDeleteSelected} className="submit-btn red">
                 Delete
               </button>
-              <button onClick={() => { setDeleteConfirmIds(null); setPendingSuggestionDelete(null); }} className="delete-cancel-btn">
+              <button onClick={() => { setDeleteConfirmIds(null); setPendingSuggestionDelete(null); }} className="cancel-btn">
                 Cancel
               </button>
             </div>
@@ -624,7 +624,7 @@ const TripPage = () => {
               <p className="delete-confirm-body">
                 This change removes {dateAdjustConfirm.removedDays} {dateAdjustConfirm.removedDays === 1 ? 'day-section' : 'day-sections'} and will delete {dateAdjustConfirm.removedEvents} {dateAdjustConfirm.removedEvents === 1 ? 'event' : 'events'}. This cannot be undone.
               </p>
-              <button onClick={handleConfirmDateAdjust} className="delete-confirm-btn">
+              <button onClick={handleConfirmDateAdjust} className="submit-btn red">
                 Adjust Dates
               </button>
               <button onClick={() => setDateAdjustConfirm(null)} className="delete-cancel-btn">
@@ -672,10 +672,10 @@ const TripPage = () => {
               <p className="delete-confirm-body">
                 "{tripName}" will be permanently deleted. This cannot be undone.
               </p>
-              <button onClick={handleDeleteConfirmed} className="delete-confirm-btn">
+              <button onClick={handleDeleteConfirmed} className="submit-btn red">
                 Delete
               </button>
-              <button onClick={() => setShowDeleteConfirm(false)} className="delete-cancel-btn">
+              <button onClick={() => setShowDeleteConfirm(false)} className="cancel-btn">
                 Cancel
               </button>
             </div>

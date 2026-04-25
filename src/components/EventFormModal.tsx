@@ -864,7 +864,7 @@ const EventFormModal = ({
 
           </fieldset>
           {!readOnly && (
-            <button type="submit" className="event-modal-submit-btn">
+            <button type="submit" className="submit-btn">
               {submitLabel}
             </button>
           )}
