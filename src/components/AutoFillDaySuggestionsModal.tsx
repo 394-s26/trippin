@@ -15,27 +15,12 @@ interface AutoFillDaySuggestionsModalProps {
   location: { name: string; lat: number; lng: number } | null;
   onClose: () => void;
   onCompleted: () => void;
+  onBack?: () => void;
 }
 
-interface RowState {
-  selected: boolean;
-  startTime: string;
-  endTime: string;
-  cost: string;
-}
-
-const emptyRow = (cost: number): RowState => ({
-  selected: false,
-  startTime: '',
-  endTime: '',
-  cost: String(cost),
-});
-
-// Combines a day's calendar date with an "HH:MM" time string into a Date.
-const combineDateAndTime = (dayDate: Date, timeStr: string): Date => {
-  const [hh, mm] = timeStr.split(':').map(Number);
+const dayAtMidnight = (dayDate: Date): Date => {
   const d = new Date(dayDate);
-  d.setHours(hh, mm, 0, 0);
+  d.setHours(0, 0, 0, 0);
   return d;
 };
 
@@ -47,9 +32,10 @@ const AutoFillDaySuggestionsModal = ({
   location,
   onClose,
   onCompleted,
+  onBack,
 }: AutoFillDaySuggestionsModalProps) => {
   const [suggestions, setSuggestions] = useState<DaySuggestion[]>([]);
-  const [rows, setRows] = useState<RowState[]>([]);
+  const [selected, setSelected] = useState<boolean[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +56,7 @@ const AutoFillDaySuggestionsModal = ({
         });
         if (cancelled) return;
         setSuggestions(results);
-        setRows(results.map((s) => emptyRow(s.estimatedCost)));
+        setSelected(results.map(() => false));
       } catch (err) {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : 'Something went wrong.';
@@ -89,15 +75,12 @@ const AutoFillDaySuggestionsModal = ({
 
   if (!isOpen) return null;
 
-  const updateRow = (idx: number, patch: Partial<RowState>) => {
-    setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  const toggleSelected = (idx: number) => {
+    setSelected((prev) => prev.map((v, i) => (i === idx ? !v : v)));
   };
 
-  const selectedCount = rows.filter((r) => r.selected).length;
-  const allSelectedHaveTimes = rows.every(
-    (r) => !r.selected || (r.startTime && r.endTime && r.endTime > r.startTime),
-  );
-  const canSubmit = selectedCount > 0 && allSelectedHaveTimes && !submitting && !!day;
+  const selectedCount = selected.filter(Boolean).length;
+  const canSubmit = selectedCount > 0 && !submitting && !!day;
 
   const handleSubmit = async () => {
     if (!canSubmit || !day) return;
@@ -105,27 +88,24 @@ const AutoFillDaySuggestionsModal = ({
     setError(null);
     try {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const chosen = suggestions
-        .map((s, i) => ({ suggestion: s, row: rows[i] }))
-        .filter((x) => x.row.selected);
+      const chosen = suggestions.filter((_, i) => selected[i]);
 
-      const newEvents: Omit<Event, 'id'>[] = chosen.map(({ suggestion, row }) => {
-        const costNum = parseFloat(row.cost);
-        return {
-          tripId,
-          dayId: day.id,
-          type: suggestion.eventType,
-          name: suggestion.name,
-          location: suggestion.location,
-          lat: suggestion.lat,
-          lng: suggestion.lng,
-          imageUrl: suggestion.imageUrl,
-          cost: isNaN(costNum) ? 0 : costNum,
-          startDate: combineDateAndTime(day.date, row.startTime),
-          endDate: combineDateAndTime(day.date, row.endTime),
-          timezone,
-        } as Omit<Event, 'id'>;
-      });
+      const dayStart = dayAtMidnight(day.date);
+      const newEvents: Omit<Event, 'id'>[] = chosen.map((suggestion) => ({
+        tripId,
+        dayId: day.id,
+        type: suggestion.eventType,
+        name: suggestion.name,
+        location: suggestion.location,
+        lat: suggestion.lat,
+        lng: suggestion.lng,
+        imageUrl: suggestion.imageUrl,
+        cost: null,
+        startDate: dayStart,
+        endDate: dayStart,
+        allDay: true,
+        timezone,
+      }) as Omit<Event, 'id'>);
 
       await Promise.all(newEvents.map((e) => createEvent(uid, e)));
       onCompleted();
@@ -140,9 +120,32 @@ const AutoFillDaySuggestionsModal = ({
   return (
     <div className="overlay-center" onClick={onClose}>
       <div
-        className="overlay-panel overlay-panel--md rounded-2xl p-6 shadow-xl max-h-[calc(80vh-80px)] flex flex-col"
+        className="overlay-panel overlay-panel--md rounded-2xl p-6 shadow-xl max-h-[calc(80vh-80px)] flex flex-col relative"
         onClick={(e) => e.stopPropagation()}
       >
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="absolute top-4 right-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 px-2 py-1 rounded"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M19 12H5" />
+              <path d="m12 19-7-7 7-7" />
+            </svg>
+            Change location
+          </button>
+        )}
         <div className="flex items-center gap-2 mb-1 text-indigo-600">
           <SparkleIcon size={20} />
           <span className="font-semibold">Auto-fill day</span>
@@ -151,7 +154,7 @@ const AutoFillDaySuggestionsModal = ({
           Suggestions {location ? `near ${location.name.split(',')[0]}` : ''}
         </h2>
         <p className="text-gray-600 text-sm mb-4">
-          Pick the places you'd like to add. Set a start and end time for each.
+          Tap a card to add it to your day.
         </p>
 
         <div className="flex-1 overflow-y-auto -mx-2 px-2">
@@ -170,21 +173,32 @@ const AutoFillDaySuggestionsModal = ({
           )}
 
           {!loading && !error && suggestions.map((s, idx) => {
-            const row = rows[idx];
+            const isSelected = !!selected[idx];
             const IconComp = EVENT_TYPE_ICONS[s.eventType];
             return (
               <div
                 key={`${s.name}-${idx}`}
-                className={`flex gap-4 py-4 border-b border-gray-100 ${
-                  row.selected ? 'bg-indigo-50/40' : ''
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
+                onClick={() => toggleSelected(idx)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleSelected(idx);
+                  }
+                }}
+                className={`flex gap-4 p-3 -mx-1 rounded-lg border-b border-gray-100 cursor-pointer transition-colors ${
+                  isSelected ? 'bg-indigo-50/60' : 'hover:bg-gray-50'
                 }`}
               >
                 <input
                   type="checkbox"
-                  checked={row.selected}
-                  onChange={(e) => updateRow(idx, { selected: e.target.checked })}
-                  aria-label={`Select ${s.name}`}
-                  className="mt-1 h-5 w-5 shrink-0 cursor-pointer accent-indigo-600"
+                  checked={isSelected}
+                  readOnly
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="mt-1 h-5 w-5 shrink-0 cursor-pointer accent-indigo-600 pointer-events-none"
                 />
 
                 <div className="flex-1 min-w-0">
@@ -194,53 +208,44 @@ const AutoFillDaySuggestionsModal = ({
                         <IconComp size={16} />
                       </span>
                     )}
-                    <h3 className="font-bold text-gray-900 truncate">{s.name}</h3>
+                    <h3
+                      className={`font-bold text-gray-900 ${isSelected ? '' : 'truncate'}`}
+                    >
+                      {s.name}
+                    </h3>
                   </div>
-                  <p className="text-sm text-gray-600 line-clamp-2 mt-1">{s.description}</p>
+                  <p
+                    className={`text-sm text-gray-600 mt-1 ${isSelected ? '' : 'line-clamp-2'}`}
+                  >
+                    {s.description}
+                  </p>
                   {s.location && (
-                    <p className="text-xs text-gray-400 mt-1 truncate">{s.location}</p>
+                    <p
+                      className={`text-xs text-gray-400 mt-1 ${isSelected ? '' : 'truncate'}`}
+                    >
+                      {s.location}
+                    </p>
                   )}
 
-                  {row.selected && (
-                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                      <label className="flex items-center gap-1">
-                        <span className="text-gray-500">Start</span>
-                        <input
-                          type="time"
-                          value={row.startTime}
-                          onChange={(e) => updateRow(idx, { startTime: e.target.value })}
-                          className="border border-gray-200 rounded px-2 py-1"
-                        />
-                      </label>
-                      <label className="flex items-center gap-1">
-                        <span className="text-gray-500">End</span>
-                        <input
-                          type="time"
-                          value={row.endTime}
-                          onChange={(e) => updateRow(idx, { endTime: e.target.value })}
-                          className="border border-gray-200 rounded px-2 py-1"
-                        />
-                      </label>
-                      <label className="flex items-center gap-1">
-                        <span className="text-gray-500">$</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={row.cost}
-                          onChange={(e) => updateRow(idx, { cost: e.target.value })}
-                          className="border border-gray-200 rounded px-2 py-1 w-20"
-                        />
-                      </label>
-                      <a
-                        href={s.googleMapsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-indigo-600 hover:underline"
-                      >
-                        View on Maps
-                      </a>
+                  <div
+                    className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+                      isSelected ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="pt-3 text-sm">
+                        <a
+                          href={s.googleMapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-600 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          View on Maps
+                        </a>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 <div className="w-36 h-24 shrink-0 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">

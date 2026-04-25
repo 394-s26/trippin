@@ -439,6 +439,7 @@ const TripPage = () => {
           location={autoFillLocation}
           onClose={closeAutoFillFlow}
           onCompleted={closeAutoFillFlow}
+          onBack={() => setAutoFillLocation(null)}
         />
 
         {showDeleteConfirm && createPortal(
