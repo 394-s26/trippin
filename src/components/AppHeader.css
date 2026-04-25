@@ -1,8 +1,7 @@
 @reference "../index.css";
 
-
 .app-header {
-  @apply fixed top-0 left-1/2 -translate-x-1/2 z-40 w-1/2 bg-white flex;
+  @apply fixed top-0 left-1/2 -translate-x-1/2 z-40 w-full md:w-1/2 bg-white flex;
 }
 
 .app-header-inner {

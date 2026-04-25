@@ -67,6 +67,30 @@ html, body, #root {
   @apply w-full md:w-1/2 bg-neutral min-h-screen flex flex-col relative shadow-2xl md:z-20;
 }
 
+
+/* Buttons */
+
+.submit-btn {
+  @apply cursor-pointer text-white bg-primary hover:bg-green-800 py-2 rounded-xl font-medium text-sm transition-colors w-full;
+}
+
+.submit-btn.red {
+  @apply bg-red-500 hover:bg-red-600;
+}
+
+.submit-btn:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.cancel-btn {
+  @apply cursor-pointer text-gray-500 hover:text-gray-700 hover:bg-gray-100 py-2 rounded-xl font-medium text-sm transition-colors w-full;
+}
+
+.cancel-btn:disabled {
+  @apply cursor-not-allowed;
+}
+
+
 /* ── Brand identity ──────────────────────────────────────── */
 
 /* Reusable brand logo text — use this anywhere Trippin branding appears

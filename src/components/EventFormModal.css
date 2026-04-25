@@ -373,10 +373,6 @@
   @apply text-primary font-semibold;
 }
 
-.event-modal-submit-btn {
-  @apply w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm mt-1;
-}
-
 /* ── When block (chip-based date / time row) ──────────────── */
 
 .when-block {
@@ -463,6 +459,14 @@
 
 .when-allday input {
   @apply w-4 h-4 accent-primary cursor-pointer;
+}
+
+.when-allday--disabled {
+  @apply opacity-40 cursor-not-allowed;
+}
+
+.when-allday--disabled input {
+  @apply cursor-not-allowed;
 }
 
 .when-tz-link {
