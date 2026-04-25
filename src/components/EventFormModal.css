@@ -461,6 +461,14 @@
   @apply w-4 h-4 accent-primary cursor-pointer;
 }
 
+.when-allday--disabled {
+  @apply opacity-40 cursor-not-allowed;
+}
+
+.when-allday--disabled input {
+  @apply cursor-not-allowed;
+}
+
 .when-tz-link {
   @apply text-sm text-primary font-medium hover:underline;
 }

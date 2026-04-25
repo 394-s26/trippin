@@ -54,18 +54,20 @@ const computeSmartDefaults = (): { start: string; end: string } => {
   return { start: fmt(startMins), end: fmt(endMins) };
 };
 
-type FormCategory = 'Transportation' | 'Lodging' | 'Event';
-const CATEGORIES: FormCategory[] = ['Transportation', 'Lodging', 'Event'];
+type FormCategory = 'Transportation' | 'Lodging' | 'Event' | 'None';
+const CATEGORIES: FormCategory[] = ['None', 'Transportation', 'Lodging', 'Event'];
 const DEFAULT_TYPE_BY_FORM_CATEGORY: Record<FormCategory, Event['type']> = {
   Transportation: 'Car',
   Lodging: 'Hotel',
   Event: 'Hiking',
+  None: 'None',
 };
 const toFormCategory = (eventType: Event['type']): FormCategory => {
   const sourceCategory = EVENT_CATEGORY[eventType];
   if (sourceCategory === 'Transportation') return 'Transportation';
   if (sourceCategory === 'Lodging') return 'Lodging';
-  return 'Event';
+  if (sourceCategory === 'None') return 'None';
+  return 'None';
 };
 
 // Full IANA time zone list when the runtime supports it; otherwise a sensible
@@ -132,8 +134,8 @@ const EventFormModal = ({
   lockHolderName,
 }: EventFormModalProps) => {
   const readOnly = mode === 'readonly';
-  const [category, setCategory] = useState<FormCategory>('Event');
-  const [type, setType] = useState<Event['type']>('Hiking');
+  const [category, setCategory] = useState<FormCategory>('None');
+  const [type, setType] = useState<Event['type']>('None');
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [lat, setLat] = useState<number | undefined>(undefined);
@@ -170,7 +172,18 @@ const EventFormModal = ({
 
   const handleCategoryChange = (cat: FormCategory) => {
     setCategory(cat);
-    setType(DEFAULT_TYPE_BY_FORM_CATEGORY[cat]);
+    const newType = DEFAULT_TYPE_BY_FORM_CATEGORY[cat];
+    setType(newType);
+    const newIsLodging = EVENT_CATEGORY[newType] === 'Lodging';
+    if (newIsLodging) {
+      setAllDay(false);
+      // Ensure end day is at least 1 day after start day
+      const startIdx = tripDays.findIndex(d => d.id === startDayId);
+      const endIdx = tripDays.findIndex(d => d.id === endDayId);
+      if (startIdx >= 0 && endIdx <= startIdx && tripDays[startIdx + 1]) {
+        setEndDayId(tripDays[startIdx + 1].id);
+      }
+    }
   };
 
   useEffect(() => {
@@ -435,8 +448,15 @@ const EventFormModal = ({
     }
     const startIdx = tripDays.findIndex(d => d.id === newId);
     const endIdx = tripDays.findIndex(d => d.id === endDayId);
-    if (startIdx >= 0 && endIdx >= 0 && endIdx < startIdx) {
-      setEndDayId(newId);
+    if (isLodgingType) {
+      // Lodging must span at least 2 days; ensure end day is after start day
+      if (startIdx >= 0 && endIdx <= startIdx) {
+        setEndDayId(tripDays[startIdx + 1]?.id ?? newId);
+      }
+    } else {
+      if (startIdx >= 0 && endIdx >= 0 && endIdx < startIdx) {
+        setEndDayId(newId);
+      }
     }
   };
 
@@ -491,8 +511,8 @@ const EventFormModal = ({
     });
 
     if (mode === 'create') {
-      setCategory('Event');
-      setType('Hiking');
+      setCategory('None');
+      setType('None');
       setName('');
       setLocation('');
       setLat(undefined);
@@ -605,7 +625,7 @@ const EventFormModal = ({
 
           {/* Name */}
           <div>
-            <label htmlFor="event-name" className="form-label">Name</label>
+            <label htmlFor="event-name" className="form-label">Name {name === "" && <span className="normal-case font-normal text-orange-500">(required)</span>}</label>
             <input
               id="event-name"
               type="text"
@@ -619,7 +639,7 @@ const EventFormModal = ({
 
           {/* Location */}
           <div>
-            <label htmlFor="event-location" className="form-label">Location</label>
+            <label htmlFor="event-location" className="form-label">Location <span className="normal-case font-normal text-gray-400">(optional)</span></label>
             <div ref={locationContainerRef} />
           </div>
 
@@ -695,9 +715,9 @@ const EventFormModal = ({
                         <div className="date-chip-options" role="listbox">
                           {tripDays
                             .filter((d) => {
-                              if (isLodgingType) return true;
                               const startIdx = tripDays.findIndex(x => x.id === startDayId);
                               const dIdx = tripDays.findIndex(x => x.id === d.id);
+                              if (isLodgingType) return dIdx > startIdx;
                               return dIdx >= startIdx && dIdx <= startIdx + 1;
                             })
                             .map((d) => {
@@ -737,11 +757,11 @@ const EventFormModal = ({
             </div>
 
             <div className="when-meta-row">
-              <label className="when-allday">
+              <label className={`when-allday${isLodgingType ? ' when-allday--disabled' : ''}`}>
                 <input
                   type="checkbox"
                   checked={allDay}
-                  disabled={readOnly}
+                  disabled={readOnly || isLodgingType}
                   onChange={(e) => {
                     const next = e.target.checked;
                     setAllDay(next);
@@ -864,7 +884,11 @@ const EventFormModal = ({
 
           </fieldset>
           {!readOnly && (
-            <button type="submit" className="submit-btn">
+            <button
+              type="submit"
+              className="submit-btn"
+              disabled={!name.trim() || (isLodgingType && startDayId === endDayId)}
+            >
               {submitLabel}
             </button>
           )}
