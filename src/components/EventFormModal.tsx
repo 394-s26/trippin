@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Event, EVENT_CATEGORY, EventCategory } from '../types/event';
+import { Event, EVENT_CATEGORY } from '../types/event';
 import { AppUser } from '../types/auth';
-import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
 import { UserIcon } from '../services/svgIcons';
-import { EVENT_COLORS } from '../utilities/eventColors';
 import UserAvatar from './UserAvatar';
 import TimeSelect, { toMinutes } from './TimeSelect';
 import TimezoneModal from './TimezoneModal';
@@ -56,8 +54,19 @@ const computeSmartDefaults = (): { start: string; end: string } => {
   return { start: fmt(startMins), end: fmt(endMins) };
 };
 
-const ALL_EVENT_TYPES = Object.keys(EVENT_CATEGORY) as Event['type'][];
-const CATEGORIES: EventCategory[] = ['Transportation', 'Lodging', 'Activity', 'Attraction', 'Food & Drink'];
+type FormCategory = 'Transportation' | 'Lodging' | 'Event';
+const CATEGORIES: FormCategory[] = ['Transportation', 'Lodging', 'Event'];
+const DEFAULT_TYPE_BY_FORM_CATEGORY: Record<FormCategory, Event['type']> = {
+  Transportation: 'Car',
+  Lodging: 'Hotel',
+  Event: 'Hiking',
+};
+const toFormCategory = (eventType: Event['type']): FormCategory => {
+  const sourceCategory = EVENT_CATEGORY[eventType];
+  if (sourceCategory === 'Transportation') return 'Transportation';
+  if (sourceCategory === 'Lodging') return 'Lodging';
+  return 'Event';
+};
 
 // Full IANA time zone list when the runtime supports it; otherwise a sensible
 // fallback covering common regions. `Intl.supportedValuesOf` is available in
@@ -123,7 +132,7 @@ const EventFormModal = ({
   lockHolderName,
 }: EventFormModalProps) => {
   const readOnly = mode === 'readonly';
-  const [category, setCategory] = useState<EventCategory>('Activity');
+  const [category, setCategory] = useState<FormCategory>('Event');
   const [type, setType] = useState<Event['type']>('Hiking');
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
@@ -155,16 +164,13 @@ const EventFormModal = ({
   const suggestionOnly = !canCreateEvent && canProposeEvent;
   const showSuggestionToggle = canCreateEvent || canProposeEvent;
 
-  const filteredTypes = ALL_EVENT_TYPES.filter(t => EVENT_CATEGORY[t] === category);
+  const isLodgingType = EVENT_CATEGORY[type] === 'Lodging';
   const startDay = tripDays.find(d => d.id === startDayId);
   const endDay = tripDays.find(d => d.id === endDayId);
 
-  const handleCategoryChange = (cat: EventCategory) => {
+  const handleCategoryChange = (cat: FormCategory) => {
     setCategory(cat);
-    const typesInCat = ALL_EVENT_TYPES.filter(t => EVENT_CATEGORY[t] === cat);
-    if (typesInCat.length > 0 && !typesInCat.includes(type)) {
-      setType(typesInCat[0]);
-    }
+    setType(DEFAULT_TYPE_BY_FORM_CATEGORY[cat]);
   };
 
   useEffect(() => {
@@ -178,8 +184,8 @@ const EventFormModal = ({
     if (!isOpen || mode !== 'create' || tripDays.length === 0) return;
     const initialId = initialDayId ?? tripDays[0].id;
     const defaults = computeSmartDefaults();
-    setStartDayId(prev => prev || initialId);
-    setEndDayId(prev => prev || initialId);
+    setStartDayId(initialId);
+    setEndDayId(initialId);
     setStartTime(prev => prev || defaults.start);
     setEndTime(prev => prev || defaults.end);
     setAllDay(false);
@@ -190,7 +196,7 @@ const EventFormModal = ({
   // Pre-populate from initialEvent in edit/readonly modes.
   useEffect(() => {
     if (!isOpen || !initialEvent) return;
-    setCategory(EVENT_CATEGORY[initialEvent.type]);
+    setCategory(toFormCategory(initialEvent.type));
     setType(initialEvent.type);
     setName(initialEvent.name);
     setLocation(initialEvent.location ?? '');
@@ -259,6 +265,14 @@ const EventFormModal = ({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [paidByOpen, startDayOpen, endDayOpen]);
+
+  // Only lodging events can span multiple days. If the user switches away from
+  // lodging, force the end day to stay anchored to the start day.
+  useEffect(() => {
+    if (isLodgingType) return;
+    if (!startDayId || !endDayId) return;
+    if (endDayId !== startDayId) setEndDayId(startDayId);
+  }, [isLodgingType, startDayId, endDayId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -366,28 +380,9 @@ const EventFormModal = ({
   const wouldExceedBudget = tripBudget != null && tripBudget > 0 && tripSpent != null && (tripSpent + costNum) > tripBudget;
   const submitLabel = mode === 'edit' ? 'Save Changes' : isSuggestion ? 'Submit Suggestion' : 'Add Event';
 
-  // When the start time changes, force the end to be exactly one hour after.
+  // Start and end times are independent; changing start should not mutate end.
   const handleStartTimeChange = (next: string) => {
     setStartTime(next);
-    const startMins = toMinutes(next);
-    if (startMins == null) return;
-    const totalEnd = startMins + 60;
-    if (totalEnd < 24 * 60) {
-      setEndTime(shiftTime(next, 60));
-      setEndDayId(prev => (prev === startDayId ? prev : startDayId));
-      return;
-    }
-    // Crossed midnight. Roll forward if there's a next trip day; else cap.
-    const startIdx = tripDays.findIndex(d => d.id === startDayId);
-    if (startIdx >= 0 && startIdx + 1 < tripDays.length) {
-      const wrapped = totalEnd - 24 * 60;
-      const pad = (n: number) => String(n).padStart(2, '0');
-      setEndTime(`${pad(Math.floor(wrapped / 60))}:${pad(wrapped % 60)}`);
-      setEndDayId(tripDays[startIdx + 1].id);
-    } else {
-      setEndTime('23:45');
-      setEndDayId(startDayId);
-    }
   };
 
   // Editing end time directly: respect what the user picked, but if it lands
@@ -434,7 +429,8 @@ const EventFormModal = ({
     e.preventDefault();
     if (tripDays.length === 0) return;
     const sDay = tripDays.find(d => d.id === startDayId) ?? tripDays[0];
-    const eDay = tripDays.find(d => d.id === endDayId) ?? sDay;
+    const rawEndDay = tripDays.find(d => d.id === endDayId) ?? sDay;
+    const eDay = isLodgingType ? rawEndDay : sDay;
 
     let eventStart: Date;
     let eventEnd: Date;
@@ -470,7 +466,7 @@ const EventFormModal = ({
     });
 
     if (mode === 'create') {
-      setCategory('Activity');
+      setCategory('Event');
       setType('Hiking');
       setName('');
       setLocation('');
@@ -582,29 +578,6 @@ const EventFormModal = ({
             </div>
           </div>
 
-          {/* Type icon grid */}
-          <div>
-            <label className="form-label">Type</label>
-            <div className="type-grid">
-              {filteredTypes.map((t) => {
-                const IconComponent = EVENT_TYPE_ICONS[t];
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    className={`type-grid-item${type === t ? ' type-grid-item--selected' : ''}`}
-                    onClick={() => setType(t)}
-                  >
-                    <span className="type-grid-icon">
-                      {IconComponent && <IconComponent size={28} />}
-                    </span>
-                    <span className="type-grid-label">{t}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Name */}
           <div>
             <label htmlFor="event-name" className="form-label">Name</label>
@@ -687,7 +660,7 @@ const EventFormModal = ({
                         type="button"
                         className="date-chip"
                         onClick={() => setEndDayOpen(o => !o)}
-                        disabled={readOnly || allDay || tripDays.length === 0}
+                        disabled={readOnly || allDay || tripDays.length === 0 || !isLodgingType}
                         aria-haspopup="listbox"
                         aria-expanded={endDayOpen}
                       >
@@ -766,41 +739,6 @@ const EventFormModal = ({
               if (end != null) setEndTimezone(end);
             }}
           />
-
-          {/* Color label */}
-          <div>
-            <label className="form-label">Label</label>
-            <div className="color-swatch-row">
-              <button
-                type="button"
-                className={`color-swatch color-swatch--none${color == null ? ' color-swatch--selected' : ''}`}
-                onClick={() => setColor(null)}
-                aria-label="No color"
-                aria-pressed={color == null}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="5" y1="19" x2="19" y2="5" />
-                </svg>
-              </button>
-              {EVENT_COLORS.map((c) => (
-                <button
-                  key={c.token}
-                  type="button"
-                  className={`color-swatch${color === c.token ? ' color-swatch--selected' : ''}`}
-                  style={{ backgroundColor: c.hex }}
-                  onClick={() => setColor(c.token)}
-                  aria-label={c.label}
-                  aria-pressed={color === c.token}
-                >
-                  {color === c.token && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* Cost & Paid By */}
           <div className="cost-paidby-row">

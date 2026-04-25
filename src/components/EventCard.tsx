@@ -1,11 +1,11 @@
 import { CSSProperties } from 'react';
-import { Event, SuggestionVote } from '../types/event';
+import { EVENT_CATEGORY, Event, SuggestionVote } from '../types/event';
 import { AppUser } from '../types/auth';
 import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
 import { LocationPinIcon, CheckIcon, XIcon } from '../services/svgIcons';
 import { UserSelection } from '../hooks/useSessionSelections';
 import { pickFirstSelector } from '../utilities/pickFirstSelector';
-import { getSuggestionVoteSummary } from '../utilities/eventSuggestions';
+import { getSuggestionVoteSummary, getSuggestionVoteThreshold } from '../utilities/eventSuggestions';
 import { resolveEventColor } from '../utilities/eventColors';
 import { EventDaySlice } from '../utilities/eventOverlapsDay';
 import UserAvatar from './UserAvatar';
@@ -14,6 +14,7 @@ import './EventCard.css';
 interface EventCardProps {
   event: Event;
   daySlice?: EventDaySlice;
+  conflictWithEventName?: string | null;
   onSelect?: () => void;
   isSelected?: boolean;
   allSelections?: UserSelection[];
@@ -23,6 +24,7 @@ interface EventCardProps {
   onVoteSuggestion?: (event: Event, vote: SuggestionVote) => void;
   canApproveSuggestion?: boolean;
   onApproveSuggestion?: (event: Event) => void;
+  onDeleteSuggestion?: (event: Event) => void;
 }
 
 const EventCard = ({
@@ -31,12 +33,14 @@ const EventCard = ({
   onSelect,
   isSelected = false,
   allSelections = [],
+  conflictWithEventName = null,
   currentUserId,
   tripUsers = [],
   totalTripUsers = 0,
   onVoteSuggestion,
   canApproveSuggestion = false,
   onApproveSuggestion,
+  onDeleteSuggestion,
 }: EventCardProps) => {
   const timeFmt = (d: Date) => new Date(d).toLocaleTimeString('en-US', {
     hour: 'numeric',
@@ -78,11 +82,21 @@ const EventCard = ({
   } = getSuggestionVoteSummary(event, totalTripUsers);
 
   const useOtherBorder = !!firstOther && !isSelected;
-  const cardClass = isSelected
-    ? `event-card${isSuggestion ? ' event-card--suggestion' : ''} event-card--selected`
-    : useOtherBorder
-      ? `event-card${isSuggestion ? ' event-card--suggestion' : ''} event-card--selected-session`
-      : `event-card${isSuggestion ? ' event-card--suggestion' : ''}`;
+  const isLodgingMiddleDay = EVENT_CATEGORY[event.type] === 'Lodging'
+    && !!daySlice
+    && daySlice.totalDays > 2
+    && daySlice.dayIndex > 1
+    && daySlice.dayIndex < daySlice.totalDays;
+  const isLodgingStayEvent = EVENT_CATEGORY[event.type] === 'Lodging'
+    && event.name.includes('(Stay)');
+
+  const cardClass = [
+    'event-card',
+    isSuggestion ? 'event-card--suggestion' : '',
+    isSelected ? 'event-card--selected' : '',
+    !isSelected && useOtherBorder ? 'event-card--selected-session' : '',
+    (isLodgingMiddleDay || isLodgingStayEvent) ? 'event-card--lodging-stay' : '',
+  ].filter(Boolean).join(' ');
   const cardStyle = (useOtherBorder ? { borderColor: firstOther.color } : undefined) as CSSProperties | undefined;
   const consensusFillStyle = {
     width: `${consensusRatio * 100}%`,
@@ -98,6 +112,12 @@ const EventCard = ({
   const yesVoterUids = event.suggestion?.votes.yes ?? [];
   const noVoterUids = event.suggestion?.votes.no ?? [];
   const approveLabel = suggestionType === 'delete' ? 'Approve deletion' : 'Approve event';
+  const voteThreshold = getSuggestionVoteThreshold(totalUsers);
+  const canCommunityApproveEvent = suggestionType !== 'delete' && yesVotes >= voteThreshold;
+  const canCommunityDeleteEvent = suggestionType !== 'delete' && noVotes >= voteThreshold;
+  const showApproveButton = suggestionType === 'delete'
+    ? canApproveSuggestion
+    : (canApproveSuggestion || canCommunityApproveEvent);
 
   return (
     <div className={cardClass} style={cardStyle} data-event-id={event.id} onClick={(e) => { e.stopPropagation(); onSelect?.(); }}>
@@ -108,6 +128,11 @@ const EventCard = ({
         <div className="event-card-body">
           <div className="event-card-time-row">
             <span className="event-card-time">{time}</span>
+            {conflictWithEventName && (
+              <span className="event-card-conflict">
+                Time conflict with "{conflictWithEventName}"
+              </span>
+            )}
             {showSpanPill && (
               <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
             )}
@@ -199,13 +224,22 @@ const EventCard = ({
             </button>
           </div>
 
-          {canApproveSuggestion && (
+          {showApproveButton && (
             <button
               type="button"
               className="event-card-approve-btn"
               onClick={() => onApproveSuggestion?.(event)}
             >
               {approveLabel}
+            </button>
+          )}
+          {canCommunityDeleteEvent && (
+            <button
+              type="button"
+              className="event-card-approve-btn event-card-approve-btn--danger"
+              onClick={() => onDeleteSuggestion?.(event)}
+            >
+              Delete event
             </button>
           )}
 

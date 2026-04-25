@@ -21,6 +21,7 @@ interface ItineraryListProps {
   onVoteSuggestion?: (event: Event, vote: SuggestionVote) => void;
   canApproveSuggestion?: boolean;
   onApproveSuggestion?: (event: Event) => void;
+  onDeleteSuggestion?: (event: Event) => void;
 }
 
 const ItineraryList = ({
@@ -37,6 +38,7 @@ const ItineraryList = ({
   onVoteSuggestion,
   canApproveSuggestion = false,
   onApproveSuggestion,
+  onDeleteSuggestion,
 }: ItineraryListProps) => {
   return (
     <div className="itinerary-list">
@@ -55,7 +57,7 @@ const ItineraryList = ({
                   aria-label="Add event"
                 >
                   <PlusIcon size={14} />
-                  Add Event
+                  {addEventLabel}
                 </button>
               )}
             </div>
@@ -73,15 +75,14 @@ const ItineraryList = ({
                     daySlice={slice ?? undefined}
                     onSelect={() => onSelectEvent?.(event.id)}
                     isSelected={selectedEventIds.includes(event.id)}
-                    allSelections={allSelections.filter(
-                      s => s.selectedIds.includes(event.id) && s.uid !== currentUserId
-                    )}
+                    allSelections={allSelections}
                     currentUserId={currentUserId}
                     tripUsers={tripUsers}
                     totalTripUsers={totalTripUsers}
                     onVoteSuggestion={onVoteSuggestion}
                     canApproveSuggestion={canApproveSuggestion}
                     onApproveSuggestion={onApproveSuggestion}
+                    onDeleteSuggestion={onDeleteSuggestion}
                   />
                 );
               })

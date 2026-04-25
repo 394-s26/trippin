@@ -13,7 +13,7 @@
 }
 
 .home-content {
-  @apply p-4 flex flex-col gap-4;
+  @apply px-6 py-4 flex flex-col gap-4;
 }
 
 .delete-confirm-title {

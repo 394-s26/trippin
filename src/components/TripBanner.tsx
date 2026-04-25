@@ -10,6 +10,8 @@ interface TripBannerProps {
   tripName: string;
   backgroundImage: string | null;
   dateRange: string;
+  startDate?: Date;
+  endDate?: Date;
   tripId: string;
   ownerId?: string;
   shared?: string[];
@@ -132,6 +134,7 @@ const TripBanner = ({
             onClick={onOpenDatePicker}
             className="trip-banner-date-btn"
             aria-label="Change trip dates"
+            type="button"
           >
             <CalendarIcon size={14} />
             <span>{dateRange || 'None'}</span>

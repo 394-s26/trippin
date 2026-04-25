@@ -42,3 +42,6 @@ export const getSuggestionVoteSummary = (event: Event, totalUsers: number) => {
     totalUsers: normalizedTotal,
   };
 };
+
+export const getSuggestionVoteThreshold = (totalUsers: number): number =>
+  (totalUsers === 2 ? 2 : Math.floor(totalUsers * 0.75));

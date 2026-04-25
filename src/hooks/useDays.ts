@@ -27,7 +27,7 @@ const useDays = (tripId: string, options: UseDaysOptions = {}) => {
   const [hasInitialDaySnapshot, setHasInitialDaySnapshot] = useState(false);
   const hasSeededFromTrip = useRef(false);
 
-  // Adjusts the days subcollection to match a new date range.
+  // Used only for initial seeding of an empty subcollection.
   // Removes days from the end if the trip shortened, shifts all remaining days
   // to the new start, then adds days at the end if the trip lengthened.
   const adjustTripLength = useCallback(
@@ -61,6 +61,50 @@ const useDays = (tripId: string, options: UseDaysOptions = {}) => {
     [uid, tripId, days]
   );
 
+  // Used for user-initiated date changes. Preserves existing day documents at
+  // their calendar dates — creates days for new dates in range, deletes days
+  // that fall outside the new range. Moving start earlier adds days at the
+  // front; moving it later removes days from the front.
+  const syncDaysToRange = useCallback(
+    async (startDate: Date, endDate: Date): Promise<void> => {
+      if (!uid) return;
+      const normalizedStart = new Date(startDate);
+      normalizedStart.setHours(0, 0, 0, 0);
+      const normalizedEnd = new Date(endDate);
+      normalizedEnd.setHours(0, 0, 0, 0);
+      if (normalizedEnd < normalizedStart) return;
+
+      const targetDates: Date[] = [];
+      const cursor = new Date(normalizedStart);
+      while (cursor <= normalizedEnd) {
+        targetDates.push(new Date(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+
+      const isSameCalendarDay = (a: Date, b: Date) =>
+        a.getFullYear() === b.getFullYear()
+        && a.getMonth() === b.getMonth()
+        && a.getDate() === b.getDate();
+
+      const sortedDays = [...days].sort((a, b) => a.date.getTime() - b.date.getTime());
+      const dayMatchesTarget = (dayDate: Date) => targetDates.some((targetDate) => isSameCalendarDay(dayDate, targetDate));
+
+      const createMissing = targetDates
+        .filter((targetDate) => !sortedDays.some((day) => isSameCalendarDay(day.date, targetDate)))
+        .map((targetDate) => {
+          const label = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
+          return createDay(uid, tripId, targetDate, label);
+        });
+
+      const deleteOverflow = sortedDays
+        .filter((day) => !dayMatchesTarget(day.date))
+        .map((day) => deleteDaysBatch(uid, tripId, [day.id]));
+
+      await Promise.all([...createMissing, ...deleteOverflow]);
+    },
+    [uid, tripId, days]
+  );
+
   useEffect(() => {
     hasSeededFromTrip.current = false;
     setHasInitialDaySnapshot(false);
@@ -90,7 +134,7 @@ const useDays = (tripId: string, options: UseDaysOptions = {}) => {
     });
   }, [seedWithTrip, uid, hasInitialDaySnapshot, days.length, adjustTripLength, tripId]);
 
-  return { days, adjustTripLength };
+  return { days, syncDaysToRange };
 };
 
 export { useDays };
