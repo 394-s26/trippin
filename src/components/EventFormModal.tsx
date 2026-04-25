@@ -7,6 +7,7 @@ import UserAvatar from './UserAvatar';
 import TimeSelect, { toMinutes } from './TimeSelect';
 import TimezoneModal from './TimezoneModal';
 import { toDate } from '../utilities/timestamps';
+import { eventsConflict } from '../utilities/eventConflicts';
 import './EventFormModal.css';
 import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 
@@ -32,6 +33,7 @@ interface EventFormModalProps {
   mode?: EventFormMode;
   initialEvent?: Event;
   lockHolderName?: string;
+  existingEvents?: Event[];
 }
 
 const toTimeString = (d: Date): string => {
@@ -130,6 +132,7 @@ const EventFormModal = ({
   mode = 'create',
   initialEvent,
   lockHolderName,
+  existingEvents = [],
 }: EventFormModalProps) => {
   const readOnly = mode === 'readonly';
   const [category, setCategory] = useState<FormCategory>('Event');
@@ -379,6 +382,51 @@ const EventFormModal = ({
   const costNum = cost !== '' ? parseFloat(cost) : 0;
   const wouldExceedBudget = tripBudget != null && tripBudget > 0 && tripSpent != null && (tripSpent + costNum) > tripBudget;
   const submitLabel = mode === 'edit' ? 'Save Changes' : isSuggestion ? 'Submit Suggestion' : 'Add Event';
+  const selectedStartDay = tripDays.find((d) => d.id === startDayId) ?? tripDays[0];
+  const selectedRawEndDay = tripDays.find((d) => d.id === endDayId) ?? selectedStartDay;
+  const selectedEndDay = isLodgingType ? selectedRawEndDay : selectedStartDay;
+
+  const draftStart = selectedStartDay
+    ? (allDay
+      ? (() => {
+        const out = new Date(selectedStartDay.date);
+        out.setHours(0, 0, 0, 0);
+        return out;
+      })()
+      : combineDateAndTime(selectedStartDay.date, startTime))
+    : null;
+  const draftEnd = selectedEndDay
+    ? (allDay
+      ? (() => {
+        const out = new Date(selectedEndDay.date);
+        out.setHours(0, 0, 0, 0);
+        return out;
+      })()
+      : combineDateAndTime(selectedEndDay.date, endTime))
+    : null;
+  const draftEvent: Event | null = (draftStart && draftEnd && name.trim())
+    ? ({
+      id: initialEvent?.id ?? '__draft__',
+      tripId: initialEvent?.tripId ?? '',
+      dayId: selectedStartDay?.id ?? '',
+      type,
+      name: name.trim(),
+      startDate: draftStart,
+      endDate: draftEnd,
+      allDay,
+      suggestion: null,
+    } as Event)
+    : null;
+  const conflictingExistingEvents = draftEvent
+    ? existingEvents.filter((candidate) => {
+      if (initialEvent && candidate.id === initialEvent.id) return false;
+      return eventsConflict(draftEvent, {
+        ...candidate,
+        startDate: toDate(candidate.startDate as Parameters<typeof toDate>[0]),
+        endDate: candidate.endDate ? toDate(candidate.endDate as Parameters<typeof toDate>[0]) : candidate.endDate,
+      } as Event);
+    })
+    : [];
 
   // Start and end times are independent; changing start should not mutate end.
   const handleStartTimeChange = (next: string) => {
@@ -724,6 +772,13 @@ const EventFormModal = ({
                 Time zone
               </button>
             </div>
+            {conflictingExistingEvents.length > 0 && (
+              <div className="event-form-conflict-banner" role="status">
+                <strong>Time conflict:</strong>{' '}
+                This overlaps with {conflictingExistingEvents.slice(0, 2).map((event) => `"${event.name}"`).join(' and ')}
+                {conflictingExistingEvents.length > 2 ? ` and ${conflictingExistingEvents.length - 2} more event(s)` : ''}.
+              </div>
+            )}
           </div>
 
           <TimezoneModal

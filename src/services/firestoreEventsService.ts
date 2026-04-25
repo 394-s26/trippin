@@ -1,8 +1,9 @@
 import { db } from './firebase';
-import { addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, onSnapshot, orderBy, query, runTransaction, Timestamp, updateDoc, where, FirestoreError } from 'firebase/firestore';
+import { addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, Timestamp, updateDoc, where, FirestoreError, writeBatch } from 'firebase/firestore';
 import { Event, EventSuggestion, SuggestionType, SuggestionVote } from '../types/event';
 import { hasActionPermission, PermissionError } from './permissionService';
 import { getSuggestionVoteThreshold, resolveCreateEventSuggestionMode } from '../utilities/eventSuggestions';
+import { buildConflictMap } from '../utilities/eventConflicts';
 
 const eventsCol = (tripId: string, dayId: string) =>
   collection(db, 'trips', tripId, 'days', dayId, 'events');
@@ -317,4 +318,49 @@ export const subscribeToEvents = (tripId: string, callback: (events: Event[]) =>
       console.error('[subscribeToEvents]', tripId, err.code, err.message);
     }
   );
+};
+
+export const recomputeEventConflicts = async (tripId: string): Promise<void> => {
+  const eventsQuery = query(
+    collectionGroup(db, 'events'),
+    where('tripId', '==', tripId),
+  );
+  const snapshot = await getDocs(eventsQuery);
+  const events = snapshot.docs.map((eventDoc) => ({ id: eventDoc.id, ...eventDoc.data() } as Event));
+  const conflictMap = buildConflictMap(events);
+  const batch = writeBatch(db);
+  let pendingWrites = 0;
+
+  snapshot.docs.forEach((eventDoc) => {
+    const current = eventDoc.data() as Event;
+    const nextConflictEventIds = conflictMap.get(eventDoc.id) ?? [];
+    const nextHasTimeConflict = nextConflictEventIds.length > 0;
+    const prevConflictEventIds = Array.isArray(current.conflictEventIds) ? current.conflictEventIds : [];
+    const prevHasTimeConflict = prevConflictEventIds.length > 0;
+    const conflictIdsUnchanged =
+      prevConflictEventIds.length === nextConflictEventIds.length
+      && prevConflictEventIds.every((value, idx) => value === nextConflictEventIds[idx]);
+    const nextConflictDismissed = nextHasTimeConflict ? current.conflictDismissed === true : false;
+    const dismissedUnchanged = (current.conflictDismissed === true) === nextConflictDismissed;
+
+    if (conflictIdsUnchanged && prevHasTimeConflict === nextHasTimeConflict && dismissedUnchanged) return;
+
+    batch.update(eventDoc.ref, {
+      conflictEventIds: nextConflictEventIds,
+      conflictDismissed: nextConflictDismissed,
+    });
+    pendingWrites += 1;
+  });
+
+  if (pendingWrites > 0) {
+    await batch.commit();
+  }
+};
+
+export const dismissEventConflict = async (
+  tripId: string,
+  dayId: string,
+  eventId: string,
+): Promise<void> => {
+  await updateDoc(doc(eventsCol(tripId, dayId), eventId), { conflictDismissed: true });
 };

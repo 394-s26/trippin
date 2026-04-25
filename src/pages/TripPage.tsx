@@ -18,7 +18,7 @@ import { useDays } from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
 import { useEventLock } from '../hooks/useEventLock';
-import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, resolveSuggestionByVote } from '../services/firestoreEventsService';
+import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, resolveSuggestionByVote, recomputeEventConflicts, dismissEventConflict } from '../services/firestoreEventsService';
 import { eventOverlapsDay, sliceEventForDay } from '../utilities/eventOverlapsDay';
 import { EVENT_CATEGORY } from '../types/event';
 import { useAuth } from '../contexts/AuthContext';
@@ -91,6 +91,8 @@ const TripPage = () => {
   const { setLastViewedTrip } = useLastViewedTrip();
 
   const scrollRef = useRef<HTMLElement>(null);
+  const recomputingConflictsRef = useRef(false);
+  const bootstrappedConflictsRef = useRef(false);
 
   const [activeDay, setActiveDay] = useState<{ id: string; date: Date } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -231,6 +233,7 @@ const TripPage = () => {
       await Promise.all(
         removedEvents.map((event) => deleteEvent(appUser.uid, event.tripId, event.dayId, event.id))
       );
+      await recomputeEventConflicts(id!);
     }
     await syncDaysToRange(dateAdjustConfirm.newStart, dateAdjustConfirm.newEnd);
     await updateStartAndEndDate(dateAdjustConfirm.newStart, dateAdjustConfirm.newEnd);
@@ -312,9 +315,11 @@ const TripPage = () => {
       await Promise.all(lodgingEvents.map((lodgingEvent) =>
         createEvent(appUser.uid, { ...lodgingEvent, tripId: id! })
       ));
+      await recomputeEventConflicts(id!);
       return;
     }
     await createEvent(appUser.uid, { ...event, tripId: id! });
+    await recomputeEventConflicts(id!);
   };
 
   const handleRequestDeleteSelected = async () => {
@@ -335,6 +340,7 @@ const TripPage = () => {
     await Promise.all(
       selected.map(e => deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)),
     );
+    await recomputeEventConflicts(id!);
     setDeleteConfirmIds(null);
     await deselectAll();
   };
@@ -401,6 +407,7 @@ const TripPage = () => {
       await Promise.all(
         lodgingEvents.map((lodgingEvent) => createEvent(appUser.uid, { ...lodgingEvent, tripId: event.tripId }))
       );
+      await recomputeEventConflicts(id!);
       await Promise.all(groupedEvents.map((grouped) => releaseEventLock(id!, grouped.id, appUser.uid)));
       setEditingEvent(null);
       await deselectAll();
@@ -415,6 +422,7 @@ const TripPage = () => {
     } else {
       await updateEvent(appUser.uid, event.tripId, event.dayId, event.id, updated);
     }
+    await recomputeEventConflicts(id!);
     await releaseEventLock(id!, event.id, appUser.uid);
     setEditingEvent(null);
     await deselectAll();
@@ -437,12 +445,34 @@ const TripPage = () => {
   const handleApproveSuggestion = async (event: Event) => {
     if (!appUser || !event.suggestion) return;
     await resolveSuggestionByVote(appUser.uid, event, 'approve');
+    await recomputeEventConflicts(id!);
   };
 
   const handleDeleteSuggestion = async (event: Event) => {
     if (!appUser || !event.suggestion) return;
     await resolveSuggestionByVote(appUser.uid, event, 'delete');
+    await recomputeEventConflicts(id!);
   };
+
+  const handleDismissConflict = async (event: Event) => {
+    if (!appUser) return;
+    await dismissEventConflict(event.tripId, event.dayId, event.id);
+  };
+
+  useEffect(() => {
+    if (!id || !appUser || events.length === 0) return;
+    if (bootstrappedConflictsRef.current || recomputingConflictsRef.current) return;
+
+    recomputingConflictsRef.current = true;
+    bootstrappedConflictsRef.current = true;
+    recomputeEventConflicts(id)
+      .catch((error) => {
+        console.error('Failed to backfill event conflict metadata.', error);
+      })
+      .finally(() => {
+        recomputingConflictsRef.current = false;
+      });
+  }, [id, appUser, events]);
 
   if (loading) {
     return (
@@ -561,6 +591,7 @@ const TripPage = () => {
               canApproveSuggestion={canApproveSuggestion}
               onApproveSuggestion={handleApproveSuggestion}
               onDeleteSuggestion={handleDeleteSuggestion}
+              onDismissConflict={handleDismissConflict}
             />
           </div>
         </main>
@@ -629,6 +660,7 @@ const TripPage = () => {
           tripSpent={events.reduce((sum, e) => sum + (e.cost ?? 0), 0)}
           canCreateEvent={canCreateEvent}
           canProposeEvent={canProposeCreateEvent}
+          existingEvents={events}
         />
 
         <EventFormModal
@@ -644,6 +676,7 @@ const TripPage = () => {
           mode={editingEvent?.lock === 'readonly' ? 'readonly' : 'edit'}
           initialEvent={editingEvent?.event}
           lockHolderName={editingEvent?.holderName}
+          existingEvents={events}
         />
 
         {showDeleteConfirm && createPortal(

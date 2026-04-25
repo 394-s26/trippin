@@ -22,6 +22,7 @@ interface ItineraryListProps {
   canApproveSuggestion?: boolean;
   onApproveSuggestion?: (event: Event) => void;
   onDeleteSuggestion?: (event: Event) => void;
+  onDismissConflict?: (event: Event) => void;
 }
 
 const ItineraryList = ({
@@ -39,7 +40,17 @@ const ItineraryList = ({
   canApproveSuggestion = false,
   onApproveSuggestion,
   onDeleteSuggestion,
+  onDismissConflict,
 }: ItineraryListProps) => {
+  const eventNameById = new Map<string, string>();
+  days.forEach((day) => {
+    day.events.forEach((event) => {
+      if (!eventNameById.has(event.id)) {
+        eventNameById.set(event.id, event.name);
+      }
+    });
+  });
+
   return (
     <div className="itinerary-list">
       {days.map((day, index) => (
@@ -79,10 +90,12 @@ const ItineraryList = ({
                     currentUserId={currentUserId}
                     tripUsers={tripUsers}
                     totalTripUsers={totalTripUsers}
+                    conflictWithEventName={(event.conflictEventIds?.[0] && eventNameById.get(event.conflictEventIds[0])) || null}
                     onVoteSuggestion={onVoteSuggestion}
                     canApproveSuggestion={canApproveSuggestion}
                     onApproveSuggestion={onApproveSuggestion}
                     onDeleteSuggestion={onDeleteSuggestion}
+                    onDismissConflict={onDismissConflict}
                   />
                 );
               })

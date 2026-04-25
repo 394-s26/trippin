@@ -30,6 +30,8 @@ interface BaseEvent {
   color?: string | null;
   allDay?: boolean;
   suggestion?: EventSuggestion | null;
+  conflictEventIds?: string[];
+  conflictDismissed?: boolean;
 }
 
 // Transportation-specific event types
@@ -131,4 +133,6 @@ export interface EventUpdate {
   color?: string | null;
   allDay?: boolean;
   suggestion?: EventSuggestion | null;
+  conflictEventIds?: string[];
+  conflictDismissed?: boolean;
 }

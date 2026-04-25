@@ -457,6 +457,10 @@
   @apply flex items-center gap-5 ml-8;
 }
 
+.event-form-conflict-banner {
+  @apply mt-3 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-800;
+}
+
 .when-allday {
   @apply flex items-center gap-2 text-sm text-gray-700 cursor-pointer;
 }
