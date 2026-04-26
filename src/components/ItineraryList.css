@@ -147,12 +147,13 @@
 
 .all-day-section {
   @apply flex flex-col gap-3 rounded-xl px-3 pt-2 pb-3 mb-1;
-  background: rgba(59, 130, 246, 0.07);
+  background: rgba(148, 130, 40, 0.07);
 }
 
 .all-day-section-label {
-  @apply text-xs font-semibold text-blue-400 mb-1 rounded-full px-2 py-0.5 self-start;
-  background: rgba(59, 130, 246, 0.2);
+  @apply text-xs font-semibold text-white mb-1 rounded-full px-2 py-0.5 self-start;
+  background: rgba(148, 130, 40, 0.75);
+  /* background: var(--color-tertiary); */
 }
 
 .event-card-row--large-gap--1 {

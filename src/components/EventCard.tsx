@@ -67,6 +67,7 @@ const EventCard = ({
   );
   const firstOther = pickFirstSelector(allSelections, event.id, currentUserId);
   const isSuggestion = !!event.suggestion;
+  const showVotingUI = isSuggestion && (!daySlice || daySlice.dayIndex === 1);
   const suggestionType = event.suggestion?.type;
   const myVote = currentUserId && event.suggestion
     ? (event.suggestion.votes.yes.includes(currentUserId) ? 'yes' : event.suggestion.votes.no.includes(currentUserId) ? 'no' : null)
@@ -107,17 +108,29 @@ const EventCard = ({
   const voteTitle = suggestionType === 'delete' ? 'Vote: should we remove this?' : 'Vote: should we do this?';
   const proposalBadge = suggestionType === 'delete' ? 'Delete Proposal' : 'Proposed';
 
+  const selectorAvatars = otherSelectors.length > 0 && (
+    <div className="event-card-selectors">
+      {otherSelectors.map(s => (
+        <UserAvatar
+          key={s.uid}
+          user={tripUsers.find(u => u.uid === s.uid) ?? null}
+          size="sm"
+          borderColor={s.color}
+        />
+      ))}
+    </div>
+  );
+
   const lookupUser = (uid: string): AppUser | null =>
     tripUsers.find(u => u.uid === uid) ?? null;
   const yesVoterUids = event.suggestion?.votes.yes ?? [];
   const noVoterUids = event.suggestion?.votes.no ?? [];
   const approveLabel = suggestionType === 'delete' ? 'Approve deletion' : 'Approve event';
+  const rejectLabel = suggestionType === 'delete' ? 'Reject deletion' : 'Reject event';
   const voteThreshold = getSuggestionVoteThreshold(totalUsers);
-  const canCommunityApproveEvent = suggestionType !== 'delete' && yesVotes >= voteThreshold;
-  const canCommunityDeleteEvent = suggestionType !== 'delete' && noVotes >= voteThreshold;
-  const showApproveButton = suggestionType === 'delete'
-    ? canApproveSuggestion
-    : (canApproveSuggestion || canCommunityApproveEvent);
+  const canCommunityApproveEvent = yesVotes >= voteThreshold;
+  const canCommunityDeleteEvent = noVotes >= voteThreshold;
+  const showApproveButton = canApproveSuggestion || canCommunityApproveEvent;
 
   return (
     <div className={cardClass} style={cardStyle} data-event-id={event.id} onClick={(e) => { e.stopPropagation(); onSelect?.(); }}>
@@ -126,33 +139,31 @@ const EventCard = ({
       )}
       <div className="event-card-header">
         <div className="event-card-body">
-          <div className="event-card-time-row">
-            {!daySlice?.isAllDay && <span className="event-card-time">{time}</span>}
-            {conflictWithEventName && (
-              <span className="event-card-conflict">
-                Time conflict with "{conflictWithEventName}"
-              </span>
-            )}
-            {showSpanPill && (
-              <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
-            )}
-            {isSuggestion && (
-              <span className="event-card-proposed-badge">{proposalBadge}</span>
-            )}
-            {otherSelectors.length > 0 && (
-              <div className="event-card-selectors">
-                {otherSelectors.map(s => (
-                  <UserAvatar
-                    key={s.uid}
-                    user={tripUsers.find(u => u.uid === s.uid) ?? null}
-                    size="sm"
-                    borderColor={s.color}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-          <h3 className="event-card-name">{displayName}</h3>
+          {!daySlice?.isAllDay && (
+            <div className="event-card-time-row">
+              <span className="event-card-time">{time}</span>
+              {conflictWithEventName && (
+                <span className="event-card-conflict">
+                  Time conflict with "{conflictWithEventName}"
+                </span>
+              )}
+              {showSpanPill && (
+                <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
+              )}
+              {isSuggestion && (
+                <span className="event-card-proposed-badge">{proposalBadge}</span>
+              )}
+              {selectorAvatars}
+            </div>
+          )}
+          {daySlice?.isAllDay ? (
+            <div className="event-card-name-row">
+              <h3 className="event-card-name">{displayName}</h3>
+              {selectorAvatars}
+            </div>
+          ) : (
+            <h3 className="event-card-name">{displayName}</h3>
+          )}
           {event.location && !isLodgingStayEvent && (
             <div className="event-card-location">
               <LocationPinIcon size={16} className={"event-card-location--svg"} />
@@ -174,7 +185,7 @@ const EventCard = ({
         </div>
       </div>
 
-      {isSuggestion && (
+      {showVotingUI && (
         <div className="event-card-vote" onClick={(e) => e.stopPropagation()}>
           <p className="event-card-vote-title">{voteTitle}</p>
 
@@ -224,23 +235,27 @@ const EventCard = ({
             </button>
           </div>
 
-          {showApproveButton && (
-            <button
-              type="button"
-              className="event-card-approve-btn"
-              onClick={() => onApproveSuggestion?.(event)}
-            >
-              {approveLabel}
-            </button>
-          )}
-          {canCommunityDeleteEvent && (
-            <button
-              type="button"
-              className="event-card-approve-btn event-card-approve-btn--danger"
-              onClick={() => onDeleteSuggestion?.(event)}
-            >
-              Delete event
-            </button>
+          {(showApproveButton || canApproveSuggestion || canCommunityDeleteEvent) && (
+            <div className="event-card-approve-actions">
+              {showApproveButton && (
+                <button
+                  type="button"
+                  className="submit-btn flex-1"
+                  onClick={() => onApproveSuggestion?.(event)}
+                >
+                  {approveLabel}
+                </button>
+              )}
+              {(canApproveSuggestion || canCommunityDeleteEvent) && (
+                <button
+                  type="button"
+                  className="submit-btn red flex-1"
+                  onClick={() => onDeleteSuggestion?.(event)}
+                >
+                  {rejectLabel}
+                </button>
+              )}
+            </div>
           )}
 
           <div className="event-card-consensus-track">

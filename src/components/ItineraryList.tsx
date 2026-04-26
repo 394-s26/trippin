@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
 import EventCard from './EventCard';
-import { PencilIcon, CheckIcon, PlusIcon, TrashIcon, GearIcon, SparkleIcon } from '../services/svgIcons';
+import { PlusIcon, SparkleIcon } from '../services/svgIcons';
 import { sliceEventForDay } from '../utilities/eventOverlapsDay';
 import { Day } from '../types/day';
 import { AppUser } from '../types/auth';
@@ -11,8 +10,6 @@ import './ItineraryList.css';
 interface ItineraryListProps {
   days: Day[];
   onAddDay?: () => void;
-  onUpdateDayLabel?: (dayId: string, label: string) => void;
-  onDeleteDay?: (dayId: string) => void;
   onAddEvent: (day: Day) => void;
   onAutoFillDay?: (day: Day) => void;
   onSelectEvent?: (eventId: string) => void;
@@ -22,9 +19,6 @@ interface ItineraryListProps {
   tripUsers?: AppUser[];
   totalTripUsers?: number;
   canAddEvent?: boolean;
-  canAddDay?: boolean;
-  canEditDay?: boolean;
-  canDeleteDay?: boolean;
   addEventLabel?: string;
   onVoteSuggestion?: (event: Event, vote: SuggestionVote) => void;
   canApproveSuggestion?: boolean;
@@ -35,8 +29,6 @@ interface ItineraryListProps {
 const ItineraryList = ({
   days,
   onAddDay: _onAddDay,
-  onUpdateDayLabel,
-  onDeleteDay,
   onAddEvent,
   onAutoFillDay,
   onSelectEvent,
@@ -46,183 +38,64 @@ const ItineraryList = ({
   tripUsers = [],
   totalTripUsers = 0,
   canAddEvent = false,
-  canEditDay = false,
-  canDeleteDay = false,
   addEventLabel: _addEventLabel = 'Event',
   onVoteSuggestion,
   canApproveSuggestion = false,
   onApproveSuggestion,
   onDeleteSuggestion,
 }: ItineraryListProps) => {
-  const [editingDay, setEditingDay] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [openMenuDayId, setOpenMenuDayId] = useState<string | null>(null);
-  const menuRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
-
-  useEffect(() => {
-    if (!openMenuDayId) return;
-    const handler = (e: MouseEvent) => {
-      const node = menuRefs.current.get(openMenuDayId);
-      if (node && !node.contains(e.target as Node)) setOpenMenuDayId(null);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [openMenuDayId]);
-
-  const startEdit = (day: Day) => {
-    setEditingDay(day.id);
-    setEditValue(day.label);
-  };
-
-  const commitEdit = (dayId: string) => {
-    if (editValue.trim() && onUpdateDayLabel) {
-      onUpdateDayLabel(dayId, editValue.trim());
-    }
-    setEditingDay(null);
-  };
-
   return (
     <div className="itinerary-list">
       {days.map((day, index) => {
-        const isEditing = editingDay === day.id;
-        const isConfirmingDelete = confirmDeleteId === day.id;
-
         return (
-          <section
-            key={day.id}
-            className={`day-section ${isEditing ? 'day-section-editing' : ''}`}
-          >
+          <section key={day.id} className="day-section">
             <div className="day-header">
               <span className="day-number">
                 {index + 1}
               </span>
 
               <div className="day-label-wrapper">
-                {isEditing ? (
-                  <>
-                    <input
-                      autoFocus
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') commitEdit(day.id); }}
-                      className="day-label-input"
-                    />
+                <span className="day-label-text">
+                  {day.label}
+                </span>
+
+                <div className="day-actions">
+                  {onAutoFillDay && (
                     <button
-                      onClick={() => commitEdit(day.id)}
-                      aria-label="Confirm day label"
-                      className="day-confirm-btn"
+                      onClick={() => onAutoFillDay(day)}
+                      aria-label={`Auto-fill day ${index + 1}`}
+                      className="day-auto-fill-btn"
                     >
-                      <CheckIcon size={18} />
+                      <SparkleIcon size={14} />
+                      Auto-fill day
                     </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="day-label-text">
-                      {day.label}
-                    </span>
-
-                    {/* Right-aligned action buttons */}
-                    <div className="day-actions">
-                      {onAutoFillDay && (
-                        <button
-                          onClick={() => onAutoFillDay(day)}
-                          aria-label={`Auto-fill day ${index + 1}`}
-                          className="day-auto-fill-btn"
-                        >
-                          <SparkleIcon size={14} />
-                          Auto-fill day
-                        </button>
-                      )}
-                      {canAddEvent && (
-                        <button
-                          onClick={() => onAddEvent?.(day)}
-                          aria-label={`Add event to day ${index + 1}`}
-                          className="day-add-event-btn"
-                        >
-                          <PlusIcon size={14} />
-                          Event
-                        </button>
-                      )}
-                      {(canEditDay || canDeleteDay) && (
-                        <div
-                          className="day-menu-wrapper"
-                          ref={(el) => { menuRefs.current.set(day.id, el); }}
-                        >
-                          <button
-                            onClick={() => setOpenMenuDayId(openMenuDayId === day.id ? null : day.id)}
-                            aria-label={`Day ${index + 1} options`}
-                            aria-expanded={openMenuDayId === day.id}
-                            aria-haspopup="menu"
-                            className={`day-gear-btn${openMenuDayId === day.id ? ' day-gear-btn--open' : ''}`}
-                          >
-                            <GearIcon size={20} />
-                          </button>
-
-                          {openMenuDayId === day.id && (
-                            <div className="day-menu" role="menu">
-                              {canEditDay && (
-                                <button
-                                  role="menuitem"
-                                  onClick={() => { setOpenMenuDayId(null); startEdit(day); }}
-                                  className="day-menu-item"
-                                >
-                                  <PencilIcon size={16} />
-                                  <span>Rename</span>
-                                </button>
-                              )}
-                              {canDeleteDay && (
-                                <button
-                                  role="menuitem"
-                                  onClick={() => { setOpenMenuDayId(null); setConfirmDeleteId(day.id); }}
-                                  className="day-menu-item day-menu-item--danger"
-                                >
-                                  <TrashIcon size={16} />
-                                  <span>Delete</span>
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Delete confirmation popover */}
-                      {isConfirmingDelete && (
-                        <div className="delete-popover">
-                          <p className="delete-popover-text">
-                            Delete Day {index + 1} and all its events?
-                          </p>
-                          <div className="delete-popover-actions">
-                            <button
-                              onClick={() => {
-                                onDeleteDay?.(day.id);
-                                setConfirmDeleteId(null);
-                              }}
-                              className="delete-confirm-btn"
-                            >
-                              Delete
-                            </button>
-                            <button
-                              onClick={() => setConfirmDeleteId(null)}
-                              className="delete-cancel-btn"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
+                  )}
+                  {canAddEvent && (
+                    <button
+                      onClick={() => onAddEvent?.(day)}
+                      aria-label={`Add event to day ${index + 1}`}
+                      className="day-add-event-btn"
+                    >
+                      <PlusIcon size={14} />
+                      Event
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
             <div className="day-events">
               <div className="day-timeline" />
               {day.events.length > 0 ? (() => {
-                  const slices = day.events.map(e => sliceEventForDay(e, day));
-                  const allDayEvents = day.events.filter((_, i) => slices[i]?.isAllDay);
-                  const timedEvents = day.events.filter((_, i) => !slices[i]?.isAllDay);
+                  const deletedTargetIds = new Set(
+                    day.events
+                      .filter(e => e.suggestion?.type === 'delete' && e.suggestion.targetEventId)
+                      .map(e => e.suggestion!.targetEventId as string)
+                  );
+                  const visibleEvents = day.events.filter(e => !deletedTargetIds.has(e.id));
+                  const slices = visibleEvents.map(e => sliceEventForDay(e, day));
+                  const allDayEvents = visibleEvents.filter((_, i) => slices[i]?.isAllDay);
+                  const timedEvents = visibleEvents.filter((_, i) => !slices[i]?.isAllDay);
                   const timedSlices = slices.filter(s => !s?.isAllDay);
 
                   return (
@@ -231,7 +104,7 @@ const ItineraryList = ({
                         <div className="all-day-section">
                           <span className="all-day-section-label">All Day</span>
                           {allDayEvents.map((event) => {
-                            const slice = slices[day.events.indexOf(event)];
+                            const slice = slices[visibleEvents.indexOf(event)];
                             return (
                               <div key={`${event.id}-${day.id}`} className="event-card-row">
                                 <EventCard
