@@ -22,7 +22,7 @@ import { useDays } from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
 import { useEventLock } from '../hooks/useEventLock';
-import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, resolveSuggestionByVote } from '../services/firestoreEventsService';
+import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, resolveSuggestionByVote, rejectDeletionSuggestion } from '../services/firestoreEventsService';
 import { eventOverlapsDay, sliceEventForDay } from '../utilities/eventOverlapsDay';
 import { EVENT_CATEGORY } from '../types/event';
 import { useAuth } from '../contexts/AuthContext';
@@ -368,7 +368,7 @@ const TripPage = () => {
   const handleConfirmDeleteSelected = async () => {
     if (!appUser || !deleteConfirmIds) return;
     if (pendingSuggestionDelete) {
-      await resolveSuggestionByVote(appUser.uid, pendingSuggestionDelete, 'delete');
+      await resolveSuggestionByVote(appUser.uid, pendingSuggestionDelete, 'approve');
       setPendingSuggestionDelete(null);
     } else {
       const selected = events.filter(e => deleteConfirmIds.includes(e.id));
@@ -477,7 +477,11 @@ const TripPage = () => {
 
   const handleApproveSuggestion = async (event: Event) => {
     if (!appUser || !event.suggestion) return;
-    await resolveSuggestionByVote(appUser.uid, event, 'approve');
+    if (event.suggestion.type === 'delete') {
+      await rejectDeletionSuggestion(appUser.uid, event);
+    } else {
+      await resolveSuggestionByVote(appUser.uid, event, 'approve');
+    }
   };
 
   const handleDeleteSuggestion = (event: Event) => {

@@ -20,6 +20,14 @@
   @apply bg-[#eef7e9] border-[#dcead6];
 }
 
+.event-card--suggestion-delete {
+  @apply bg-red-50 border-red-200;
+}
+
+.event-card--suggestion-delete:hover {
+  @apply bg-red-100 border-red-200;
+}
+
 .event-card--selected {
   @apply border-4 border-primary;
 }
@@ -81,6 +89,10 @@
   @apply text-[10px] uppercase tracking-[0.18em] font-semibold rounded-full px-2.5 py-1 bg-primary text-white;
 }
 
+.event-card-proposed-badge--delete {
+  @apply bg-red-700;
+}
+
 .event-card-name {
   @apply font-semibold text-gray-900 text-sm leading-snug;
 }
@@ -122,7 +134,7 @@
 }
 
 .event-card-vote-title {
-  @apply text-[11px] uppercase tracking-[0.18em] font-semibold text-primary mb-3;
+  @apply text-[13px] uppercase tracking-[0.18em] font-semibold text-primary mb-3;
 }
 
 .event-card-vote-actions {

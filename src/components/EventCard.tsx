@@ -93,7 +93,8 @@ const EventCard = ({
 
   const cardClass = [
     'event-card',
-    isSuggestion ? 'event-card--suggestion' : '',
+    isSuggestion && suggestionType !== 'delete' ? 'event-card--suggestion' : '',
+    isSuggestion && suggestionType === 'delete' ? 'event-card--suggestion-delete' : '',
     isSelected ? 'event-card--selected' : '',
     !isSelected && useOtherBorder ? 'event-card--selected-session' : '',
     (isLodgingMiddleDay || isLodgingStayEvent) ? 'event-card--lodging-stay' : '',
@@ -151,7 +152,7 @@ const EventCard = ({
                 <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
               )}
               {isSuggestion && (
-                <span className="event-card-proposed-badge">{proposalBadge}</span>
+                <span className={`event-card-proposed-badge${suggestionType === 'delete' ? ' event-card-proposed-badge--delete' : ''}`}>{proposalBadge}</span>
               )}
               {selectorAvatars}
             </div>
@@ -200,7 +201,7 @@ const EventCard = ({
                 <CheckIcon size={18} />
               </span>
               <span className="event-card-vote-btn-label">
-                {suggestionType === 'delete' ? 'Do it' : 'Count me in'}
+                {suggestionType === 'delete' ? 'Remove it' : 'Count me in'}
               </span>
               {yesVoterUids.length > 0 && (
                 <span className="event-card-vote-voters" aria-label={`${yesVotes} yes voters`}>
@@ -241,7 +242,7 @@ const EventCard = ({
                 <button
                   type="button"
                   className="submit-btn flex-1"
-                  onClick={() => onApproveSuggestion?.(event)}
+                  onClick={() => suggestionType === 'delete' ? onDeleteSuggestion?.(event) : onApproveSuggestion?.(event)}
                 >
                   {approveLabel}
                 </button>
@@ -250,7 +251,7 @@ const EventCard = ({
                 <button
                   type="button"
                   className="submit-btn red flex-1"
-                  onClick={() => onDeleteSuggestion?.(event)}
+                  onClick={() => suggestionType === 'delete' ? onApproveSuggestion?.(event) : onDeleteSuggestion?.(event)}
                 >
                   {rejectLabel}
                 </button>

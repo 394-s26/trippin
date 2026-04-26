@@ -17,7 +17,7 @@
 }
 
 .suggestion-toggle-card {
-  @apply flex items-center justify-between gap-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3;
+  @apply flex items-center justify-between gap-4 rounded-2xl border border-green-200 bg-green-100 px-4 py-3;
 }
 
 .suggestion-toggle-card--locked {
@@ -33,7 +33,7 @@
 }
 
 .suggestion-toggle-switch {
-  @apply relative shrink-0 h-8 w-14 rounded-full bg-green-200 transition-colors duration-150;
+  @apply relative shrink-0 h-8 w-14 rounded-full bg-gray-200 transition-colors duration-150;
 }
 
 .suggestion-toggle-switch:disabled {
