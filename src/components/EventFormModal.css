@@ -87,6 +87,16 @@
   .suggestion-toggle-card--on .ballot-anim__box {
     animation: ballot-box-bounce 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.45s;
   }
+
+  /* Explorer auto-on: modal is already open in suggestion mode, so give the
+     title slide time to finish before the ballot drops. */
+  .suggestion-toggle-card--on.suggestion-toggle-card--auto .ballot-anim__paper {
+    animation-delay: 1.4s;
+  }
+
+  .suggestion-toggle-card--on.suggestion-toggle-card--auto .ballot-anim__box {
+    animation-delay: 1.4s;
+  }
 }
 
 @keyframes ballot-paper-drop {

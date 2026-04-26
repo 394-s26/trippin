@@ -20,7 +20,7 @@ import { useDays } from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
 import { useEventLock } from '../hooks/useEventLock';
-import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, resolveSuggestionByVote, rejectDeletionSuggestion } from '../services/firestoreEventsService';
+import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, resolveSuggestionByVote, rejectDeletionSuggestion, rejectCreateSuggestion } from '../services/firestoreEventsService';
 import { eventOverlapsDay, sliceEventForDay } from '../utilities/eventOverlapsDay';
 import { EVENT_CATEGORY } from '../types/event';
 import { useAuth } from '../contexts/AuthContext';
@@ -345,7 +345,14 @@ const TripPage = () => {
   const handleConfirmDeleteSelected = async () => {
     if (!appUser || !deleteConfirmIds) return;
     if (pendingSuggestionDelete) {
-      await resolveSuggestionByVote(appUser.uid, pendingSuggestionDelete, 'approve');
+      // For a CREATE proposal being rejected, the event doesn't exist yet — the
+      // doc is just the proposal. Deleting it removes the would-be event.
+      // For a DELETE proposal being approved, we want to delete the real target.
+      if (pendingSuggestionDelete.suggestion?.type === 'create') {
+        await rejectCreateSuggestion(appUser.uid, pendingSuggestionDelete);
+      } else {
+        await resolveSuggestionByVote(appUser.uid, pendingSuggestionDelete, 'approve');
+      }
       setPendingSuggestionDelete(null);
     } else {
       const selected = events.filter(e => deleteConfirmIds.includes(e.id));

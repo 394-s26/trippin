@@ -593,7 +593,7 @@ const EventFormModal = ({
           {/* Suggestion toggle */}
           {showSuggestionToggle && mode === 'create' && (
             <div
-              className={`suggestion-toggle-card${suggestionOnly ? ' suggestion-toggle-card--locked' : ''}${isSuggestion ? ' suggestion-toggle-card--on' : ''}`}
+              className={`suggestion-toggle-card${suggestionOnly ? ' suggestion-toggle-card--locked suggestion-toggle-card--auto' : ''}${isSuggestion ? ' suggestion-toggle-card--on' : ''}`}
             >
               <div className="ballot-anim" aria-hidden="true">
                 <BallotBoxIcon className="ballot-anim__box" size={44} />

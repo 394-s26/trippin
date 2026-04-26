@@ -33,9 +33,6 @@ interface AutoFillRequest {
   locationName: string;
 }
 
-// Roles that can run auto-fill. Explorers can also auto-fill — their resulting events
-// become suggestions on the client side via createEvent's permission-based mode resolver.
-const ALLOWED_ROLES = new Set(["owner", "manager", "explorer"]);
 
 // Geoapify category → app Event type. First-match wins when a place has multiple categories.
 const CATEGORY_MAP: ReadonlyArray<[string, AppEventType]> = [
@@ -196,10 +193,8 @@ export const autoFillDay = onCall(
     const tripSnap = await db.doc(`trips/${tripId}`).get();
     if (!tripSnap.exists) throw new HttpsError("not-found", "Trip not found.");
     const tripData = tripSnap.data()!;
-    const role = tripData.userId === uid
-      ? "owner"
-      : tripData.permissions?.[uid];
-    if (!role || !ALLOWED_ROLES.has(role)) {
+    const isMember = tripData.userId === uid || !!tripData.permissions?.[uid];
+    if (!isMember) {
       throw new HttpsError("permission-denied", "You don't have permission to auto-fill this day.");
     }
 

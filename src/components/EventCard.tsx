@@ -102,7 +102,7 @@ const EventCard = ({
   const cardStyle = (useOtherBorder ? { borderColor: firstOther.color } : undefined) as CSSProperties | undefined;
   const consensusFillStyle = {
     width: `${consensusRatio * 100}%`,
-    backgroundColor: leadingVote === 'yes' ? '#2d5a27' : '#b42318',
+    backgroundColor: suggestionType === 'delete' ? '#b42318' : leadingVote === 'yes' ? '#2d5a27' : '#b42318',
   };
   const yesStyle = { ['--vote-fill' as string]: `${yesRatio * 100}%` } as CSSProperties;
   const noStyle = { ['--vote-fill' as string]: `${noRatio * 100}%` } as CSSProperties;
@@ -186,85 +186,116 @@ const EventCard = ({
         </div>
       </div>
 
-      {showVotingUI && (
-        <div className="event-card-vote" onClick={(e) => e.stopPropagation()}>
-          <p className="event-card-vote-title">{voteTitle}</p>
+      {showVotingUI && (() => {
+        // For DELETE proposals, "yes" is destructive (red) and "no" is preserve
+        // (green). For CREATE proposals it's the opposite. We render the
+        // preserve/positive button first so destructive actions sit below.
+        const yesIsDestructive = suggestionType === 'delete';
+        const yesBtnTone = yesIsDestructive ? 'event-card-vote-btn--no' : 'event-card-vote-btn--yes';
+        const noBtnTone = yesIsDestructive ? 'event-card-vote-btn--yes' : 'event-card-vote-btn--no';
 
-          <div className="event-card-vote-actions">
-            <button
-              type="button"
-              className={`event-card-vote-btn event-card-vote-btn--yes${myVote === 'yes' ? ' event-card-vote-btn--active' : ''}`}
-              style={yesStyle}
-              onClick={() => onVoteSuggestion?.(event, 'yes')}
-            >
-              <span className="event-card-vote-btn-icon">
-                <CheckIcon size={18} />
+        const yesButton = (
+          <button
+            type="button"
+            className={`event-card-vote-btn ${yesBtnTone}${myVote === 'yes' ? ' event-card-vote-btn--active' : ''}`}
+            style={yesStyle}
+            onClick={() => onVoteSuggestion?.(event, 'yes')}
+          >
+            <span className="event-card-vote-btn-icon">
+              <CheckIcon size={18} />
+            </span>
+            <span className="event-card-vote-btn-label">
+              {suggestionType === 'delete' ? 'Remove it' : 'Count me in'}
+            </span>
+            {yesVoterUids.length > 0 && (
+              <span className="event-card-vote-voters" aria-label={`${yesVotes} yes voters`}>
+                {yesVoterUids.map(uid => (
+                  <UserAvatar key={uid} user={lookupUser(uid)} size="sm" bordered />
+                ))}
               </span>
-              <span className="event-card-vote-btn-label">
-                {suggestionType === 'delete' ? 'Remove it' : 'Count me in'}
-              </span>
-              {yesVoterUids.length > 0 && (
-                <span className="event-card-vote-voters" aria-label={`${yesVotes} yes voters`}>
-                  {yesVoterUids.map(uid => (
-                    <UserAvatar key={uid} user={lookupUser(uid)} size="sm" bordered />
-                  ))}
-                </span>
-              )}
-              <span className="event-card-vote-btn-count">{yesVotes}/{totalUsers}</span>
-            </button>
+            )}
+            <span className="event-card-vote-btn-count">{yesVotes}/{totalUsers}</span>
+          </button>
+        );
 
-            <button
-              type="button"
-              className={`event-card-vote-btn event-card-vote-btn--no${myVote === 'no' ? ' event-card-vote-btn--active' : ''}`}
-              style={noStyle}
-              onClick={() => onVoteSuggestion?.(event, 'no')}
-            >
-              <span className="event-card-vote-btn-icon">
-                <XIcon size={18} />
+        const noButton = (
+          <button
+            type="button"
+            className={`event-card-vote-btn ${noBtnTone}${myVote === 'no' ? ' event-card-vote-btn--active' : ''}`}
+            style={noStyle}
+            onClick={() => onVoteSuggestion?.(event, 'no')}
+          >
+            <span className="event-card-vote-btn-icon">
+              <XIcon size={18} />
+            </span>
+            <span className="event-card-vote-btn-label">
+              {suggestionType === 'delete' ? 'Keep it' : 'Not worth it'}
+            </span>
+            {noVoterUids.length > 0 && (
+              <span className="event-card-vote-voters" aria-label={`${noVotes} no voters`}>
+                {noVoterUids.map(uid => (
+                  <UserAvatar key={uid} user={lookupUser(uid)} size="sm" bordered />
+                ))}
               </span>
-              <span className="event-card-vote-btn-label">
-                {suggestionType === 'delete' ? 'Keep it' : 'Not worth it'}
-              </span>
-              {noVoterUids.length > 0 && (
-                <span className="event-card-vote-voters" aria-label={`${noVotes} no voters`}>
-                  {noVoterUids.map(uid => (
-                    <UserAvatar key={uid} user={lookupUser(uid)} size="sm" bordered />
-                  ))}
-                </span>
-              )}
-              <span className="event-card-vote-btn-count">{noVotes}/{totalUsers}</span>
-            </button>
-          </div>
+            )}
+            <span className="event-card-vote-btn-count">{noVotes}/{totalUsers}</span>
+          </button>
+        );
 
-          {(showApproveButton || canApproveSuggestion || canCommunityDeleteEvent) && (
-            <div className="event-card-approve-actions">
-              {showApproveButton && (
-                <button
-                  type="button"
-                  className="global-btn default-btn flex-1"
-                  onClick={() => suggestionType === 'delete' ? onDeleteSuggestion?.(event) : onApproveSuggestion?.(event)}
-                >
-                  {approveLabel}
-                </button>
-              )}
-              {(canApproveSuggestion || canCommunityDeleteEvent) && (
-                <button
-                  type="button"
-                  className="global-btn red-btn flex-1"
-                  onClick={() => suggestionType === 'delete' ? onApproveSuggestion?.(event) : onDeleteSuggestion?.(event)}
-                >
-                  {rejectLabel}
-                </button>
-              )}
+        // For DELETE proposals: render "Keep it" (no) first, "Remove it" (yes) below.
+        // For CREATE proposals: keep yes-on-top.
+        const orderedVoteButtons = yesIsDestructive
+          ? <>{noButton}{yesButton}</>
+          : <>{yesButton}{noButton}</>;
+
+        const approveBtn = (
+          <button
+            type="button"
+            key="approve"
+            className={`global-btn ${suggestionType === 'delete' ? 'red-btn' : 'default-btn'} flex-1`}
+            onClick={() => suggestionType === 'delete' ? onDeleteSuggestion?.(event) : onApproveSuggestion?.(event)}
+          >
+            {approveLabel}
+          </button>
+        );
+        const rejectBtn = (
+          <button
+            type="button"
+            key="reject"
+            className={`global-btn ${suggestionType === 'delete' ? 'default-btn' : 'red-btn'} flex-1`}
+            onClick={() => suggestionType === 'delete' ? onApproveSuggestion?.(event) : onDeleteSuggestion?.(event)}
+          >
+            {rejectLabel}
+          </button>
+        );
+
+        // For DELETE proposals: reject (preserve) on left, approve (destructive) on right.
+        // For CREATE proposals: approve (positive) on left, reject (destructive) on right.
+        const orderedApproveButtons = suggestionType === 'delete'
+          ? <>{(canApproveSuggestion || canCommunityDeleteEvent) && rejectBtn}{showApproveButton && approveBtn}</>
+          : <>{showApproveButton && approveBtn}{(canApproveSuggestion || canCommunityDeleteEvent) && rejectBtn}</>;
+
+        return (
+          <div className="event-card-vote" onClick={(e) => e.stopPropagation()}>
+            <p className={`event-card-vote-title${suggestionType === 'delete' ? ' event-card-vote-title--delete' : ''}`}>{voteTitle}</p>
+
+            <div className="event-card-vote-actions">
+              {orderedVoteButtons}
             </div>
-          )}
 
-          <div className="event-card-consensus-track">
-            <span className="event-card-consensus-fill" style={consensusFillStyle} />
+            {(showApproveButton || canApproveSuggestion || canCommunityDeleteEvent) && (
+              <div className="event-card-approve-actions">
+                {orderedApproveButtons}
+              </div>
+            )}
+
+            <div className="event-card-consensus-track">
+              <span className="event-card-consensus-fill" style={consensusFillStyle} />
+            </div>
+            <p className="event-card-consensus-text">{Math.round(consensusRatio * 100)}% consensus</p>
           </div>
-          <p className="event-card-consensus-text">{Math.round(consensusRatio * 100)}% consensus</p>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
