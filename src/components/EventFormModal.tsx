@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Event, EVENT_CATEGORY } from '../types/event';
 import { AppUser } from '../types/auth';
 import { UserIcon } from '../services/svgIcons';
+import { EVENT_COLORS } from '../utilities/eventColors';
 import UserAvatar from './UserAvatar';
 import TimeSelect, { toMinutes } from './TimeSelect';
 import TimezoneModal from './TimezoneModal';
@@ -54,12 +55,12 @@ const computeSmartDefaults = (): { start: string; end: string } => {
   return { start: fmt(startMins), end: fmt(endMins) };
 };
 
-type FormCategory = 'Transportation' | 'Lodging' | 'Event' | 'None';
-const CATEGORIES: FormCategory[] = ['None', 'Transportation', 'Lodging', 'Event'];
+type FormCategory = 'Transportation' | 'Lodging' | 'Activity' | 'None';
+const CATEGORIES: FormCategory[] = ['None', 'Transportation', 'Lodging', 'Activity'];
 const DEFAULT_TYPE_BY_FORM_CATEGORY: Record<FormCategory, Event['type']> = {
   Transportation: 'Car',
   Lodging: 'Hotel',
-  Event: 'Hiking',
+  Activity: 'Hiking',
   None: 'None',
 };
 const toFormCategory = (eventType: Event['type']): FormCategory => {
@@ -794,6 +795,41 @@ const EventFormModal = ({
               if (end != null) setEndTimezone(end);
             }}
           />
+
+          {/* Color label */}
+          <div>
+            <label className="form-label">Label</label>
+            <div className="color-swatch-row">
+              <button
+                type="button"
+                className={`color-swatch color-swatch--none${color == null ? ' color-swatch--selected' : ''}`}
+                onClick={() => setColor(null)}
+                aria-label="No color"
+                aria-pressed={color == null}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="5" y1="19" x2="19" y2="5" />
+                </svg>
+              </button>
+              {EVENT_COLORS.map((c) => (
+                <button
+                  key={c.token}
+                  type="button"
+                  className={`color-swatch${color === c.token ? ' color-swatch--selected' : ''}`}
+                  style={{ backgroundColor: c.hex }}
+                  onClick={() => setColor(c.token)}
+                  aria-label={c.label}
+                  aria-pressed={color === c.token}
+                >
+                  {color === c.token && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Cost & Paid By */}
           <div className="cost-paidby-row">
