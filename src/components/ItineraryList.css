@@ -40,6 +40,98 @@
   @apply flex items-center gap-1 text-xs font-semibold text-white bg-primary border border-primary rounded-lg px-2 py-1 hover:bg-primary-light transition-colors;
 }
 
+.day-auto-fill-btn {
+  @apply flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-2 py-1 hover:bg-indigo-100 transition-colors;
+}
+
+.day-menu-wrapper {
+  @apply relative flex items-center;
+}
+
+.day-gear-btn {
+  @apply inline-flex items-center justify-center rounded-lg text-gray-400 transition-all;
+  width: 36px;
+  height: 36px;
+}
+
+.day-gear-btn:hover {
+  @apply text-primary bg-gray-100;
+}
+
+.day-gear-btn--open {
+  @apply text-primary bg-gray-100;
+  transform: rotate(60deg);
+}
+
+.day-menu {
+  @apply absolute z-30 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden flex flex-col;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 160px;
+  transform-origin: top right;
+  animation: day-menu-pop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.day-menu-item {
+  @apply flex items-center gap-2.5 w-full px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors text-left;
+}
+
+.day-menu-item:hover {
+  @apply bg-gray-50 text-primary;
+}
+
+.day-menu-item--danger {
+  @apply text-gray-700;
+}
+
+.day-menu-item--danger:hover {
+  @apply bg-red-50 text-red-600;
+}
+
+@keyframes day-menu-pop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 640px) {
+  .day-gear-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .day-menu {
+    min-width: 180px;
+  }
+
+  .day-menu-item {
+    @apply py-3;
+  }
+}
+
+.day-gear-btn {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s, background-color 0.15s;
+}
+
+.delete-popover {
+  @apply absolute right-0 top-7 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-52;
+}
+
+.delete-popover-text {
+  @apply text-xs text-gray-700 font-medium mb-3;
+}
+
+.delete-popover-actions {
+  @apply flex gap-2;
+}
+
+.delete-confirm-btn {
+  @apply flex-1 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors;
+}
+
+.delete-cancel-btn {
+  @apply flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-1.5 rounded-lg transition-colors;
+}
+
 .day-events {
   @apply relative pl-4 flex flex-col gap-3;
 }

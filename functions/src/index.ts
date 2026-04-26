@@ -9,6 +9,8 @@ import * as nodemailer from "nodemailer";
 initializeApp();
 const db = getFirestore();
 
+export {autoFillDay} from "./autoFill";
+
 setGlobalOptions({maxInstances: 10});
 
 // Secrets — set via: firebase functions:secrets:set GMAIL_EMAIL / GMAIL_APP_PASSWORD

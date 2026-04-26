@@ -29,6 +29,7 @@ interface BaseEvent {
   paidBy?: string | null;
   color?: string | null;
   allDay?: boolean;
+  imageUrl?: string | null;
   suggestion?: EventSuggestion | null;
 }
 
@@ -136,5 +137,6 @@ export interface EventUpdate {
   paidBy?: string | null;
   color?: string | null;
   allDay?: boolean;
+  imageUrl?: string | null;
   suggestion?: EventSuggestion | null;
 }
