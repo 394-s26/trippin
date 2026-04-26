@@ -261,6 +261,29 @@
   font-size: 0.9rem;
 }
 
+/* ── Day nav panel (below filter toggle) ─────────────────── */
+
+.map-day-nav {
+  @apply absolute top-18 right-0.5 z-[9] flex flex-col gap-1 pointer-events-auto p-1.5 rounded-lg bg-white/70 shadow-sm max-h-[7.75rem] overflow-y-auto;
+}
+
+.map-day-nav--title {
+  @apply text-sm text-gray-800;
+}
+
+.map-day-nav-btn {
+  @apply block px-3 py-1.5 min-w-20 bg-gray-100 border border-transparent rounded-lg text-[0.78rem] font-medium text-gray-700 shadow-sm cursor-pointer text-left whitespace-nowrap transition-all duration-150;
+}
+
+.map-day-nav-btn:hover {
+  @apply bg-white shadow-md;
+}
+
+.map-day-nav-btn--active,
+.map-day-nav-btn--active:hover {
+  @apply bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-[0_2px_6px_rgba(45,90,39,0.35)];
+}
+
 @media (max-width: 768px) {
   .map-layout {
     flex-direction: column;

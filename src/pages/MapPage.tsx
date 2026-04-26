@@ -23,6 +23,17 @@ const ALL_CATEGORIES: EventCategory[] = ['Transportation', 'Lodging', 'Activity'
 const hasCoords = (e: Event): e is Event & { lat: number; lng: number } =>
   typeof e.lat === 'number' && typeof e.lng === 'number';
 
+const ordinal = (n: number): string => {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+};
+
+const formatDayLabel = (date: Date): string => {
+  const month = date.toLocaleDateString('en-US', { month: 'long' });
+  return `${month} ${ordinal(date.getDate())}`;
+};
+
 const PopupContent = ({ event }: { event: Event }) => {
   const date =
     event.startDate instanceof Date
@@ -103,10 +114,20 @@ const MapPage = () => {
   const [selectedCategories, setSelectedCategories] = useState<Set<EventCategory>>(new Set(ALL_CATEGORIES));
   const [nameQuery, setNameQuery] = useState('');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [activeDayIds, setActiveDayIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (days.length > 0 && selectedDayIds.size === 0) {
       setSelectedDayIds(new Set(days.map(d => d.id)));
+    }
+    if (days.length > 0 && activeDayIds.size === 0) {
+      const today = new Date();
+      const todayDay = days.find(d =>
+        d.date.getFullYear() === today.getFullYear() &&
+        d.date.getMonth() === today.getMonth() &&
+        d.date.getDate() === today.getDate(),
+      );
+      if (todayDay) setActiveDayIds(new Set([todayDay.id]));
     }
   }, [days.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -136,14 +157,28 @@ const MapPage = () => {
     });
   }, [mappableEvents, selectedDayIds, selectedCategories, nameQuery]);
 
+  // Single active day = that day's events are the centering target.
+  const singleActiveDayId = activeDayIds.size === 1 ? [...activeDayIds][0] : null;
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded || visibleEvents.length === 0) return;
-
+    if (singleActiveDayId) return; // focused-day effect handles centering
     const bounds = new mapboxgl.LngLatBounds();
     visibleEvents.forEach(e => bounds.extend([e.lng!, e.lat!]));
     map.fitBounds(bounds, { padding: 60, maxZoom: 13, duration: 800 });
-  }, [visibleEvents, mapLoaded]);
+  }, [visibleEvents, mapLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!singleActiveDayId || !mapLoaded) return;
+    const map = mapRef.current;
+    if (!map) return;
+    const dayEvents = mappableEvents.filter(e => e.dayId === singleActiveDayId);
+    if (dayEvents.length === 0) return;
+    const bounds = new mapboxgl.LngLatBounds();
+    dayEvents.forEach(e => bounds.extend([e.lng, e.lat]));
+    map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 800 });
+  }, [singleActiveDayId, mapLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const clearFilters = () => {
     setSelectedDayIds(new Set(days.map(d => d.id)));
@@ -163,10 +198,19 @@ const MapPage = () => {
     map.fitBounds(bounds, { padding: 60, maxZoom: 13, duration: 800 });
   };
 
+  const handleDayNavClick = (dayId: string) => {
+    // Day nav is single-select: clicking it collapses to just that day,
+    // or deselects if it was already the only active day.
+    setActiveDayIds(prev =>
+      prev.size === 1 && prev.has(dayId) ? new Set() : new Set([dayId]),
+    );
+  };
+
   // home-container gives the correct column width; override its min-h-screen so it
   // never exceeds the space available between the fixed header (80px) and navbar (80px).
   const containerStyle: React.CSSProperties = {
     height: 'calc(100dvh - 160px)', // 80px header + 80px navbar
+    marginTop: '65px',
     minHeight: 'unset',
     overflow: 'hidden',
     display: 'flex',
@@ -314,13 +358,37 @@ const MapPage = () => {
                     </svg>
                     Re-center
                   </button>
+                  {!filterOpen && days.length > 0 && (
+                    <div className="map-day-nav">
+                      <p className="map-day-nav--title">Daily Plan</p>
+                      {days.map(day => {
+                        const dateLabel = formatDayLabel(day.date);
+                        const isActive = activeDayIds.size === 1 && activeDayIds.has(day.id);
+                        return (
+                          <button
+                            key={day.id}
+                            type="button"
+                            className={`map-day-nav-btn${isActive ? ' map-day-nav-btn--active' : ''}`}
+                            onClick={() => handleDayNavClick(day.id)}
+                            aria-pressed={isActive}
+                          >
+                            {dateLabel}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
+
+
 
                 <DirectionsExplorer
                   days={days}
                   mappableEvents={mappableEvents}
                   mapRef={mapboxMapRef}
                   accessToken={ACCESS_TOKEN}
+                  activeDayIds={activeDayIds}
+                  onChangeActiveDayIds={setActiveDayIds}
                 />
 
                 {unmappableEvents.length > 0 && (
