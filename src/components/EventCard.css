@@ -61,6 +61,10 @@
   @apply flex items-center gap-2 mb-1 min-h-6;
 }
 
+.event-card-name-row {
+  @apply flex items-center gap-2;
+}
+
 .event-card-time {
   @apply text-xs font-medium bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5;
 }

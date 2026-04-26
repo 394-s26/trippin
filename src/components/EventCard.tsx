@@ -107,6 +107,19 @@ const EventCard = ({
   const voteTitle = suggestionType === 'delete' ? 'Vote: should we remove this?' : 'Vote: should we do this?';
   const proposalBadge = suggestionType === 'delete' ? 'Delete Proposal' : 'Proposed';
 
+  const selectorAvatars = otherSelectors.length > 0 && (
+    <div className="event-card-selectors">
+      {otherSelectors.map(s => (
+        <UserAvatar
+          key={s.uid}
+          user={tripUsers.find(u => u.uid === s.uid) ?? null}
+          size="sm"
+          borderColor={s.color}
+        />
+      ))}
+    </div>
+  );
+
   const lookupUser = (uid: string): AppUser | null =>
     tripUsers.find(u => u.uid === uid) ?? null;
   const yesVoterUids = event.suggestion?.votes.yes ?? [];
@@ -126,33 +139,31 @@ const EventCard = ({
       )}
       <div className="event-card-header">
         <div className="event-card-body">
-          <div className="event-card-time-row">
-            {!daySlice?.isAllDay && <span className="event-card-time">{time}</span>}
-            {conflictWithEventName && (
-              <span className="event-card-conflict">
-                Time conflict with "{conflictWithEventName}"
-              </span>
-            )}
-            {showSpanPill && (
-              <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
-            )}
-            {isSuggestion && (
-              <span className="event-card-proposed-badge">{proposalBadge}</span>
-            )}
-            {otherSelectors.length > 0 && (
-              <div className="event-card-selectors">
-                {otherSelectors.map(s => (
-                  <UserAvatar
-                    key={s.uid}
-                    user={tripUsers.find(u => u.uid === s.uid) ?? null}
-                    size="sm"
-                    borderColor={s.color}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-          <h3 className="event-card-name">{displayName}</h3>
+          {!daySlice?.isAllDay && (
+            <div className="event-card-time-row">
+              <span className="event-card-time">{time}</span>
+              {conflictWithEventName && (
+                <span className="event-card-conflict">
+                  Time conflict with "{conflictWithEventName}"
+                </span>
+              )}
+              {showSpanPill && (
+                <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
+              )}
+              {isSuggestion && (
+                <span className="event-card-proposed-badge">{proposalBadge}</span>
+              )}
+              {selectorAvatars}
+            </div>
+          )}
+          {daySlice?.isAllDay ? (
+            <div className="event-card-name-row">
+              <h3 className="event-card-name">{displayName}</h3>
+              {selectorAvatars}
+            </div>
+          ) : (
+            <h3 className="event-card-name">{displayName}</h3>
+          )}
           {event.location && !isLodgingStayEvent && (
             <div className="event-card-location">
               <LocationPinIcon size={16} className={"event-card-location--svg"} />
