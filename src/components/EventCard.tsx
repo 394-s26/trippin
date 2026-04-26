@@ -70,6 +70,7 @@ const EventCard = ({
   const firstOther = pickFirstSelector(allSelections, event.id, currentUserId);
   const isSuggestion = !!event.suggestion;
   const hasPersistentConflict = (event.conflictEventIds?.length ?? 0) > 0 && event.conflictDismissed !== true;
+  const showVotingUI = isSuggestion && (!daySlice || daySlice.dayIndex === 1);
   const suggestionType = event.suggestion?.type;
   const myVote = currentUserId && event.suggestion
     ? (event.suggestion.votes.yes.includes(currentUserId) ? 'yes' : event.suggestion.votes.no.includes(currentUserId) ? 'no' : null)
@@ -95,7 +96,8 @@ const EventCard = ({
 
   const cardClass = [
     'event-card',
-    isSuggestion ? 'event-card--suggestion' : '',
+    isSuggestion && suggestionType !== 'delete' ? 'event-card--suggestion' : '',
+    isSuggestion && suggestionType === 'delete' ? 'event-card--suggestion-delete' : '',
     isSelected ? 'event-card--selected' : '',
     !isSelected && useOtherBorder ? 'event-card--selected-session' : '',
     (isLodgingMiddleDay || isLodgingStayEvent) ? 'event-card--lodging-stay' : '',
@@ -110,17 +112,29 @@ const EventCard = ({
   const voteTitle = suggestionType === 'delete' ? 'Vote: should we remove this?' : 'Vote: should we do this?';
   const proposalBadge = suggestionType === 'delete' ? 'Delete Proposal' : 'Proposed';
 
+  const selectorAvatars = otherSelectors.length > 0 && (
+    <div className="event-card-selectors">
+      {otherSelectors.map(s => (
+        <UserAvatar
+          key={s.uid}
+          user={tripUsers.find(u => u.uid === s.uid) ?? null}
+          size="sm"
+          borderColor={s.color}
+        />
+      ))}
+    </div>
+  );
+
   const lookupUser = (uid: string): AppUser | null =>
     tripUsers.find(u => u.uid === uid) ?? null;
   const yesVoterUids = event.suggestion?.votes.yes ?? [];
   const noVoterUids = event.suggestion?.votes.no ?? [];
   const approveLabel = suggestionType === 'delete' ? 'Approve deletion' : 'Approve event';
+  const rejectLabel = suggestionType === 'delete' ? 'Reject deletion' : 'Reject event';
   const voteThreshold = getSuggestionVoteThreshold(totalUsers);
-  const canCommunityApproveEvent = suggestionType !== 'delete' && yesVotes >= voteThreshold;
-  const canCommunityDeleteEvent = suggestionType !== 'delete' && noVotes >= voteThreshold;
-  const showApproveButton = suggestionType === 'delete'
-    ? canApproveSuggestion
-    : (canApproveSuggestion || canCommunityApproveEvent);
+  const canCommunityApproveEvent = yesVotes >= voteThreshold;
+  const canCommunityDeleteEvent = noVotes >= voteThreshold;
+  const showApproveButton = canApproveSuggestion || canCommunityApproveEvent;
   const conflictSummary = conflictWithEventName
     ? `Conflicts with "${conflictWithEventName}"`
     : 'Conflicts with another event';
@@ -132,39 +146,37 @@ const EventCard = ({
       )}
       <div className="event-card-header">
         <div className="event-card-body">
-          <div className="event-card-time-row">
-            <span className={`event-card-time${hasPersistentConflict ? ' event-card-time--conflict' : ''}`}>{time}</span>
-            {conflictWithEventName && (
-              <span className="event-card-conflict">
-                Conflict
-              </span>
-            )}
-            {!conflictWithEventName && hasPersistentConflict && (
-              <span className="event-card-conflict">
-                Conflict
-              </span>
-            )}
-            {showSpanPill && (
-              <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
-            )}
-            {isSuggestion && (
-              <span className="event-card-proposed-badge">{proposalBadge}</span>
-            )}
-            {otherSelectors.length > 0 && (
-              <div className="event-card-selectors">
-                {otherSelectors.map(s => (
-                  <UserAvatar
-                    key={s.uid}
-                    user={tripUsers.find(u => u.uid === s.uid) ?? null}
-                    size="sm"
-                    borderColor={s.color}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-          <h3 className="event-card-name">{displayName}</h3>
-          {event.location && (
+          {!daySlice?.isAllDay && (
+            <div className="event-card-time-row">
+              <span className={`event-card-time${hasPersistentConflict ? ' event-card-time--conflict' : ''}`}>{time}</span>
+              {conflictWithEventName && (
+                <span className="event-card-conflict">
+                  Conflict
+                </span>
+              )}
+              {!conflictWithEventName && hasPersistentConflict && (
+                <span className="event-card-conflict">
+                  Conflict
+                </span>
+              )}
+              {showSpanPill && (
+                <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
+              )}
+              {isSuggestion && (
+                <span className={`event-card-proposed-badge${suggestionType === 'delete' ? ' event-card-proposed-badge--delete' : ''}`}>{proposalBadge}</span>
+              )}
+              {selectorAvatars}
+            </div>
+          )}
+          {daySlice?.isAllDay ? (
+            <div className="event-card-name-row">
+              <h3 className="event-card-name">{displayName}</h3>
+              {selectorAvatars}
+            </div>
+          ) : (
+            <h3 className="event-card-name">{displayName}</h3>
+          )}
+          {event.location && !isLodgingStayEvent && (
             <div className="event-card-location">
               <LocationPinIcon size={16} className={"event-card-location--svg"} />
               <p className="event-card-meta"> {event.location}</p>
@@ -203,7 +215,7 @@ const EventCard = ({
         </div>
       </div>
 
-      {isSuggestion && (
+      {showVotingUI && (
         <div className="event-card-vote" onClick={(e) => e.stopPropagation()}>
           <p className="event-card-vote-title">{voteTitle}</p>
 
@@ -218,7 +230,7 @@ const EventCard = ({
                 <CheckIcon size={18} />
               </span>
               <span className="event-card-vote-btn-label">
-                {suggestionType === 'delete' ? 'Do it' : 'Count me in'}
+                {suggestionType === 'delete' ? 'Remove it' : 'Count me in'}
               </span>
               {yesVoterUids.length > 0 && (
                 <span className="event-card-vote-voters" aria-label={`${yesVotes} yes voters`}>
@@ -253,23 +265,27 @@ const EventCard = ({
             </button>
           </div>
 
-          {showApproveButton && (
-            <button
-              type="button"
-              className="event-card-approve-btn"
-              onClick={() => onApproveSuggestion?.(event)}
-            >
-              {approveLabel}
-            </button>
-          )}
-          {canCommunityDeleteEvent && (
-            <button
-              type="button"
-              className="event-card-approve-btn event-card-approve-btn--danger"
-              onClick={() => onDeleteSuggestion?.(event)}
-            >
-              Delete event
-            </button>
+          {(showApproveButton || canApproveSuggestion || canCommunityDeleteEvent) && (
+            <div className="event-card-approve-actions">
+              {showApproveButton && (
+                <button
+                  type="button"
+                  className="global-btn default-btn flex-1"
+                  onClick={() => suggestionType === 'delete' ? onDeleteSuggestion?.(event) : onApproveSuggestion?.(event)}
+                >
+                  {approveLabel}
+                </button>
+              )}
+              {(canApproveSuggestion || canCommunityDeleteEvent) && (
+                <button
+                  type="button"
+                  className="global-btn red-btn flex-1"
+                  onClick={() => suggestionType === 'delete' ? onApproveSuggestion?.(event) : onDeleteSuggestion?.(event)}
+                >
+                  {rejectLabel}
+                </button>
+              )}
+            </div>
           )}
 
           <div className="event-card-consensus-track">

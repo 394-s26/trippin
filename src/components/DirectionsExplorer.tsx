@@ -9,6 +9,10 @@ import './DirectionsExplorer.css';
 
 const ROUTE_SOURCE_PREFIX = 'directions-route-source';
 const ROUTE_LAYER_PREFIX = 'directions-route-layer';
+const ROUTE_ARROW_LAYER_PREFIX = 'directions-route-arrow';
+const ARROW_IMAGE_ID = 'route-direction-arrow';
+
+const ARROW_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="12" height="12"><polygon points="0,0 12,6 0,12 3,6" fill="white"/></svg>`;
 const MAX_WAYPOINTS = 25;
 
 const formatDistance = (meters: number): string => {
@@ -29,6 +33,8 @@ interface DirectionsExplorerProps {
   mappableEvents: Array<Event & { lat: number; lng: number }>;
   mapRef: { current: mapboxgl.Map | null };
   accessToken: string;
+  activeDayIds?: Set<string>;
+  onChangeActiveDayIds?: (ids: Set<string>) => void;
 }
 
 const DirectionsExplorer = ({
@@ -36,14 +42,21 @@ const DirectionsExplorer = ({
   mappableEvents,
   mapRef,
   accessToken,
+  activeDayIds: controlledActiveDayIds,
+  onChangeActiveDayIds,
 }: DirectionsExplorerProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeDayIds, setActiveDayIds] = useState<Set<string>>(new Set());
+  const [internalActiveDayIds, setInternalActiveDayIds] = useState<Set<string>>(new Set());
+  const activeDayIds = controlledActiveDayIds ?? internalActiveDayIds;
+  const setActiveDayIds = onChangeActiveDayIds ?? setInternalActiveDayIds;
   const [loadingDayIds, setLoadingDayIds] = useState<Set<string>>(new Set());
   const [routeInfoMap, setRouteInfoMap] = useState<Map<string, { distance: number; duration: number }>>(new Map());
   const [errorMap, setErrorMap] = useState<Map<string, string>>(new Map());
 
   const routeLabelRefs = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  // Per-day cancel functions so adding a new day never interrupts an existing fetch.
+  const cancelFnsRef = useRef<Map<string, () => void>>(new Map());
+  const prevActiveDayIdsRef = useRef<Set<string>>(new Set());
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, Array<Event & { lat: number; lng: number }>>();
@@ -72,8 +85,10 @@ const DirectionsExplorer = ({
     const map = mapRef.current;
     if (!map) return;
     const layerId = `${ROUTE_LAYER_PREFIX}-${dayId}`;
+    const arrowLayerId = `${ROUTE_ARROW_LAYER_PREFIX}-${dayId}`;
     const sourceId = `${ROUTE_SOURCE_PREFIX}-${dayId}`;
     try {
+      if (map.getLayer(arrowLayerId)) map.removeLayer(arrowLayerId);
       if (map.getLayer(layerId)) map.removeLayer(layerId);
       if (map.getSource(sourceId)) map.removeSource(sourceId);
     } catch {
@@ -112,6 +127,40 @@ const DirectionsExplorer = ({
     };
     map.addLayer(lineLayer);
 
+    const arrowLayerId = `${ROUTE_ARROW_LAYER_PREFIX}-${dayId}`;
+    const addArrowLayer = () => {
+      if (map.getLayer(arrowLayerId)) return;
+      map.addLayer({
+        id: arrowLayerId,
+        type: 'symbol',
+        source: sourceId,
+        layout: {
+          'symbol-placement': 'line',
+          'symbol-spacing': 80,
+          'icon-image': ARROW_IMAGE_ID,
+          'icon-size': 1,
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+        },
+        paint: {
+          'icon-color': '#2D5A27',
+          'icon-halo-color': 'white',
+          'icon-halo-width': 1,
+        },
+      });
+    };
+
+    if (map.hasImage(ARROW_IMAGE_ID)) {
+      addArrowLayer();
+    } else {
+      const img = new Image(12, 12);
+      img.onload = () => {
+        if (!map.hasImage(ARROW_IMAGE_ID)) map.addImage(ARROW_IMAGE_ID, img, { sdf: true });
+        addArrowLayer();
+      };
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(ARROW_SVG)}`;
+    }
+
     const coords = geometry.coordinates;
     const [midLng, midLat] = coords[Math.floor(coords.length / 2)];
     const el = document.createElement('div');
@@ -129,84 +178,97 @@ const DirectionsExplorer = ({
     );
   }, [clearDayRoute]);
 
-  // Fetch and draw routes for all active days whenever the selection changes.
-  useEffect(() => {
-    if (activeDayIds.size === 0) {
-      clearAllRoutes();
-      setRouteInfoMap(new Map());
-      return;
-    }
+  const fetchDayRoute = useCallback((dayId: string) => {
+    const dayEvents = eventsByDay.get(dayId);
+    if (!dayEvents || dayEvents.length < 2) return;
+
+    // Cancel any in-progress fetch for this day before starting a new one.
+    cancelFnsRef.current.get(dayId)?.();
 
     let cancelled = false;
+    cancelFnsRef.current.set(dayId, () => { cancelled = true; });
 
-    clearAllRoutes();
-    setErrorMap(new Map());
-    setLoadingDayIds(new Set(
-      [...activeDayIds].filter(id => (eventsByDay.get(id)?.length ?? 0) >= 2),
-    ));
+    setLoadingDayIds(prev => { const s = new Set(prev); s.add(dayId); return s; });
+    setErrorMap(prev => { const m = new Map(prev); m.delete(dayId); return m; });
 
-    [...activeDayIds].forEach(dayId => {
-      const dayEvents = eventsByDay.get(dayId);
-      if (!dayEvents || dayEvents.length < 2) return;
+    const waypoints: [number, number][] = dayEvents
+      .slice(0, MAX_WAYPOINTS)
+      .map(e => [e.lng, e.lat]);
 
-      const waypoints: [number, number][] = dayEvents
-        .slice(0, MAX_WAYPOINTS)
-        .map(e => [e.lng, e.lat]);
-
-      fetchDirections(waypoints, 'driving', accessToken)
-        .then(result => {
+    fetchDirections(waypoints, 'driving', accessToken)
+      .then(result => {
+        if (cancelled) return;
+        const map = mapRef.current;
+        if (!map) return;
+        const apply = () => {
           if (cancelled) return;
-          const map = mapRef.current;
-          if (!map) return;
-
-          const apply = () => {
-            if (cancelled) return;
-            drawDayRoute(map, dayId, result.geometry, result.distance, result.duration);
-
-            const coords = result.geometry.coordinates;
-            if (coords.length > 0) {
-              const bounds = new mapboxgl.LngLatBounds();
-              coords.forEach(([lng, lat]) => bounds.extend([lng, lat] as [number, number]));
-              map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 800 });
-            }
-
-            setRouteInfoMap(prev => new Map(prev).set(dayId, { distance: result.distance, duration: result.duration }));
-            setLoadingDayIds(prev => { const s = new Set(prev); s.delete(dayId); return s; });
-          };
-
-          if (!map.isStyleLoaded()) {
-            map.once('style.load', apply);
-          } else {
-            apply();
+          drawDayRoute(map, dayId, result.geometry, result.distance, result.duration);
+          const coords = result.geometry.coordinates;
+          if (coords.length > 0) {
+            const bounds = new mapboxgl.LngLatBounds();
+            coords.forEach(([lng, lat]) => bounds.extend([lng, lat] as [number, number]));
+            map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 800 });
           }
-        })
-        .catch((err: unknown) => {
-          if (cancelled) return;
-          const msg = (err instanceof Error ? err.message : null) ?? 'Failed to fetch directions';
-          setErrorMap(prev => new Map(prev).set(dayId, msg));
+          setRouteInfoMap(prev => new Map(prev).set(dayId, { distance: result.distance, duration: result.duration }));
           setLoadingDayIds(prev => { const s = new Set(prev); s.delete(dayId); return s; });
-        });
+          cancelFnsRef.current.delete(dayId);
+        };
+        if (!map.isStyleLoaded()) map.once('style.load', apply);
+        else apply();
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const msg = (err instanceof Error ? err.message : null) ?? 'Failed to fetch directions';
+        setErrorMap(prev => new Map(prev).set(dayId, msg));
+        setLoadingDayIds(prev => { const s = new Set(prev); s.delete(dayId); return s; });
+        cancelFnsRef.current.delete(dayId);
+      });
+  }, [eventsByDay, accessToken, mapRef, drawDayRoute]);
+
+  // React to changes in activeDayIds using delta logic:
+  // only cancel+clear days that were removed, only fetch days that were added.
+  useEffect(() => {
+    const prev = prevActiveDayIdsRef.current;
+    const curr = activeDayIds;
+    prevActiveDayIdsRef.current = curr;
+
+    // Removed days: cancel in-progress fetch and clear the drawn route.
+    [...prev].filter(id => !curr.has(id)).forEach(id => {
+      cancelFnsRef.current.get(id)?.();
+      cancelFnsRef.current.delete(id);
+      clearDayRoute(id);
+      setRouteInfoMap(m => { const n = new Map(m); n.delete(id); return n; });
+      setLoadingDayIds(s => { const n = new Set(s); n.delete(id); return n; });
+      setErrorMap(m => { const n = new Map(m); n.delete(id); return n; });
     });
 
+    // Added days: start a fresh fetch (existing days are untouched).
+    [...curr].filter(id => !prev.has(id)).forEach(id => fetchDayRoute(id));
+  }, [activeDayIds, clearDayRoute, fetchDayRoute]);
+
+  // Retry active days whenever fetchDayRoute changes (i.e. eventsByDay loaded after
+  // activeDayIds was already set via auto-zoom, causing the initial fetch to bail early).
+  useEffect(() => {
+    [...activeDayIds].forEach(id => {
+      if (!cancelFnsRef.current.has(id) && !routeInfoMap.has(id)) {
+        fetchDayRoute(id);
+      }
+    });
+  }, [fetchDayRoute]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cancel all in-progress fetches and clear routes on unmount.
+  useEffect(() => {
     return () => {
-      cancelled = true;
+      cancelFnsRef.current.forEach(cancel => cancel());
+      cancelFnsRef.current.clear();
       clearAllRoutes();
     };
-  }, [activeDayIds, eventsByDay, accessToken, mapRef, clearAllRoutes, drawDayRoute]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setActiveDayIds(new Set());
-      setErrorMap(new Map());
-    }
-  }, [isOpen]);
+  }, [clearAllRoutes]);
 
   const handleDayClick = (dayId: string) => {
-    setActiveDayIds(prev => {
-      const s = new Set(prev);
-      s.has(dayId) ? s.delete(dayId) : s.add(dayId);
-      return s;
-    });
+    const s = new Set(activeDayIds);
+    s.has(dayId) ? s.delete(dayId) : s.add(dayId);
+    setActiveDayIds(s);
     setErrorMap(prev => { const m = new Map(prev); m.delete(dayId); return m; });
   };
 

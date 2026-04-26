@@ -23,6 +23,17 @@ const ALL_CATEGORIES: EventCategory[] = ['Transportation', 'Lodging', 'Activity'
 const hasCoords = (e: Event): e is Event & { lat: number; lng: number } =>
   typeof e.lat === 'number' && typeof e.lng === 'number';
 
+const ordinal = (n: number): string => {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+};
+
+const formatDayLabel = (date: Date): string => {
+  const month = date.toLocaleDateString('en-US', { month: 'long' });
+  return `${month} ${ordinal(date.getDate())}`;
+};
+
 const PopupContent = ({ event }: { event: Event }) => {
   const date =
     event.startDate instanceof Date
@@ -67,7 +78,7 @@ const EventMarker = ({
     >
       <div className="map-marker">
         <div className="map-marker-pin" style={{ color: color, borderColor: color }}>
-          {Icon && <Icon size={16} />}
+          {Icon ? <Icon size={16} /> : <span className="map-marker-initial">{event.name.charAt(0).toUpperCase()}</span>}
           <div className="map-marker-badge" style={{ color, borderColor: color }}>{orderNum}</div>
         </div>
       </div>
@@ -103,10 +114,20 @@ const MapPage = () => {
   const [selectedCategories, setSelectedCategories] = useState<Set<EventCategory>>(new Set(ALL_CATEGORIES));
   const [nameQuery, setNameQuery] = useState('');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [activeDayIds, setActiveDayIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (days.length > 0 && selectedDayIds.size === 0) {
       setSelectedDayIds(new Set(days.map(d => d.id)));
+    }
+    if (days.length > 0 && activeDayIds.size === 0) {
+      const today = new Date();
+      const todayDay = days.find(d =>
+        d.date.getFullYear() === today.getFullYear() &&
+        d.date.getMonth() === today.getMonth() &&
+        d.date.getDate() === today.getDate(),
+      );
+      if (todayDay) setActiveDayIds(new Set([todayDay.id]));
     }
   }, [days.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -119,40 +140,45 @@ const MapPage = () => {
     return m;
   }, [days]);
 
-  const eventOrderMap = useMemo(() => {
-    const order = new Map<string, number>();
-    const byDay = new Map<string, Array<Event & { lat: number; lng: number }>>();
-    mappableEvents.forEach(e => {
-      const arr = byDay.get(e.dayId) ?? [];
-      arr.push(e);
-      byDay.set(e.dayId, arr);
-    });
-    byDay.forEach(dayEvents => {
-      [...dayEvents]
-        .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
-        .forEach((e, i) => order.set(e.id, i + 1));
-    });
-    return order;
-  }, [mappableEvents]);
+  const dayNumberMap = useMemo(() => {
+    const m = new Map<string, number>();
+    days.forEach((day, i) => m.set(day.id, i + 1));
+    return m;
+  }, [days]);
 
   const visibleEvents = useMemo(() => {
     const q = nameQuery.trim().toLowerCase();
     return mappableEvents.filter(e => {
       if (!selectedDayIds.has(e.dayId)) return false;
-      if (!selectedCategories.has(EVENT_CATEGORY[e.type])) return false;
+      const cat = EVENT_CATEGORY[e.type];
+      if (cat && cat !== 'None' && !selectedCategories.has(cat)) return false;
       if (q && !e.name.toLowerCase().includes(q)) return false;
       return true;
     });
   }, [mappableEvents, selectedDayIds, selectedCategories, nameQuery]);
 
+  // Single active day = that day's events are the centering target.
+  const singleActiveDayId = activeDayIds.size === 1 ? [...activeDayIds][0] : null;
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded || visibleEvents.length === 0) return;
-
+    if (singleActiveDayId) return; // focused-day effect handles centering
     const bounds = new mapboxgl.LngLatBounds();
     visibleEvents.forEach(e => bounds.extend([e.lng!, e.lat!]));
     map.fitBounds(bounds, { padding: 60, maxZoom: 13, duration: 800 });
-  }, [visibleEvents, mapLoaded]);
+  }, [visibleEvents, mapLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!singleActiveDayId || !mapLoaded) return;
+    const map = mapRef.current;
+    if (!map) return;
+    const dayEvents = mappableEvents.filter(e => e.dayId === singleActiveDayId);
+    if (dayEvents.length === 0) return;
+    const bounds = new mapboxgl.LngLatBounds();
+    dayEvents.forEach(e => bounds.extend([e.lng, e.lat]));
+    map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 800 });
+  }, [singleActiveDayId, mapLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const clearFilters = () => {
     setSelectedDayIds(new Set(days.map(d => d.id)));
@@ -164,10 +190,27 @@ const MapPage = () => {
     ? (visibleEvents.find(e => e.id === selectedEventId) ?? null)
     : null;
 
+  const handleRecenter = () => {
+    const map = mapRef.current;
+    if (!map || visibleEvents.length === 0) return;
+    const bounds = new mapboxgl.LngLatBounds();
+    visibleEvents.forEach(e => bounds.extend([e.lng!, e.lat!]));
+    map.fitBounds(bounds, { padding: 60, maxZoom: 13, duration: 800 });
+  };
+
+  const handleDayNavClick = (dayId: string) => {
+    // Day nav is single-select: clicking it collapses to just that day,
+    // or deselects if it was already the only active day.
+    setActiveDayIds(prev =>
+      prev.size === 1 && prev.has(dayId) ? new Set() : new Set([dayId]),
+    );
+  };
+
   // home-container gives the correct column width; override its min-h-screen so it
   // never exceeds the space available between the fixed header (80px) and navbar (80px).
   const containerStyle: React.CSSProperties = {
     height: 'calc(100dvh - 160px)', // 80px header + 80px navbar
+    marginTop: '65px',
     minHeight: 'unset',
     overflow: 'hidden',
     display: 'flex',
@@ -262,7 +305,7 @@ const MapPage = () => {
                     <EventMarker
                       key={event.id}
                       event={event}
-                      orderNum={eventOrderMap.get(event.id) ?? 1}
+                      orderNum={dayNumberMap.get(event.dayId) ?? 1}
                       color={dayColorMap.get(event.dayId) ?? '#2D5A27'}
                       onClick={() => setSelectedEventId(event.id)}
                     />
@@ -296,15 +339,56 @@ const MapPage = () => {
                   onClearAll={clearFilters}
                 />
 
-                <div className="map-load-meter" aria-live="polite">
-                  {remaining} map views left
+                <div className="map-top-right-controls">
+                  <div className="map-load-meter" aria-live="polite">
+                    {remaining} map views left
+                  </div>
+                  <button
+                    className="map-recenter-btn"
+                    onClick={handleRecenter}
+                    title="Re-center on events"
+                    aria-label="Re-center map on visible events"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="3"/>
+                      <line x1="12" y1="2" x2="12" y2="6"/>
+                      <line x1="12" y1="18" x2="12" y2="22"/>
+                      <line x1="2" y1="12" x2="6" y2="12"/>
+                      <line x1="18" y1="12" x2="22" y2="12"/>
+                    </svg>
+                    Re-center
+                  </button>
+                  {!filterOpen && days.length > 0 && (
+                    <div className="map-day-nav">
+                      <p className="map-day-nav--title">Daily Plan</p>
+                      {days.map(day => {
+                        const dateLabel = formatDayLabel(day.date);
+                        const isActive = activeDayIds.size === 1 && activeDayIds.has(day.id);
+                        return (
+                          <button
+                            key={day.id}
+                            type="button"
+                            className={`map-day-nav-btn${isActive ? ' map-day-nav-btn--active' : ''}`}
+                            onClick={() => handleDayNavClick(day.id)}
+                            aria-pressed={isActive}
+                          >
+                            {dateLabel}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
+
+
 
                 <DirectionsExplorer
                   days={days}
                   mappableEvents={mappableEvents}
                   mapRef={mapboxMapRef}
                   accessToken={ACCESS_TOKEN}
+                  activeDayIds={activeDayIds}
+                  onChangeActiveDayIds={setActiveDayIds}
                 />
 
                 {unmappableEvents.length > 0 && (

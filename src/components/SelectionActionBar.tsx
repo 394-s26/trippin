@@ -136,7 +136,7 @@ const SelectionActionBar = ({
       : undefined;
 
   const canDeleteSelection = canDelete || canSuggestDelete;
-  const deleteLabel = canSuggestDelete && !canDelete ? 'Suggest Delete' : 'Delete';
+  const deleteLabel = canSuggestDelete && !canDelete ? 'Vote Delete' : 'Delete';
 
   return createPortal(
     <div

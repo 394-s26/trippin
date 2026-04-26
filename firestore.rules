@@ -111,12 +111,13 @@ service cloud.firestore {
 
     // Session selections — scoped to a trip's members.
     // Any trip member can read all selections for that trip.
-    // A user can only write their own selection document.
+    // A user can write their own selection document; the trip owner can delete any.
     match /sessions/{tripId}/selections/{userId} {
       allow read: if isAuthed() && canAccessParentTrip(tripId);
       allow write: if isAuthed() &&
-        request.auth.uid == userId &&
-        canAccessParentTrip(tripId);
+        canAccessParentTrip(tripId) &&
+        (request.auth.uid == userId ||
+         isTripOwner(get(/databases/$(database)/documents/trips/$(tripId)).data));
     }
 
     // Event edit locks — prevent concurrent edits across users.
@@ -159,6 +160,13 @@ service cloud.firestore {
         get(/databases/$(database)/documents/trips/$(resource.data.tripId)).data.userId == request.auth.uid ||
         get(/databases/$(database)/documents/trips/$(resource.data.tripId)).data.permissions[request.auth.uid] == 'manager'
       );
+    }
+
+    // Geoapify suggestion cache, keyed by rounded lat/lng.
+    // Any authed user can read; only the Cloud Function (admin SDK) writes.
+    match /placeSuggestionsCache/{locationKey} {
+      allow read: if isAuthed();
+      allow write: if false;
     }
   }
 }

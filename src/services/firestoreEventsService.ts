@@ -175,7 +175,7 @@ export const approveSuggestion = async (uid: string, event: Event) => {
     const noVotes = current.suggestion.votes.no.length;
 
     if (!allowed) {
-      const canCommunityApprove = current.suggestion.type === 'create' && yesVotes >= threshold;
+      const canCommunityApprove = yesVotes >= threshold;
       if (!canCommunityApprove) throw new PermissionError('approve_suggestion');
     }
 
@@ -193,6 +193,12 @@ export const approveSuggestion = async (uid: string, event: Event) => {
     console.error('Error approving suggestion: ', error);
     throw error;
   }
+};
+
+export const rejectDeletionSuggestion = async (uid: string, event: Event) => {
+  if (!event.suggestion || event.suggestion.type !== 'delete') return;
+  const suggestionRef = doc(eventsCol(event.tripId, event.dayId), event.id);
+  await deleteDoc(suggestionRef);
 };
 
 export const resolveSuggestionByVote = async (

@@ -73,14 +73,6 @@
   @apply w-full border border-gray-200 rounded-xl pl-7 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary;
 }
 
-.budget-submit-btn {
-  @apply bg-primary text-white py-3 rounded-xl font-medium text-sm mt-1;
-}
-
-.budget-cancel-btn {
-  @apply text-gray-400 py-2 rounded-xl font-medium text-sm;
-}
-
 /* ── Split Method Popup (centered dialog) ──────────────────── */
 
 .split-done-btn {
@@ -169,10 +161,6 @@
 
 .split-config-warning {
   @apply text-xs font-normal;
-}
-
-.split-config-save {
-  @apply w-full mt-3 bg-primary text-white py-2 rounded-xl font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
 /* ── Breakdown Table ─────────────────────────────────────────── */

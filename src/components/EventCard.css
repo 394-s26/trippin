@@ -20,6 +20,14 @@
   @apply bg-[#eef7e9] border-[#dcead6];
 }
 
+.event-card--suggestion-delete {
+  @apply bg-red-50 border-red-200;
+}
+
+.event-card--suggestion-delete:hover {
+  @apply bg-red-100 border-red-200;
+}
+
 .event-card--selected {
   @apply border-4 border-primary;
 }
@@ -58,7 +66,11 @@
 }
 
 .event-card-time-row {
-  @apply flex items-center gap-2 mb-1;
+  @apply flex items-center gap-2 mb-1 min-h-6;
+}
+
+.event-card-name-row {
+  @apply flex items-center gap-2;
 }
 
 .event-card-time {
@@ -79,6 +91,10 @@
 
 .event-card-proposed-badge {
   @apply text-[10px] uppercase tracking-[0.18em] font-semibold rounded-full px-2.5 py-1 bg-primary text-white;
+}
+
+.event-card-proposed-badge--delete {
+  @apply bg-red-700;
 }
 
 .event-card-name {
@@ -142,7 +158,7 @@
 }
 
 .event-card-vote-title {
-  @apply text-[11px] uppercase tracking-[0.18em] font-semibold text-primary mb-3;
+  @apply text-[13px] uppercase tracking-[0.18em] font-semibold text-primary mb-3;
 }
 
 .event-card-vote-actions {
@@ -215,20 +231,8 @@
   margin-left: -0.5rem;
 }
 
-.event-card-approve-btn {
-  @apply mt-3 w-full rounded-2xl px-4 py-3 text-sm font-semibold bg-primary text-white transition-colors duration-150;
-}
-
-.event-card-approve-btn:hover {
-  @apply bg-green-800;
-}
-
-.event-card-approve-btn--danger {
-  @apply bg-red-600;
-}
-
-.event-card-approve-btn--danger:hover {
-  @apply bg-red-700;
+.event-card-approve-actions {
+  @apply mt-3 flex gap-2;
 }
 
 .event-card-consensus-track {
