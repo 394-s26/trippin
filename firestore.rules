@@ -111,12 +111,13 @@ service cloud.firestore {
 
     // Session selections — scoped to a trip's members.
     // Any trip member can read all selections for that trip.
-    // A user can only write their own selection document.
+    // A user can write their own selection document; the trip owner can delete any.
     match /sessions/{tripId}/selections/{userId} {
       allow read: if isAuthed() && canAccessParentTrip(tripId);
       allow write: if isAuthed() &&
-        request.auth.uid == userId &&
-        canAccessParentTrip(tripId);
+        canAccessParentTrip(tripId) &&
+        (request.auth.uid == userId ||
+         isTripOwner(get(/databases/$(database)/documents/trips/$(tripId)).data));
     }
 
     // Event edit locks — prevent concurrent edits across users.

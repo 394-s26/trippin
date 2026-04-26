@@ -319,6 +319,7 @@ const EventFormModal = ({
         el.classList.add("form-input");
         el.style.display = "block";
         el.style.width = "100%";
+        el.style.color = "#374151";
 
         autocompleteRef.current = el;
 

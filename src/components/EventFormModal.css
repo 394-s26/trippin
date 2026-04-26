@@ -150,7 +150,7 @@
 }
 
 .form-input {
-  @apply w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white;
+  @apply w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary bg-white;
 }
 
 .location-field-wrapper {
