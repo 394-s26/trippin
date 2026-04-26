@@ -138,7 +138,7 @@
 
 .day-timeline {
   @apply absolute left-0 top-2 bottom-2 w-0.5 rounded-full;
-  background: var(--color-secondary);
+  background: rgba(111, 111, 111, 0.15);
 }
 
 .day-no-events {
