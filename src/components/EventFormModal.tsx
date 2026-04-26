@@ -771,6 +771,11 @@ const EventFormModal = ({
                       value={endTime}
                       onChange={handleEndTimeChange}
                       anchorMinutes={toMinutes(startTime) ?? undefined}
+                      dayOffset={Math.max(
+                        0,
+                        tripDays.findIndex(d => d.id === endDayId)
+                          - tripDays.findIndex(d => d.id === startDayId),
+                      )}
                       disabled={readOnly || allDay}
                       ariaLabel="End time"
                       variant="chip"

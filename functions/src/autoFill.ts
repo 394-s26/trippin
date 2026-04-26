@@ -33,8 +33,9 @@ interface AutoFillRequest {
   locationName: string;
 }
 
-// Roles that can run auto-fill. Kept in sync with src/config/permissions.json (auto_fill_day).
-const ALLOWED_ROLES = new Set(["owner", "manager"]);
+// Roles that can run auto-fill. Explorers can also auto-fill — their resulting events
+// become suggestions on the client side via createEvent's permission-based mode resolver.
+const ALLOWED_ROLES = new Set(["owner", "manager", "explorer"]);
 
 // Geoapify category → app Event type. First-match wins when a place has multiple categories.
 const CATEGORY_MAP: ReadonlyArray<[string, AppEventType]> = [
