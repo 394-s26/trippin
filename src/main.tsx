@@ -18,7 +18,7 @@ const AppLayout = () => (
   <ProtectedRoute>
     <LastViewedTripProvider>
       <AppHeader /> {/* Fixed header inside here */}
-      <main className="pt-20">
+      <main className="pt-4">
         <Outlet />
       </main>
       <Navbar />

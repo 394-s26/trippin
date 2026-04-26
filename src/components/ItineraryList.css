@@ -1,27 +1,42 @@
 @reference "../index.css";
 
 .itinerary-list {
-  @apply flex flex-col gap-6;
+  @apply flex flex-col;
 }
 
 .day-section {
   @apply rounded-2xl p-3 -mx-3 transition-colors;
+  padding-bottom: 1.75rem;
+}
+
+.day-section:last-child {
+  padding-bottom: 0.75rem;
 }
 
 .day-header {
-  @apply flex items-center gap-3 mb-3;
+  @apply flex items-center gap-3 mb-3 sticky z-10 py-2 -my-2;
+  top: calc(4rem + 1px);
+  background-color: var(--color-neutral);
 }
 
-.day-number {
-  @apply w-8 h-8 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center shrink-0;
+.day-date-box {
+  @apply flex items-baseline justify-between bg-primary text-white px-4 py-2 shrink-0 min-w-45;
+  border-top-left-radius: 0.35rem;
+  border-bottom-left-radius: 0.35rem;
+  border-top-right-radius: 1rem;
+  border-bottom-right-radius: 1rem;
+}
+
+.day-date-monthday {
+  @apply font-bold text-sm leading-tight;
+}
+
+.day-date-weekday {
+  @apply font-medium text-xs leading-tight opacity-85;
 }
 
 .day-label-wrapper {
   @apply flex items-center gap-2 flex-1 min-w-0;
-}
-
-.day-label-text {
-  @apply text-primary font-bold text-base truncate;
 }
 
 .day-label-title {
@@ -137,8 +152,14 @@
 }
 
 .day-timeline {
-  @apply absolute left-0 top-2 bottom-2 w-0.5 rounded-full;
+  @apply absolute left-0 w-0.5;
+  top: -0.25rem;
+  bottom: -0.5rem;
   background: rgba(111, 111, 111, 0.15);
+}
+
+.day-section:last-child .day-timeline {
+  bottom: 0.5rem;
 }
 
 .day-no-events {
@@ -161,11 +182,11 @@
 }
 
 .event-card-row--large-gap--2 {
-  @apply mt-10 relative;
+  @apply mt-11 relative;
 }
 
 .event-card-row--large-gap--3 {
-  @apply mt-11 relative;
+  @apply mt-13 relative;
 }
 
 .event-card-row--large-gap--1::before,
@@ -182,13 +203,13 @@
 }
 
 .event-card-row--large-gap--2::before {
-  top: -2.9rem;
-  height: 2.7rem;
+  top: -3.2rem;
+  height: 3rem;
 }
 
 .event-card-row--large-gap--3::before {
-  top: -3.2rem;
-  height: 3rem;
+  top: -3.7rem;
+  height: 3.5rem;
 }
 
 .empty-trip-hint {
