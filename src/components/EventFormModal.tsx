@@ -593,7 +593,7 @@ const EventFormModal = ({
           {/* Suggestion toggle */}
           {showSuggestionToggle && mode === 'create' && (
             <div
-              className={`suggestion-toggle-card${suggestionOnly ? ' suggestion-toggle-card--locked' : ''}${isSuggestion ? ' suggestion-toggle-card--on' : ''}`}
+              className={`suggestion-toggle-card${suggestionOnly ? ' suggestion-toggle-card--locked suggestion-toggle-card--auto' : ''}${isSuggestion ? ' suggestion-toggle-card--on' : ''}`}
             >
               <div className="ballot-anim" aria-hidden="true">
                 <BallotBoxIcon className="ballot-anim__box" size={44} />
@@ -771,6 +771,11 @@ const EventFormModal = ({
                       value={endTime}
                       onChange={handleEndTimeChange}
                       anchorMinutes={toMinutes(startTime) ?? undefined}
+                      dayOffset={Math.max(
+                        0,
+                        tripDays.findIndex(d => d.id === endDayId)
+                          - tripDays.findIndex(d => d.id === startDayId),
+                      )}
                       disabled={readOnly || allDay}
                       ariaLabel="End time"
                       variant="chip"

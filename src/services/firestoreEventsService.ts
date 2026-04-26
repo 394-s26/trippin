@@ -200,6 +200,17 @@ export const rejectDeletionSuggestion = async (uid: string, event: Event) => {
   await deleteDoc(suggestionRef);
 };
 
+// Admin rejection of a create-type suggestion: the event document represents
+// only the proposal (it was never finalized), so deleting it removes both the
+// proposal and the would-be event in one shot.
+export const rejectCreateSuggestion = async (uid: string, event: Event) => {
+  if (!event.suggestion || event.suggestion.type !== 'create') return;
+  const allowed = await hasActionPermission(uid, event.tripId, 'approve_suggestion');
+  if (!allowed) throw new PermissionError('approve_suggestion');
+  const suggestionRef = doc(eventsCol(event.tripId, event.dayId), event.id);
+  await deleteDoc(suggestionRef);
+};
+
 export const resolveSuggestionByVote = async (
   uid: string,
   event: Event,
