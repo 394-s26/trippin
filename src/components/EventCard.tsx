@@ -67,6 +67,7 @@ const EventCard = ({
   );
   const firstOther = pickFirstSelector(allSelections, event.id, currentUserId);
   const isSuggestion = !!event.suggestion;
+  const showVotingUI = isSuggestion && (!daySlice || daySlice.dayIndex === 1);
   const suggestionType = event.suggestion?.type;
   const myVote = currentUserId && event.suggestion
     ? (event.suggestion.votes.yes.includes(currentUserId) ? 'yes' : event.suggestion.votes.no.includes(currentUserId) ? 'no' : null)
@@ -174,7 +175,7 @@ const EventCard = ({
         </div>
       </div>
 
-      {isSuggestion && (
+      {showVotingUI && (
         <div className="event-card-vote" onClick={(e) => e.stopPropagation()}>
           <p className="event-card-vote-title">{voteTitle}</p>
 

@@ -66,9 +66,15 @@ const ItineraryList = ({
           <div className="day-events">
             <div className="day-timeline" />
             {day.events.length > 0 ? (() => {
-                const slices = day.events.map(e => sliceEventForDay(e, day));
-                const allDayEvents = day.events.filter((_, i) => slices[i]?.isAllDay);
-                const timedEvents = day.events.filter((_, i) => !slices[i]?.isAllDay);
+                const deletedTargetIds = new Set(
+                  day.events
+                    .filter(e => e.suggestion?.type === 'delete' && e.suggestion.targetEventId)
+                    .map(e => e.suggestion!.targetEventId as string)
+                );
+                const visibleEvents = day.events.filter(e => !deletedTargetIds.has(e.id));
+                const slices = visibleEvents.map(e => sliceEventForDay(e, day));
+                const allDayEvents = visibleEvents.filter((_, i) => slices[i]?.isAllDay);
+                const timedEvents = visibleEvents.filter((_, i) => !slices[i]?.isAllDay);
                 const timedSlices = slices.filter(s => !s?.isAllDay);
 
                 return (
@@ -77,7 +83,7 @@ const ItineraryList = ({
                       <div className="all-day-section">
                         <span className="all-day-section-label">All Day</span>
                         {allDayEvents.map((event) => {
-                          const slice = slices[day.events.indexOf(event)];
+                          const slice = slices[visibleEvents.indexOf(event)];
                           return (
                             <div key={`${event.id}-${day.id}`} className="event-card-row">
                               <EventCard
