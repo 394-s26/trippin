@@ -58,7 +58,7 @@
 }
 
 .event-card-time-row {
-  @apply flex items-center gap-2 mb-1;
+  @apply flex items-center gap-2 mb-1 min-h-6;
 }
 
 .event-card-time {
