@@ -100,9 +100,13 @@ const EventCard = ({
     (isLodgingMiddleDay || isLodgingStayEvent) ? 'event-card--lodging-stay' : '',
   ].filter(Boolean).join(' ');
   const cardStyle = (useOtherBorder ? { borderColor: firstOther.color } : undefined) as CSSProperties | undefined;
+  // For delete proposals: yes="Remove it" (red), no="Keep it" (green).
+  // For create proposals: yes="Count me in" (green), no="Not worth it" (red).
   const consensusFillStyle = {
     width: `${consensusRatio * 100}%`,
-    backgroundColor: suggestionType === 'delete' ? '#b42318' : leadingVote === 'yes' ? '#2d5a27' : '#b42318',
+    backgroundColor: suggestionType === 'delete'
+      ? (leadingVote === 'no' ? '#2d5a27' : '#b42318')
+      : (leadingVote === 'yes' ? '#2d5a27' : '#b42318'),
   };
   const yesStyle = { ['--vote-fill' as string]: `${yesRatio * 100}%` } as CSSProperties;
   const noStyle = { ['--vote-fill' as string]: `${noRatio * 100}%` } as CSSProperties;
