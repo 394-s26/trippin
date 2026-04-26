@@ -93,7 +93,8 @@ const EventCard = ({
 
   const cardClass = [
     'event-card',
-    isSuggestion ? 'event-card--suggestion' : '',
+    isSuggestion && suggestionType !== 'delete' ? 'event-card--suggestion' : '',
+    isSuggestion && suggestionType === 'delete' ? 'event-card--suggestion-delete' : '',
     isSelected ? 'event-card--selected' : '',
     !isSelected && useOtherBorder ? 'event-card--selected-session' : '',
     (isLodgingMiddleDay || isLodgingStayEvent) ? 'event-card--lodging-stay' : '',
@@ -200,7 +201,7 @@ const EventCard = ({
                 <CheckIcon size={18} />
               </span>
               <span className="event-card-vote-btn-label">
-                {suggestionType === 'delete' ? 'Do it' : 'Count me in'}
+                {suggestionType === 'delete' ? 'Remove it' : 'Count me in'}
               </span>
               {yesVoterUids.length > 0 && (
                 <span className="event-card-vote-voters" aria-label={`${yesVotes} yes voters`}>

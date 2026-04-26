@@ -20,6 +20,14 @@
   @apply bg-[#eef7e9] border-[#dcead6];
 }
 
+.event-card--suggestion-delete {
+  @apply bg-red-50 border-red-200;
+}
+
+.event-card--suggestion-delete:hover {
+  @apply bg-red-100 border-red-200;
+}
+
 .event-card--selected {
   @apply border-4 border-primary;
 }
@@ -82,7 +90,7 @@
 }
 
 .event-card-proposed-badge--delete {
-  @apply bg-red-600;
+  @apply bg-red-700;
 }
 
 .event-card-name {
