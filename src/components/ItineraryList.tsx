@@ -90,7 +90,9 @@ const ItineraryList = ({
                     currentUserId={currentUserId}
                     tripUsers={tripUsers}
                     totalTripUsers={totalTripUsers}
-                    conflictWithEventName={(event.conflictEventIds?.[0] && eventNameById.get(event.conflictEventIds[0])) || null}
+                    conflictWithEventName={event.conflictDismissed === true
+                      ? null
+                      : ((event.conflictEventIds?.[0] && eventNameById.get(event.conflictEventIds[0])) || null)}
                     onVoteSuggestion={onVoteSuggestion}
                     canApproveSuggestion={canApproveSuggestion}
                     onApproveSuggestion={onApproveSuggestion}
