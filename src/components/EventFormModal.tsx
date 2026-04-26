@@ -945,10 +945,10 @@ const EventFormModal = ({
           {!readOnly && (
             <button
               type="submit"
-              className="submit-btn"
+              className="global-btn default-btn"
               disabled={!name.trim() || (isLodgingType && startDayId === endDayId)}
             >
-              <span key={submitLabel} className="submit-btn-label">
+              <span key={submitLabel} className="global-btn default-btn-label">
                 {submitLabel}
               </span>
             </button>

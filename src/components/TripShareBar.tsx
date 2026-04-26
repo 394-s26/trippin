@@ -646,8 +646,8 @@ const TripShareBar = ({
                             <div className="share-modal-remove-confirm">
                               <p className="share-modal-remove-confirm-text">Remove {user.firstName} from this trip?</p>
                               <div className="share-modal-remove-confirm-actions">
-                                <button className="flex-1 red         submit-btn" onClick={handleRemoveConfirm}>Remove</button>
-                                <button className="flex-1 bg-gray-100 cancel-btn" onClick={() => setRemoveConfirmUid(null)}>Cancel</button>
+                                <button className="flex-1 red         global-btn default-btn" onClick={handleRemoveConfirm}>Remove</button>
+                                <button className="flex-1 bg-gray-100 global-btn cancel-btn" onClick={() => setRemoveConfirmUid(null)}>Cancel</button>
                               </div>
                             </div>
                           </td>
@@ -697,7 +697,7 @@ const TripShareBar = ({
                               <p className="share-modal-remove-confirm-text">Cancel invite for {inv.email}?</p>
                               <div className="share-modal-remove-confirm-actions">
                                 <button
-                                  className="flex-1 submit-btn red"
+                                  className="flex-1 global-btn red-btn"
                                   onClick={async () => {
                                     await cancelInvite(inv.id);
                                     setPersistedInvites(prev => prev.filter(i => i.id !== inv.id));
@@ -705,7 +705,7 @@ const TripShareBar = ({
                                   }}
                                 >Cancel Invite</button>
                                 <button
-                                  className="flex-1 bg-gray-100 cancel-btn"
+                                  className="flex-1 bg-gray-100 global-btn cancel-btn"
                                   onClick={() => setRemoveConfirmInviteId(null)}
                                 >Keep</button>
                               </div>

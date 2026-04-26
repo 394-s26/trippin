@@ -163,10 +163,6 @@
   @apply text-xs font-normal;
 }
 
-.split-config-save {
-  @apply w-full mt-3 bg-primary text-white py-2 rounded-xl font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed;
-}
-
 /* ── Breakdown Table ─────────────────────────────────────────── */
 
 .split-breakdown {

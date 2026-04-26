@@ -241,7 +241,7 @@ const EventCard = ({
               {showApproveButton && (
                 <button
                   type="button"
-                  className="submit-btn flex-1"
+                  className="global-btn default-btn flex-1"
                   onClick={() => suggestionType === 'delete' ? onDeleteSuggestion?.(event) : onApproveSuggestion?.(event)}
                 >
                   {approveLabel}
@@ -250,7 +250,7 @@ const EventCard = ({
               {(canApproveSuggestion || canCommunityDeleteEvent) && (
                 <button
                   type="button"
-                  className="submit-btn red flex-1"
+                  className="global-btn red-btn flex-1"
                   onClick={() => suggestionType === 'delete' ? onApproveSuggestion?.(event) : onDeleteSuggestion?.(event)}
                 >
                   {rejectLabel}

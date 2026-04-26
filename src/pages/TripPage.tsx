@@ -649,10 +649,10 @@ const TripPage = () => {
                 })()}
                 <p><strong>This cannot be undone.</strong></p>
               </div>
-              <button onClick={handleConfirmDeleteSelected} className="submit-btn red">
+              <button onClick={handleConfirmDeleteSelected} className="global-btn red-btn">
                 Delete
               </button>
-              <button onClick={() => { setDeleteConfirmIds(null); setPendingSuggestionDelete(null); }} className="cancel-btn">
+              <button onClick={() => { setDeleteConfirmIds(null); setPendingSuggestionDelete(null); }} className="global-btn cancel-btn">
                 Cancel
               </button>
             </div>
@@ -668,10 +668,10 @@ const TripPage = () => {
               <p className="delete-confirm-body">
                 This change removes {dateAdjustConfirm.removedDays} {dateAdjustConfirm.removedDays === 1 ? 'day-section' : 'day-sections'} and will delete {dateAdjustConfirm.removedEvents} {dateAdjustConfirm.removedEvents === 1 ? 'event' : 'events'}. This cannot be undone.
               </p>
-              <button onClick={handleConfirmDateAdjust} className="submit-btn red">
+              <button onClick={handleConfirmDateAdjust} className="global-btn red-btn">
                 Adjust Dates
               </button>
-              <button onClick={() => setDateAdjustConfirm(null)} className="delete-cancel-btn">
+              <button onClick={() => setDateAdjustConfirm(null)} className="delete-global-btn cancel-btn">
                 Cancel
               </button>
             </div>
@@ -745,10 +745,10 @@ const TripPage = () => {
               <p className="delete-confirm-body">
                 "{tripName}" will be permanently deleted. This cannot be undone.
               </p>
-              <button onClick={handleDeleteConfirmed} className="submit-btn red">
+              <button onClick={handleDeleteConfirmed} className="global-btn red-btn">
                 Delete
               </button>
-              <button onClick={() => setShowDeleteConfirm(false)} className="cancel-btn">
+              <button onClick={() => setShowDeleteConfirm(false)} className="global-btn cancel-btn">
                 Cancel
               </button>
             </div>
