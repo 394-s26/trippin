@@ -151,7 +151,7 @@ const EventCard = ({
                 <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
               )}
               {isSuggestion && (
-                <span className="event-card-proposed-badge">{proposalBadge}</span>
+                <span className={`event-card-proposed-badge${suggestionType === 'delete' ? ' event-card-proposed-badge--delete' : ''}`}>{proposalBadge}</span>
               )}
               {selectorAvatars}
             </div>
@@ -241,7 +241,7 @@ const EventCard = ({
                 <button
                   type="button"
                   className="submit-btn flex-1"
-                  onClick={() => onApproveSuggestion?.(event)}
+                  onClick={() => suggestionType === 'delete' ? onDeleteSuggestion?.(event) : onApproveSuggestion?.(event)}
                 >
                   {approveLabel}
                 </button>
@@ -250,7 +250,7 @@ const EventCard = ({
                 <button
                   type="button"
                   className="submit-btn red flex-1"
-                  onClick={() => onDeleteSuggestion?.(event)}
+                  onClick={() => suggestionType === 'delete' ? onApproveSuggestion?.(event) : onDeleteSuggestion?.(event)}
                 >
                   {rejectLabel}
                 </button>
