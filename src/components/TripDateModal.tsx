@@ -131,13 +131,13 @@ const TripDateModal = ({
 
         <div className="trip-date-modal-actions">
           <button
-            className="submit-btn"
+            className="global-btn default-btn"
             onClick={handleConfirm}
             disabled={!canConfirm}
           >
             Save Dates
           </button>
-          <button className="cancel-btn" onClick={onClose}>
+          <button className="global-btn cancel-btn" onClick={onClose}>
             Cancel
           </button>
         </div>

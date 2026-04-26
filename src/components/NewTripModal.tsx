@@ -82,12 +82,12 @@ export default function NewTripModal({ isOpen, onClose, onSubmit, submitting }: 
 
           <button
             type="submit"
-            className="new-trip-modal-submit"
+            className="global-btn default-btn"
             disabled={!isValid || submitting}
           >
             {submitting ? 'Creating…' : 'Create Trip'}
           </button>
-          <button type="button" className="new-trip-modal-cancel" onClick={onClose}>
+          <button type="button" className="global-btn cancel-btn" onClick={onClose}>
             Cancel
           </button>
         </form>
