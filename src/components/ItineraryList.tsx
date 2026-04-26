@@ -26,6 +26,18 @@ interface ItineraryListProps {
   onDeleteSuggestion?: (event: Event) => void;
 }
 
+const ORDINAL_SUFFIXES = ['th', 'st', 'nd', 'rd'];
+const getOrdinal = (n: number) => {
+  const v = n % 100;
+  return n + (ORDINAL_SUFFIXES[(v - 20) % 10] ?? ORDINAL_SUFFIXES[v] ?? ORDINAL_SUFFIXES[0]);
+};
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 const ItineraryList = ({
   days,
   onAddDay: _onAddDay,
@@ -47,18 +59,17 @@ const ItineraryList = ({
   return (
     <div className="itinerary-list">
       {days.map((day, index) => {
+        const monthDay = `${MONTH_NAMES[day.date.getMonth()]} ${getOrdinal(day.date.getDate())}`;
+        const weekday = WEEKDAY_NAMES[day.date.getDay()];
         return (
           <section key={day.id} className="day-section">
             <div className="day-header">
-              <span className="day-number">
-                {index + 1}
-              </span>
+              <div className="day-date-box">
+                <span className="day-date-monthday">{monthDay}</span>
+                <span className="day-date-weekday">{weekday}</span>
+              </div>
 
               <div className="day-label-wrapper">
-                <span className="day-label-text">
-                  {day.label}
-                </span>
-
                 <div className="day-actions">
                   {onAutoFillDay && (
                     <button
