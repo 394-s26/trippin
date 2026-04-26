@@ -515,6 +515,73 @@ export const WarningIcon = ({ size = 24, className }: IconProps): ReactElement =
   </svg>
 );
 
+// Ballot box — used for the "Suggestion mode" toggle animation
+export const BallotBoxIcon = ({ size = 44, className }: IconProps): ReactElement => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+    className={className}
+  >
+    {/* Box body */}
+    <path
+      d="M8 18h32v22a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V18z"
+      fill="var(--color-primary)"
+    />
+    {/* Box top / lid with slot */}
+    <path
+      d="M6 14h36a2 2 0 0 1 2 2v4H4v-4a2 2 0 0 1 2-2z"
+      fill="var(--color-primary-light)"
+    />
+    {/* Slot */}
+    <rect x="16" y="16" width="16" height="2" rx="1" fill="#0e2a0a" />
+    {/* Decorative stars */}
+    <path
+      d="M16 28l1 2.4 2.4.6-2.4.6L16 34l-1-2.4-2.4-.6 2.4-.6L16 28z"
+      fill="var(--color-secondary)"
+    />
+    <path
+      d="M32 32l.8 1.9 2 .5-2 .5L32 36.8 31.2 35l-2-.5 2-.5L32 32z"
+      fill="var(--color-secondary)"
+    />
+  </svg>
+);
+
+// Ballot paper — used in tandem with BallotBoxIcon
+export const BallotPaperIcon = ({ size = 20, className }: IconProps): ReactElement => (
+  <svg
+    width={size}
+    height={size * 1.25}
+    viewBox="0 0 20 25"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+    className={className}
+  >
+    <rect
+      x="1"
+      y="1"
+      width="18"
+      height="23"
+      rx="2"
+      fill="white"
+      stroke="var(--color-primary-light)"
+      strokeWidth="1.5"
+    />
+    <path
+      d="M5 12l3 3 7-7"
+      stroke="var(--color-primary)"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
+  </svg>
+);
+
 // Sparkle — used for the "Auto-fill day" button
 export const SparkleIcon = ({ size = 16, className }: IconProps): ReactElement => (
   <svg

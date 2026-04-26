@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Event, EVENT_CATEGORY } from '../types/event';
 import { AppUser } from '../types/auth';
-import { UserIcon } from '../services/svgIcons';
+import { UserIcon, BallotBoxIcon, BallotPaperIcon } from '../services/svgIcons';
 import { EVENT_COLORS } from '../utilities/eventColors';
 import UserAvatar from './UserAvatar';
 import TimeSelect, { toMinutes } from './TimeSelect';
@@ -157,6 +157,7 @@ const EventFormModal = ({
   const [startDayOpen, setStartDayOpen] = useState(false);
   const [endDayOpen, setEndDayOpen] = useState(false);
   const [isSuggestion, setIsSuggestion] = useState(false);
+  const [ballotAnimKey, setBallotAnimKey] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const locationContainerRef = useRef<HTMLDivElement>(null);
   const startDayRef = useRef<HTMLDivElement>(null);
@@ -548,7 +549,12 @@ const EventFormModal = ({
       <div className="overlay-panel overlay-panel--lg rounded-t-2xl p-6 pb-10 max-h-[90vh] overflow-y-auto animate-slide-up">
         <div className="event-modal-header">
           <h2 className="event-modal-title">
-            {mode === 'edit' ? 'Edit Event' : mode === 'readonly' ? 'Event (locked)' : isSuggestion ? 'New Event Suggestion' : 'New Event'}
+            <span
+              key={mode === 'create' ? `create-${isSuggestion}` : mode}
+              className="event-modal-title-text"
+            >
+              {mode === 'edit' ? 'Edit Event' : mode === 'readonly' ? 'Event (locked)' : isSuggestion ? 'New Event Suggestion' : 'New Event'}
+            </span>
           </h2>
           <button
             onClick={onClose}
@@ -586,8 +592,18 @@ const EventFormModal = ({
 
           {/* Suggestion toggle */}
           {showSuggestionToggle && mode === 'create' && (
-            <div className={`suggestion-toggle-card${suggestionOnly ? ' suggestion-toggle-card--locked' : ''}`}>
-              <div>
+            <div
+              className={`suggestion-toggle-card${suggestionOnly ? ' suggestion-toggle-card--locked' : ''}${isSuggestion ? ' suggestion-toggle-card--on' : ''}`}
+            >
+              <div className="ballot-anim" aria-hidden="true">
+                <BallotBoxIcon className="ballot-anim__box" size={44} />
+                <BallotPaperIcon
+                  key={ballotAnimKey}
+                  className="ballot-anim__paper"
+                  size={20}
+                />
+              </div>
+              <div className="suggestion-toggle-text">
                 <p className="suggestion-toggle-title">Suggestion mode</p>
                 <p className="suggestion-toggle-copy">
                   {suggestionOnly
@@ -601,7 +617,13 @@ const EventFormModal = ({
                 aria-pressed={isSuggestion}
                 aria-label="Toggle suggestion mode"
                 disabled={suggestionOnly}
-                onClick={() => setIsSuggestion((current) => !current)}
+                onClick={() =>
+                  setIsSuggestion((current) => {
+                    const next = !current;
+                    if (next) setBallotAnimKey((k) => k + 1);
+                    return next;
+                  })
+                }
               >
                 <span className="suggestion-toggle-knob" />
               </button>
@@ -926,7 +948,9 @@ const EventFormModal = ({
               className="submit-btn"
               disabled={!name.trim() || (isLodgingType && startDayId === endDayId)}
             >
-              {submitLabel}
+              <span key={submitLabel} className="submit-btn-label">
+                {submitLabel}
+              </span>
             </button>
           )}
         </form>
