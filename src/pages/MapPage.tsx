@@ -67,7 +67,7 @@ const EventMarker = ({
     >
       <div className="map-marker">
         <div className="map-marker-pin" style={{ color: color, borderColor: color }}>
-          {Icon && <Icon size={16} />}
+          {Icon ? <Icon size={16} /> : <span className="map-marker-initial">{event.name.charAt(0).toUpperCase()}</span>}
           <div className="map-marker-badge" style={{ color, borderColor: color }}>{orderNum}</div>
         </div>
       </div>
@@ -119,27 +119,18 @@ const MapPage = () => {
     return m;
   }, [days]);
 
-  const eventOrderMap = useMemo(() => {
-    const order = new Map<string, number>();
-    const byDay = new Map<string, Array<Event & { lat: number; lng: number }>>();
-    mappableEvents.forEach(e => {
-      const arr = byDay.get(e.dayId) ?? [];
-      arr.push(e);
-      byDay.set(e.dayId, arr);
-    });
-    byDay.forEach(dayEvents => {
-      [...dayEvents]
-        .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
-        .forEach((e, i) => order.set(e.id, i + 1));
-    });
-    return order;
-  }, [mappableEvents]);
+  const dayNumberMap = useMemo(() => {
+    const m = new Map<string, number>();
+    days.forEach((day, i) => m.set(day.id, i + 1));
+    return m;
+  }, [days]);
 
   const visibleEvents = useMemo(() => {
     const q = nameQuery.trim().toLowerCase();
     return mappableEvents.filter(e => {
       if (!selectedDayIds.has(e.dayId)) return false;
-      if (!selectedCategories.has(EVENT_CATEGORY[e.type])) return false;
+      const cat = EVENT_CATEGORY[e.type];
+      if (cat && cat !== 'None' && !selectedCategories.has(cat)) return false;
       if (q && !e.name.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -163,6 +154,14 @@ const MapPage = () => {
   const selectedEvent = selectedEventId
     ? (visibleEvents.find(e => e.id === selectedEventId) ?? null)
     : null;
+
+  const handleRecenter = () => {
+    const map = mapRef.current;
+    if (!map || visibleEvents.length === 0) return;
+    const bounds = new mapboxgl.LngLatBounds();
+    visibleEvents.forEach(e => bounds.extend([e.lng!, e.lat!]));
+    map.fitBounds(bounds, { padding: 60, maxZoom: 13, duration: 800 });
+  };
 
   // home-container gives the correct column width; override its min-h-screen so it
   // never exceeds the space available between the fixed header (80px) and navbar (80px).
@@ -262,7 +261,7 @@ const MapPage = () => {
                     <EventMarker
                       key={event.id}
                       event={event}
-                      orderNum={eventOrderMap.get(event.id) ?? 1}
+                      orderNum={dayNumberMap.get(event.dayId) ?? 1}
                       color={dayColorMap.get(event.dayId) ?? '#2D5A27'}
                       onClick={() => setSelectedEventId(event.id)}
                     />
@@ -296,8 +295,25 @@ const MapPage = () => {
                   onClearAll={clearFilters}
                 />
 
-                <div className="map-load-meter" aria-live="polite">
-                  {remaining} map views left
+                <div className="map-top-right-controls">
+                  <div className="map-load-meter" aria-live="polite">
+                    {remaining} map views left
+                  </div>
+                  <button
+                    className="map-recenter-btn"
+                    onClick={handleRecenter}
+                    title="Re-center on events"
+                    aria-label="Re-center map on visible events"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="3"/>
+                      <line x1="12" y1="2" x2="12" y2="6"/>
+                      <line x1="12" y1="18" x2="12" y2="22"/>
+                      <line x1="2" y1="12" x2="6" y2="12"/>
+                      <line x1="18" y1="12" x2="22" y2="12"/>
+                    </svg>
+                    Re-center
+                  </button>
                 </div>
 
                 <DirectionsExplorer

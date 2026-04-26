@@ -9,6 +9,10 @@ import './DirectionsExplorer.css';
 
 const ROUTE_SOURCE_PREFIX = 'directions-route-source';
 const ROUTE_LAYER_PREFIX = 'directions-route-layer';
+const ROUTE_ARROW_LAYER_PREFIX = 'directions-route-arrow';
+const ARROW_IMAGE_ID = 'route-direction-arrow';
+
+const ARROW_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="12" height="12"><polygon points="0,0 12,6 0,12 3,6" fill="white"/></svg>`;
 const MAX_WAYPOINTS = 25;
 
 const formatDistance = (meters: number): string => {
@@ -72,8 +76,10 @@ const DirectionsExplorer = ({
     const map = mapRef.current;
     if (!map) return;
     const layerId = `${ROUTE_LAYER_PREFIX}-${dayId}`;
+    const arrowLayerId = `${ROUTE_ARROW_LAYER_PREFIX}-${dayId}`;
     const sourceId = `${ROUTE_SOURCE_PREFIX}-${dayId}`;
     try {
+      if (map.getLayer(arrowLayerId)) map.removeLayer(arrowLayerId);
       if (map.getLayer(layerId)) map.removeLayer(layerId);
       if (map.getSource(sourceId)) map.removeSource(sourceId);
     } catch {
@@ -111,6 +117,40 @@ const DirectionsExplorer = ({
       paint: { 'line-color': '#2D5A27', 'line-width': 5, 'line-opacity': 0.85 },
     };
     map.addLayer(lineLayer);
+
+    const arrowLayerId = `${ROUTE_ARROW_LAYER_PREFIX}-${dayId}`;
+    const addArrowLayer = () => {
+      if (map.getLayer(arrowLayerId)) return;
+      map.addLayer({
+        id: arrowLayerId,
+        type: 'symbol',
+        source: sourceId,
+        layout: {
+          'symbol-placement': 'line',
+          'symbol-spacing': 80,
+          'icon-image': ARROW_IMAGE_ID,
+          'icon-size': 1,
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+        },
+        paint: {
+          'icon-color': '#2D5A27',
+          'icon-halo-color': 'white',
+          'icon-halo-width': 1,
+        },
+      });
+    };
+
+    if (map.hasImage(ARROW_IMAGE_ID)) {
+      addArrowLayer();
+    } else {
+      const img = new Image(12, 12);
+      img.onload = () => {
+        if (!map.hasImage(ARROW_IMAGE_ID)) map.addImage(ARROW_IMAGE_ID, img, { sdf: true });
+        addArrowLayer();
+      };
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(ARROW_SVG)}`;
+    }
 
     const coords = geometry.coordinates;
     const [midLng, midLat] = coords[Math.floor(coords.length / 2)];
@@ -193,13 +233,6 @@ const DirectionsExplorer = ({
       clearAllRoutes();
     };
   }, [activeDayIds, eventsByDay, accessToken, mapRef, clearAllRoutes, drawDayRoute]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setActiveDayIds(new Set());
-      setErrorMap(new Map());
-    }
-  }, [isOpen]);
 
   const handleDayClick = (dayId: string) => {
     setActiveDayIds(prev => {
