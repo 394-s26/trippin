@@ -9,8 +9,6 @@ import EventFormModal from '../components/EventFormModal';
 import BudgetModal from '../components/BudgetModal';
 import TripShareBar from '../components/TripShareBar';
 import { SelectionActionBar } from '../components/SelectionActionBar';
-import UpgradeRoleModal from '../components/UpgradeRoleModal';
-import RegenerateDayConfirmModal from '../components/RegenerateDayConfirmModal';
 import AutoFillDayLocationModal, { ResolvedLocation } from '../components/AutoFillDayLocationModal';
 import AutoFillDaySuggestionsModal from '../components/AutoFillDaySuggestionsModal';
 import { TripDateModal } from '../components/TripDateModal';
@@ -22,8 +20,12 @@ import { useDays } from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
 import { useEventLock } from '../hooks/useEventLock';
+<<<<<<< time-conflict
 import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, resolveSuggestionByVote, recomputeEventConflicts, dismissEventConflict } from '../services/firestoreEventsService';
 import { rejectDeletionSuggestion } from '../services/firestoreEventsService';
+=======
+import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, resolveSuggestionByVote, rejectDeletionSuggestion, rejectCreateSuggestion } from '../services/firestoreEventsService';
+>>>>>>> origin/main
 import { eventOverlapsDay, sliceEventForDay } from '../utilities/eventOverlapsDay';
 import { EVENT_CATEGORY } from '../types/event';
 import { useAuth } from '../contexts/AuthContext';
@@ -123,10 +125,7 @@ const TripPage = () => {
   // Auto-fill day flow state. One active day at a time moves through:
   // regenerate-confirm (if day has events) → location picker → suggestions.
   const [autoFillDay, setAutoFillDay] = useState<Day | null>(null);
-  const [regenerateDay, setRegenerateDay] = useState<Day | null>(null);
   const [autoFillLocation, setAutoFillLocation] = useState<ResolvedLocation | null>(null);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [regenerateSubmitting, setRegenerateSubmitting] = useState(false);
 
   const canCreateEvent = can('add_event');
   const canProposeCreateEvent = can('propose_create_event');
@@ -334,25 +333,7 @@ const TripPage = () => {
   };
 
   const handleAutoFillDay = (day: Day) => {
-    if (!can('auto_fill_day')) { setShowUpgradeModal(true); return; }
-    if (day.events.length > 0) { setRegenerateDay(day); return; }
     setAutoFillDay(day);
-  };
-
-  const handleRegenerateConfirmed = async () => {
-    if (!appUser || !regenerateDay) return;
-    setRegenerateSubmitting(true);
-    try {
-      await Promise.all(
-        regenerateDay.events.map((e) =>
-          deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)
-        )
-      );
-      setAutoFillDay(regenerateDay);
-    } finally {
-      setRegenerateSubmitting(false);
-      setRegenerateDay(null);
-    }
   };
 
   const closeAutoFillFlow = () => {
@@ -375,7 +356,14 @@ const TripPage = () => {
   const handleConfirmDeleteSelected = async () => {
     if (!appUser || !deleteConfirmIds) return;
     if (pendingSuggestionDelete) {
-      await resolveSuggestionByVote(appUser.uid, pendingSuggestionDelete, 'approve');
+      // For a CREATE proposal being rejected, the event doesn't exist yet — the
+      // doc is just the proposal. Deleting it removes the would-be event.
+      // For a DELETE proposal being approved, we want to delete the real target.
+      if (pendingSuggestionDelete.suggestion?.type === 'create') {
+        await rejectCreateSuggestion(appUser.uid, pendingSuggestionDelete);
+      } else {
+        await resolveSuggestionByVote(appUser.uid, pendingSuggestionDelete, 'approve');
+      }
       setPendingSuggestionDelete(null);
     } else {
       const selected = events.filter(e => deleteConfirmIds.includes(e.id));
@@ -768,18 +756,6 @@ const TripPage = () => {
           initialEvent={editingEvent?.event}
           lockHolderName={editingEvent?.holderName}
           existingEvents={events}
-        />
-
-        <UpgradeRoleModal
-          isOpen={showUpgradeModal}
-          onClose={() => setShowUpgradeModal(false)}
-        />
-
-        <RegenerateDayConfirmModal
-          isOpen={regenerateDay !== null}
-          onCancel={() => setRegenerateDay(null)}
-          onConfirm={handleRegenerateConfirmed}
-          submitting={regenerateSubmitting}
         />
 
         <AutoFillDayLocationModal

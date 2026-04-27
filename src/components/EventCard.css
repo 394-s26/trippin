@@ -161,6 +161,10 @@
   @apply text-[13px] uppercase tracking-[0.18em] font-semibold text-primary mb-3;
 }
 
+.event-card-vote-title--delete {
+  @apply text-red-600;
+}
+
 .event-card-vote-actions {
   @apply flex flex-col gap-2;
 }
