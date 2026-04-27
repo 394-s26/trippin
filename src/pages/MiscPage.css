@@ -8,34 +8,31 @@
   @apply text-xl font-bold text-gray-900;
 }
 
-/* Two-column tile grid. `items-stretch` on the grid + `flex-1` on column
-   children keeps every tile the same row height, so expanding the AI card
-   grows Photos + Game alongside it — no white space between the grid and
-   the Notes section below. */
+/* Two-column tile grid. Fixed min-height of 50vh keeps Notes anchored at
+   the halfway mark. Inside each column the cards flex to fill the row
+   evenly, so Photos + Game stretch alongside AI with no white space. */
 .misc-grid {
-  @apply grid grid-cols-2 gap-3 items-stretch;
+  @apply grid grid-cols-2 gap-3;
+  min-height: 50vh;
 }
 
 .misc-grid-col {
-  @apply flex flex-col gap-3 min-h-0;
+  @apply flex flex-col gap-3;
 }
 
 .misc-grid-col > .misc-card {
   flex: 1 1 0;
-  min-height: 0;
 }
 
 /* Shared card tile (Photos, Game, AI) */
 
 .misc-card {
-  @apply flex flex-col gap-2 p-4 rounded-2xl bg-white shadow-sm text-left transition-all w-full;
+  @apply w-full flex flex-col gap-2 p-4 rounded-2xl bg-white shadow-sm text-left transition-all;
   min-height: 7rem;
-  border: none;
-  cursor: pointer;
 }
 
 button.misc-card {
-  @apply appearance-none;
+  @apply appearance-none border-none cursor-pointer;
 }
 
 .misc-card:hover {
@@ -66,8 +63,6 @@ button.misc-card {
   @apply col-span-3 flex items-center justify-center aspect-video bg-gray-50 rounded-md text-gray-300;
 }
 
-/* AI card expanded: stop being a clickable tile, push children to fill
-   vertical space so the inline list scrolls within the row. */
 .misc-card--ai-expanded {
   cursor: default;
 }
@@ -76,7 +71,7 @@ button.misc-card {
   @apply shadow-sm;
 }
 
-/* Shared modal header/close-button (Photos/Game/AI popups) */
+/* Shared modal (for photos popup, game popup, AI day/time picker) */
 
 .misc-modal {
   max-height: 85vh;
