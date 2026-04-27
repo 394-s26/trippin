@@ -711,10 +711,10 @@ const TripPage = () => {
               <p className="delete-confirm-body">
                 The warning for "{conflictDismissConfirm.name}" will be hidden until this event conflicts again.
               </p>
-              <button onClick={handleConfirmDismissConflict} className="delete-confirm-btn">
+              <button onClick={handleConfirmDismissConflict} className="global-btn red-btn">
                 Dismiss Warning
               </button>
-              <button onClick={() => setConflictDismissConfirm(null)} className="delete-cancel-btn">
+              <button onClick={() => setConflictDismissConfirm(null)} className="global-btn cancel-btn">
                 Cancel
               </button>
             </div>

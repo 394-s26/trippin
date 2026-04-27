@@ -153,16 +153,6 @@ const EventCard = ({
           {!daySlice?.isAllDay && (
             <div className="event-card-time-row">
               <span className={`event-card-time${hasPersistentConflict ? ' event-card-time--conflict' : ''}`}>{time}</span>
-              {conflictWithEventName && (
-                <span className="event-card-conflict">
-                  Conflict
-                </span>
-              )}
-              {!conflictWithEventName && hasPersistentConflict && (
-                <span className="event-card-conflict">
-                  Conflict
-                </span>
-              )}
               {showSpanPill && (
                 <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
               )}
