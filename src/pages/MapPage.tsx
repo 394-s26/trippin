@@ -116,6 +116,7 @@ const MapPage = () => {
   const [nameQuery] = useState('');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [activeDayIds, setActiveDayIds] = useState<Set<string>>(new Set());
+  const [dayNavOpen, setDayNavOpen] = useState(false);
 
   useEffect(() => {
     if (days.length > 0 && selectedDayIds.size === 0) {
@@ -350,23 +351,39 @@ const MapPage = () => {
 
                 {days.length > 0 && (
                   <div className="map-day-nav">
-                    <p className="map-day-nav--title">Daily Plan</p>
-                    <div className="map-day-nav--buttons">
-                      {days.map(day => {
-                        const dateLabel = formatDayLabel(day.date);
-                        const isActive = activeDayIds.size === 1 && activeDayIds.has(day.id);
-                        return (
-                          <button
-                            key={day.id}
-                            type="button"
-                            className={`map-day-nav-btn${isActive ? ' map-day-nav-btn--active' : ''}`}
-                            onClick={() => handleDayNavClick(day.id)}
-                            aria-pressed={isActive}
-                          >
-                            {dateLabel}
-                          </button>
-                        );
-                      })}
+                    <button
+                      type="button"
+                      className={`map-day-nav--title${dayNavOpen ? ' map-day-nav--title-open' : ''}`}
+                      onClick={() => setDayNavOpen(o => !o)}
+                      aria-expanded={dayNavOpen}
+                    >
+                      <CaretRightIcon size={12} className={`map-day-nav--caret${dayNavOpen ? ' map-day-nav--caret-open' : ''}`} />
+                      <span>Daily Plan</span>
+                      {!dayNavOpen && activeDayIds.size === 1 && (() => {
+                        const activeDay = days.find(d => activeDayIds.has(d.id));
+                        return activeDay ? (
+                          <span className="map-day-nav--active-label">{formatDayLabel(activeDay.date)}</span>
+                        ) : null;
+                      })()}
+                    </button>
+                    <div className={`map-day-nav--buttons${dayNavOpen ? ' map-day-nav--buttons-open' : ''}`}>
+                      <div className="map-day-nav--buttons-inner">
+                        {days.map(day => {
+                          const dateLabel = formatDayLabel(day.date);
+                          const isActive = activeDayIds.size === 1 && activeDayIds.has(day.id);
+                          return (
+                            <button
+                              key={day.id}
+                              type="button"
+                              className={`map-day-nav-btn${isActive ? ' map-day-nav-btn--active' : ''}`}
+                              onClick={() => handleDayNavClick(day.id)}
+                              aria-pressed={isActive}
+                            >
+                              {dateLabel}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -405,7 +422,7 @@ const MapPage = () => {
 
                 {unmappableEvents.length > 0 && (
                   <div className="map-unmappable">
-                    {showUnmappable && (
+                    <div className={`map-unmappable-list${showUnmappable ? ' map-unmappable-list-open' : ''}`}>
                       <ul>
                         {unmappableEvents.map(e => (
                           <li key={e.id}>
@@ -416,7 +433,7 @@ const MapPage = () => {
                           </li>
                         ))}
                       </ul>
-                    )}
+                    </div>
                     <button className="map-unmappable-toggle" onClick={() => setShowUnmappable(!showUnmappable)}>
                       <CaretRightIcon size={16} className={`map-unmappable-caret ${showUnmappable ? 'is-open' : ''}`} />
                       <span>{unmappableEvents.length} event{unmappableEvents.length === 1 ? '' : 's'} without coordinates</span>
