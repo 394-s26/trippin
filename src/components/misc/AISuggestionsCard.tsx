@@ -4,7 +4,7 @@ import { Event } from '../../types/event';
 import { Day } from '../../types/day';
 import { Trip } from '../../types/trip';
 import { createEvent } from '../../services/firestoreEventsService';
-import { XIcon, PlusIcon } from '../../services/svgIcons';
+import { XIcon, PlusIcon, LocationPinIcon } from '../../services/svgIcons';
 import { fetchAISuggestions, loadSavedSuggestions, saveSuggestions, AISuggestion } from '../../services/aiSuggestionService';
 import { geocodeAddress } from '../../services/googleMapsService';
 import TimeSelect from '../TimeSelect';
@@ -130,7 +130,7 @@ const AISuggestionsCard = ({
         startDate,
         endDate,
         allDay: false,
-        cost: adding.cost || null,
+        cost: adding.cost ? adding.cost * tripUserCount : null,
         location: adding.address ?? undefined,
         ...(coords ?? {}),
         suggestion: null,
@@ -236,25 +236,34 @@ const AISuggestionsCard = ({
         <ul className="misc-ai-list misc-ai-list--inline">
           {suggestions.map((s) => (
             <li key={s.id} className="misc-ai-item">
-              <div className="misc-ai-item-body">
+              <div className="misc-ai-item-top-row">
                 <div className="misc-ai-item-header">
                   <span className="misc-ai-item-type">{s.type}</span>
                   <h4 className="misc-ai-item-title">{s.title}</h4>
                 </div>
-                <p className="misc-ai-item-desc">{s.description}</p>
-                {s.address && <p className="misc-ai-item-address">{s.address}</p>}
-                {s.cost != null && <p className="misc-ai-item-cost">~${s.cost}/person</p>}
+                <button
+                  type="button"
+                  className="misc-ai-add-btn"
+                  onClick={(e) => openPicker(e, s)}
+                  disabled={!canAct || !currentUid || sortedDays.length === 0}
+                  aria-label={actionLabel}
+                >
+                  <PlusIcon size={16} />
+                  <span>{actionLabel}</span>
+                </button>
               </div>
-              <button
-                type="button"
-                className="misc-ai-add-btn"
-                onClick={(e) => openPicker(e, s)}
-                disabled={!canAct || !currentUid || sortedDays.length === 0}
-                aria-label={actionLabel}
-              >
-                <PlusIcon size={16} />
-                <span>{actionLabel}</span>
-              </button>
+              <p className="misc-ai-item-desc">{s.description}</p>
+              {s.address && (
+                <div className="misc-ai-item-address">
+                  <LocationPinIcon size={12} className="event-card-location--svg" />
+                  <span>{s.address}</span>
+                </div>
+              )}
+              {s.cost != null && (
+                <p className="misc-ai-item-cost">
+                  ~${s.cost * tripUserCount} total{s.cost > 0 && ` (~$${s.cost}/person)`}
+                </p>
+              )}
             </li>
           ))}
         </ul>

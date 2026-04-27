@@ -89,7 +89,7 @@ const PhotosCard = ({ tripId, currentUid, photos, tripUsers }: PhotosCardProps) 
       {open && createPortal(
         <div className="overlay-bottom">
           <div className="overlay-scrim" onClick={() => setOpen(false)} />
-          <div className="overlay-panel overlay-panel--md rounded-t-2xl p-5 pb-8 flex flex-col gap-4 animate-slide-up misc-modal">
+          <div className="overlay-panel overlay-panel--lg rounded-t-2xl p-5 pb-8 flex flex-col gap-4 animate-slide-up misc-modal min-h-[40vw]">
             <div className="misc-modal-header">
               <h2 className="misc-modal-title">Trip Photos</h2>
               <button
