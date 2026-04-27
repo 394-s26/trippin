@@ -201,6 +201,31 @@ export const rejectDeletionSuggestion = async (uid: string, event: Event) => {
   await deleteDoc(suggestionRef);
 };
 
+// Rejection/withdrawal of a create-type suggestion. The event doc is the proposal
+// itself, so deleting it removes both in one shot.
+// Allowed if: caller has approve_suggestion, OR is the original proposer, OR the
+// "no" (reject) votes have reached the community threshold (majority decided).
+export const rejectCreateSuggestion = async (uid: string, event: Event) => {
+  if (!event.suggestion || event.suggestion.type !== 'create') return;
+  const isProposer = event.suggestion.createdBy === uid;
+  if (!isProposer) {
+    const [allowed, tripSnap] = await Promise.all([
+      hasActionPermission(uid, event.tripId, 'approve_suggestion'),
+      getDoc(doc(db, 'trips', event.tripId)),
+    ]);
+    if (!allowed) {
+      const shared = Array.isArray(tripSnap.data()?.shared) ? tripSnap.data()?.shared as string[] : [];
+      const ownerId = typeof tripSnap.data()?.userId === 'string' ? tripSnap.data()?.userId as string : null;
+      const totalUsers = new Set([...(ownerId ? [ownerId] : []), ...shared]).size;
+      const threshold = getSuggestionVoteThreshold(totalUsers);
+      const noVotes = event.suggestion.votes.no.length;
+      if (noVotes < threshold) throw new PermissionError('approve_suggestion');
+    }
+  }
+  const suggestionRef = doc(eventsCol(event.tripId, event.dayId), event.id);
+  await deleteDoc(suggestionRef);
+};
+
 export const resolveSuggestionByVote = async (
   uid: string,
   event: Event,

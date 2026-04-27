@@ -538,13 +538,23 @@ export const BallotBoxIcon = ({ size = 44, className }: IconProps): ReactElement
     />
     {/* Slot */}
     <rect x="16" y="16" width="16" height="2" rx="1" fill="#0e2a0a" />
+    {/* Static checkmark badge so users recognize this as a voter box */}
+    <circle cx="24" cy="31" r="7" fill="var(--color-secondary)" />
+    <path
+      d="M20.5 31l2.5 2.5 4.5-5"
+      stroke="var(--color-primary)"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
     {/* Decorative stars */}
     <path
-      d="M16 28l1 2.4 2.4.6-2.4.6L16 34l-1-2.4-2.4-.6 2.4-.6L16 28z"
+      d="M13 22l.7 1.7 1.8.5-1.8.5L13 26.4l-.7-1.7-1.8-.5 1.8-.5L13 22z"
       fill="var(--color-secondary)"
     />
     <path
-      d="M32 32l.8 1.9 2 .5-2 .5L32 36.8 31.2 35l-2-.5 2-.5L32 32z"
+      d="M35 24l.7 1.7 1.8.5-1.8.5L35 28.4l-.7-1.7-1.8-.5 1.8-.5L35 24z"
       fill="var(--color-secondary)"
     />
   </svg>
