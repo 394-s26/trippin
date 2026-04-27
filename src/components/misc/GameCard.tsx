@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AppUser } from '../../types/auth';
 import {
@@ -27,10 +27,47 @@ const nameOf = (users: AppUser[], uid: string): string => {
   return `${u.firstName} ${u.lastName}`.trim() || u.username || 'Someone';
 };
 
+const CONFETTI_DURATION_MS = 3000;
+const CONFETTI_PIECE_COUNT = 36;
+const CONFETTI_COLORS = ['#2D5A27', '#178F96', '#98FB98', '#fbbf24', '#ec4899', '#3b82f6'];
+
+const Confetti = () => {
+  // Memoize-ish via initial render — we don't need updates.
+  const pieces = Array.from({ length: CONFETTI_PIECE_COUNT }).map((_, i) => {
+    const left = Math.random() * 100;
+    const delay = Math.random() * 0.4;
+    const color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+    const size = 6 + Math.random() * 6;
+    const duration = 1.5 + Math.random() * 1.4;
+    const drift = (Math.random() - 0.5) * 80; // px horizontal drift
+    return { i, left, delay, color, size, duration, drift };
+  });
+  return (
+    <div className="misc-game-confetti" aria-hidden="true">
+      {pieces.map((p) => (
+        <span
+          key={p.i}
+          style={{
+            left: `${p.left}%`,
+            backgroundColor: p.color,
+            width: `${p.size}px`,
+            height: `${p.size}px`,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.duration}s`,
+            ['--drift' as string]: `${p.drift}px`,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 const GameCard = ({ tripId, currentUid, game, tripUsers }: GameCardProps) => {
   const [popupOpen, setPopupOpen] = useState(false);
   const [picker, setPicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const winFiredRef = useRef<number | null>(null);
 
   const isPlayerX = currentUid && game?.playerX === currentUid;
   const isPlayerO = currentUid && game?.playerO === currentUid;
@@ -42,6 +79,10 @@ const GameCard = ({ tripId, currentUid, game, tripUsers }: GameCardProps) => {
   const gameOverState = game && (game.status === 'completed' || game.status === 'draw' || game.status === 'declined');
   const noGame = !game || Boolean(gameOverState);
 
+  const isMyWin = game?.status === 'completed' && game.winner === currentUid;
+  const isMyLoss = game?.status === 'completed' && game.winner != null && game.winner !== currentUid && isParticipant;
+  const isDraw = game?.status === 'draw';
+
   const opponents = tripUsers.filter((u) => u.uid !== currentUid);
 
   // Clear error when game state changes significantly.
@@ -49,27 +90,42 @@ const GameCard = ({ tripId, currentUid, game, tripUsers }: GameCardProps) => {
     setError(null);
   }, [game?.status]);
 
-  // Close popup if game disappears or becomes "over" while we're watching; the
-  // end state is still shown on the card.
+  // Auto-close popup if:
+  //   (a) the game doc disappeared,
+  //   (b) the invitee declined while we still had the popup open as challenger,
+  //   (c) someone clicked End-game (status becomes 'completed' with no winner).
+  // A natural completion (status='completed' with a winner) or a draw keeps
+  // the popup open so players can see the result / confetti.
   useEffect(() => {
     if (!popupOpen) return;
-    if (!game) setPopupOpen(false);
+    if (!game) {
+      setPopupOpen(false);
+      return;
+    }
+    if (game.status === 'declined') setPopupOpen(false);
+    if (game.status === 'completed' && game.winner === null) setPopupOpen(false);
   }, [popupOpen, game]);
 
-  const handleOpen = () => {
+  // Fire confetti exactly once per win — keyed by createdAt so a fresh game
+  // re-arms the trigger.
+  useEffect(() => {
+    if (!isMyWin || !game) return;
+    const key = game.createdAt.toMillis();
+    if (winFiredRef.current === key) return;
+    winFiredRef.current = key;
+    setShowConfetti(true);
+    const t = setTimeout(() => setShowConfetti(false), CONFETTI_DURATION_MS);
+    return () => clearTimeout(t);
+  }, [isMyWin, game]);
+
+  const handleStartGameClick = () => {
     setError(null);
-    if (noGame) {
-      setPicker(true);
-      return;
-    }
-    if (isMyPendingInvite) {
-      // Pending invites are accepted/declined from the card directly — no auto-open.
-      return;
-    }
-    // Active game or spectator view → open popup.
-    if (isParticipant || game?.status === 'active' || game?.status === 'completed' || game?.status === 'draw') {
-      setPopupOpen(true);
-    }
+    setPicker(true);
+  };
+
+  const handleViewClick = () => {
+    setError(null);
+    setPopupOpen(true);
   };
 
   const handleInvite = async (opponentUid: string) => {
@@ -139,41 +195,37 @@ const GameCard = ({ tripId, currentUid, game, tripUsers }: GameCardProps) => {
     }
   };
 
-  // ────────────────────────────────────────
-  // Card summary
-  // ────────────────────────────────────────
-  const renderSummary = () => {
+  // ──────────────────────────────────────────────────────────────────────
+  // Card body — every state renders centered text and a cylinder action
+  // button, except the my-pending-invite case which uses two pill buttons.
+  // ──────────────────────────────────────────────────────────────────────
+
+  const renderCardBody = () => {
+    // No game / past game → start cylinder.
     if (!game || gameOverState) {
+      let primary: string;
+      let sub: string | null = 'Tap to challenge a member';
       if (game?.status === 'completed' && game.winner) {
-        return (
-          <>
-            <span className="misc-game-status">
-              {nameOf(tripUsers, game.winner)} won
-            </span>
-            <span className="misc-game-sub">Tap to start a new game</span>
-          </>
-        );
-      }
-      if (game?.status === 'draw') {
-        return (
-          <>
-            <span className="misc-game-status">Draw</span>
-            <span className="misc-game-sub">Tap to start a new game</span>
-          </>
-        );
-      }
-      if (game?.status === 'declined') {
-        return (
-          <>
-            <span className="misc-game-status">Invite declined</span>
-            <span className="misc-game-sub">Tap to challenge someone</span>
-          </>
-        );
+        primary = `${nameOf(tripUsers, game.winner)} won`;
+      } else if (game?.status === 'draw') {
+        primary = 'Draw';
+      } else if (game?.status === 'declined') {
+        primary = 'Invite declined';
+      } else {
+        primary = 'No game in progress';
       }
       return (
         <>
-          <span className="misc-game-status">No game in progress</span>
-          <span className="misc-game-sub">Tap to challenge a member</span>
+          <span className="misc-game-status">{primary}</span>
+          {sub && <span className="misc-game-sub">{sub}</span>}
+          <button
+            type="button"
+            className="misc-game-cylinder-btn"
+            onClick={handleStartGameClick}
+            disabled={!currentUid}
+          >
+            Start a new game
+          </button>
         </>
       );
     }
@@ -188,14 +240,14 @@ const GameCard = ({ tripId, currentUid, game, tripUsers }: GameCardProps) => {
             <div className="misc-game-invite-actions">
               <button
                 type="button"
-                className="misc-game-invite-accept"
+                className="misc-game-cylinder-btn"
                 onClick={handleAccept}
               >
                 Accept
               </button>
               <button
                 type="button"
-                className="misc-game-invite-decline"
+                className="misc-game-cylinder-btn misc-game-cylinder-btn--ghost"
                 onClick={handleDecline}
               >
                 Decline
@@ -210,7 +262,13 @@ const GameCard = ({ tripId, currentUid, game, tripUsers }: GameCardProps) => {
             <span className="misc-game-status">
               Waiting for {nameOf(tripUsers, game.playerO)}…
             </span>
-            <span className="misc-game-sub">Tap to cancel or watch</span>
+            <button
+              type="button"
+              className="misc-game-cylinder-btn misc-game-cylinder-btn--ghost"
+              onClick={handleViewClick}
+            >
+              View / Cancel
+            </button>
           </>
         );
       }
@@ -232,29 +290,57 @@ const GameCard = ({ tripId, currentUid, game, tripUsers }: GameCardProps) => {
         </span>
         <span className="misc-game-sub">
           {isParticipant
-            ? game.turn === mySymbol ? 'Your turn — tap to play' : 'Waiting for opponent'
-            : 'In progress — tap to watch'}
+            ? game.turn === mySymbol ? 'Your turn' : 'Waiting for opponent'
+            : 'In progress'}
         </span>
+        <button
+          type="button"
+          className="misc-game-cylinder-btn"
+          onClick={handleViewClick}
+        >
+          {isParticipant ? 'Open game' : 'Watch'}
+        </button>
       </>
     );
   };
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Popup helpers
+  // ──────────────────────────────────────────────────────────────────────
+
   const winnerName = game?.winner ? nameOf(tripUsers, game.winner) : null;
+  const labelFor = (uid: string) => (uid === currentUid ? 'You' : nameOf(tripUsers, uid));
+
+  // Decide the board overlay state.
+  // - Active + opponent's turn (or spectator): 'wait'
+  // - Completed + I won: 'won' (also fires confetti via separate effect)
+  // - Completed + I lost: 'lost'
+  // - Completed/draw — neutral participant or spectator: 'wait'
+  const boardOverlay: 'wait' | 'won' | 'lost' | null = (() => {
+    if (!game) return null;
+    if (gameActive) {
+      if (!isParticipant) return 'wait';
+      if (game.turn !== mySymbol) return 'wait';
+      return null;
+    }
+    if (game.status === 'completed') {
+      if (isMyWin) return 'won';
+      if (isMyLoss) return 'lost';
+      return 'wait';
+    }
+    if (isDraw) return 'wait';
+    return null;
+  })();
 
   return (
     <>
-      <button
-        type="button"
-        className="misc-card misc-card--game"
-        onClick={handleOpen}
-        aria-label="Open game"
-      >
-        <div className="misc-card-header">
+      <div className="misc-card misc-card--game">
+        <div className="misc-card-header misc-card-header--centered">
           <span className="misc-card-title">GAME</span>
         </div>
-        <div className="misc-game-summary">{renderSummary()}</div>
+        <div className="misc-game-body">{renderCardBody()}</div>
         {error && <span className="misc-game-error">{error}</span>}
-      </button>
+      </div>
 
       {/* Opponent picker */}
       {picker && createPortal(
@@ -300,7 +386,7 @@ const GameCard = ({ tripId, currentUid, game, tripUsers }: GameCardProps) => {
       {popupOpen && game && createPortal(
         <div className="overlay-bottom">
           <div className="overlay-scrim" onClick={() => setPopupOpen(false)} />
-          <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-5 pb-8 flex flex-col gap-4 animate-slide-up misc-modal">
+          <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-5 pb-8 flex flex-col gap-4 animate-slide-up misc-modal misc-game-popup">
             <div className="misc-modal-header">
               <h2 className="misc-modal-title">Tic-Tac-Toe</h2>
               <button
@@ -316,47 +402,57 @@ const GameCard = ({ tripId, currentUid, game, tripUsers }: GameCardProps) => {
             <div className="misc-game-players">
               <div className={`misc-game-player${game.turn === 'X' && game.status === 'active' ? ' misc-game-player--active' : ''}`}>
                 <span className="misc-game-player-symbol">X</span>
-                <span className="misc-game-player-name">{nameOf(tripUsers, game.playerX)}</span>
+                <span className="misc-game-player-name">{labelFor(game.playerX)}</span>
               </div>
               <div className="misc-game-vs">vs</div>
               <div className={`misc-game-player${game.turn === 'O' && game.status === 'active' ? ' misc-game-player--active' : ''}`}>
                 <span className="misc-game-player-symbol">O</span>
-                <span className="misc-game-player-name">{nameOf(tripUsers, game.playerO)}</span>
+                <span className="misc-game-player-name">{labelFor(game.playerO)}</span>
               </div>
             </div>
 
-            <div className="misc-game-board">
-              {game.board.map((cell, i) => {
-                const disabled =
-                  !gameActive ||
-                  !isParticipant ||
-                  game.turn !== mySymbol ||
-                  cell !== null;
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    className={`misc-game-cell misc-game-cell--${cell ?? 'empty'}`}
-                    onClick={() => handleCellClick(i)}
-                    disabled={disabled}
-                    aria-label={`Cell ${i + 1}${cell ? ` — ${cell}` : ''}`}
-                  >
-                    {cell}
-                  </button>
-                );
-              })}
+            <div className="misc-game-board-wrapper">
+              <div className="misc-game-board">
+                {game.board.map((cell, i) => {
+                  const disabled =
+                    !gameActive ||
+                    !isParticipant ||
+                    game.turn !== mySymbol ||
+                    cell !== null;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`misc-game-cell misc-game-cell--${cell ?? 'empty'}`}
+                      onClick={() => handleCellClick(i)}
+                      disabled={disabled}
+                      aria-label={`Cell ${i + 1}${cell ? ` — ${cell}` : ''}`}
+                    >
+                      {cell}
+                    </button>
+                  );
+                })}
+              </div>
+              {boardOverlay && (
+                <div
+                  className={`misc-game-board-overlay misc-game-board-overlay--${boardOverlay}`}
+                  aria-hidden="true"
+                />
+              )}
             </div>
 
             <div className="misc-game-state-line">
               {game.status === 'active' && (
                 <span>
                   {isParticipant
-                    ? game.turn === mySymbol ? "Your turn" : "Opponent's turn"
+                    ? game.turn === mySymbol ? 'Your turn' : "Opponent's turn"
                     : `Turn: ${game.turn}`}
                 </span>
               )}
               {game.status === 'completed' && winnerName && (
-                <span className="misc-game-result">{winnerName} wins!</span>
+                <span className="misc-game-result">
+                  {isMyWin ? 'You win!' : isMyLoss ? `${winnerName} wins.` : `${winnerName} wins!`}
+                </span>
               )}
               {game.status === 'draw' && <span className="misc-game-result">It's a draw.</span>}
               {game.status === 'pending' && (
@@ -387,6 +483,8 @@ const GameCard = ({ tripId, currentUid, game, tripUsers }: GameCardProps) => {
                 </button>
               </div>
             )}
+
+            {showConfetti && <Confetti />}
           </div>
         </div>,
         document.body,

@@ -1,7 +1,20 @@
 @reference "../../index.css";
 
-.misc-game-summary {
-  @apply flex flex-col items-start gap-1 text-left;
+/* ── Card body ─────────────────────────────────────────────────
+   Every state in the game tile centers its content so the layout
+   stays balanced whether we're showing a status, a cylinder
+   action button, or accept/decline pills. */
+
+.misc-card--game {
+  @apply items-center text-center;
+}
+
+.misc-card-header--centered {
+  @apply justify-center;
+}
+
+.misc-game-body {
+  @apply w-full flex flex-col items-center justify-center gap-2 flex-1;
 }
 
 .misc-game-status {
@@ -16,16 +29,18 @@
   @apply text-xs text-red-500;
 }
 
+/* Pill / cylinder action button — primary style */
+.misc-game-cylinder-btn {
+  @apply px-5 py-2 rounded-full bg-primary text-white text-xs font-medium hover:bg-primary-light disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
+}
+
+/* Same shape, ghost variant */
+.misc-game-cylinder-btn--ghost {
+  @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
+}
+
 .misc-game-invite-actions {
-  @apply flex gap-2 mt-1;
-}
-
-.misc-game-invite-accept {
-  @apply px-3 py-1 rounded-full bg-primary text-white text-xs font-medium hover:bg-primary-light transition-colors;
-}
-
-.misc-game-invite-decline {
-  @apply px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 transition-colors;
+  @apply flex items-center justify-center gap-2 flex-wrap;
 }
 
 /* Opponent picker list */
@@ -38,7 +53,12 @@
   @apply w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors text-left;
 }
 
-/* Active game popup */
+/* ── Active game popup ─────────────────────────────────────── */
+
+.misc-game-popup {
+  position: relative;
+  overflow: hidden; /* clip confetti to the panel */
+}
 
 .misc-game-players {
   @apply flex items-center justify-between gap-2;
@@ -64,14 +84,29 @@
   @apply text-xs text-gray-400 px-1;
 }
 
-.misc-game-board {
-  @apply grid grid-cols-3 gap-2 mx-auto;
+/* Board + overlay container */
+.misc-game-board-wrapper {
+  position: relative;
   width: 15rem;
   height: 15rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Three equal columns AND rows so cells stay the same size whether
+   they hold a glyph or are empty. */
+.misc-game-board {
+  @apply grid grid-cols-3 grid-rows-3 gap-2;
+  width: 100%;
+  height: 100%;
 }
 
 .misc-game-cell {
   @apply flex items-center justify-center text-2xl font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors disabled:cursor-not-allowed disabled:hover:bg-gray-100;
+  /* `min-h-0` and `min-w-0` let the grid track sizing govern instead of
+     content height — without these a row with a glyph would be taller. */
+  min-width: 0;
+  min-height: 0;
 }
 
 .misc-game-cell--X {
@@ -84,6 +119,30 @@
 
 .misc-game-cell--empty {
   @apply text-transparent;
+}
+
+/* Board overlays — sit on top of the grid, block pointer events while
+   visible, and tint the board with the right color for each state. The
+   negative inset lets the tint bleed slightly past the board edges so
+   the state reads at a glance. */
+.misc-game-board-overlay {
+  position: absolute;
+  inset: -0.6rem;
+  border-radius: 1rem;
+  pointer-events: none;
+  transition: background-color 200ms ease;
+}
+
+.misc-game-board-overlay--wait {
+  background-color: rgba(209, 213, 219, 0.45); /* gray-300 — lighter */
+}
+
+.misc-game-board-overlay--won {
+  background-color: rgba(152, 251, 152, 0.40); /* light green (palegreen) */
+}
+
+.misc-game-board-overlay--lost {
+  background-color: rgba(239, 68, 68, 0.22); /* light red */
 }
 
 .misc-game-state-line {
@@ -104,4 +163,41 @@
 
 .misc-game-end-btn {
   @apply flex-1 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors;
+}
+
+/* ── Confetti ──────────────────────────────────────────────── */
+
+.misc-game-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 70;
+}
+
+.misc-game-confetti span {
+  position: absolute;
+  top: -10%;
+  border-radius: 2px;
+  animation-name: misc-confetti-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes misc-confetti-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--drift, 0), 110vh, 0) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .misc-game-confetti span {
+    animation: none;
+    display: none;
+  }
 }
