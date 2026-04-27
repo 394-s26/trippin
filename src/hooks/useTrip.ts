@@ -95,6 +95,14 @@ const useTrip = (tripId: string) => {
         }
     };
 
+    const updateStartDate = async (startDate: Date) => {
+        try {
+            await updateTrip(uid, tripId, { startDate }, 'change_start_date');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+        }
+    };
+
     const deleteTrip = async () => {
         try {
             await deleteTripDoc(uid, tripId);

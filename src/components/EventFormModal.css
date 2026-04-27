@@ -17,7 +17,7 @@
 }
 
 .suggestion-toggle-card {
-  @apply flex items-center justify-between gap-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3;
+  @apply flex items-center justify-between gap-4 rounded-2xl border border-green-200 bg-green-100 px-4 py-3;
 }
 
 .suggestion-toggle-card--locked {
@@ -33,7 +33,7 @@
 }
 
 .suggestion-toggle-switch {
-  @apply relative shrink-0 h-8 w-14 rounded-full bg-green-200 transition-colors duration-150;
+  @apply relative shrink-0 h-8 w-14 rounded-full bg-gray-200 transition-colors duration-150;
 }
 
 .suggestion-toggle-switch:disabled {
@@ -50,6 +50,98 @@
 
 .suggestion-toggle-switch--on .suggestion-toggle-knob {
   transform: translateX(1.5rem);
+}
+
+.suggestion-toggle-text {
+  @apply flex-1 min-w-0;
+}
+
+.ballot-anim {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.ballot-anim__box {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+}
+
+.ballot-anim__paper {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -150%) rotate(-12deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .suggestion-toggle-card--on .ballot-anim__paper {
+    animation: ballot-paper-drop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) 0.45s forwards;
+  }
+
+  .suggestion-toggle-card--on .ballot-anim__box {
+    animation: ballot-box-bounce 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.45s;
+  }
+
+  /* Explorer auto-on: modal is already open in suggestion mode, so give the
+     title slide time to finish before the ballot drops. */
+  .suggestion-toggle-card--on.suggestion-toggle-card--auto .ballot-anim__paper {
+    animation-delay: 1.4s;
+  }
+
+  .suggestion-toggle-card--on.suggestion-toggle-card--auto .ballot-anim__box {
+    animation-delay: 1.4s;
+  }
+}
+
+@keyframes ballot-paper-drop {
+  0%   { transform: translate(-50%, -150%) rotate(-12deg); opacity: 0; }
+  25%  { opacity: 1; }
+  55%  { transform: translate(-50%, -20%) rotate(0deg); opacity: 1; }
+  85%  { transform: translate(-50%, 20%) rotate(2deg); opacity: 0.6; }
+  100% { transform: translate(-50%, 35%) rotate(0deg); opacity: 0; }
+}
+
+@keyframes ballot-box-bounce {
+  0%, 55% { transform: scale(1, 1) translateY(0); }
+  70%     { transform: scale(1.08, 0.94) translateY(2px); }
+  85%     { transform: scale(0.97, 1.04) translateY(-2px); }
+  100%    { transform: scale(1, 1) translateY(0); }
+}
+
+.event-modal-title {
+  overflow: hidden;
+  line-height: 1.25;
+}
+
+.event-modal-title-text,
+.submit-btn-label {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .event-modal-title-text {
+    animation: title-slide-in 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .submit-btn-label {
+    animation: label-swap-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@keyframes title-slide-in {
+  from { transform: translateX(-110%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes label-swap-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .event-modal-fieldset {
@@ -150,7 +242,7 @@
 }
 
 .form-input {
-  @apply w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white;
+  @apply w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary bg-white;
 }
 
 .location-field-wrapper {
@@ -373,10 +465,6 @@
   @apply text-primary font-semibold;
 }
 
-.event-modal-submit-btn {
-  @apply w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm mt-1;
-}
-
 /* ── When block (chip-based date / time row) ──────────────── */
 
 .when-block {
@@ -463,6 +551,14 @@
 
 .when-allday input {
   @apply w-4 h-4 accent-primary cursor-pointer;
+}
+
+.when-allday--disabled {
+  @apply opacity-40 cursor-not-allowed;
+}
+
+.when-allday--disabled input {
+  @apply cursor-not-allowed;
 }
 
 .when-tz-link {

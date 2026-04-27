@@ -2,7 +2,7 @@ import { db } from './firebase';
 import { addDoc, arrayRemove, arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, onSnapshot, orderBy, query, runTransaction, Timestamp, updateDoc, where, FirestoreError } from 'firebase/firestore';
 import { Event, EventSuggestion, SuggestionType, SuggestionVote } from '../types/event';
 import { hasActionPermission, PermissionError } from './permissionService';
-import { resolveCreateEventSuggestionMode } from '../utilities/eventSuggestions';
+import { getSuggestionVoteThreshold, resolveCreateEventSuggestionMode } from '../utilities/eventSuggestions';
 
 const eventsCol = (tripId: string, dayId: string) =>
   collection(db, 'trips', tripId, 'days', dayId, 'events');
@@ -154,14 +154,32 @@ export const voteOnSuggestion = async (
 
 export const approveSuggestion = async (uid: string, event: Event) => {
   if (!event.suggestion) return;
-  const allowed = await hasActionPermission(uid, event.tripId, 'approve_suggestion');
-  if (!allowed) throw new PermissionError('approve_suggestion');
-
   const suggestionRef = doc(eventsCol(event.tripId, event.dayId), event.id);
 
   try {
-    if (event.suggestion.type === 'delete') {
-      const targetId = event.suggestion.targetEventId;
+    const [allowed, tripSnap, suggestionSnap] = await Promise.all([
+      hasActionPermission(uid, event.tripId, 'approve_suggestion'),
+      getDoc(doc(db, 'trips', event.tripId)),
+      getDoc(suggestionRef),
+    ]);
+    if (!suggestionSnap.exists()) return;
+
+    const current = suggestionSnap.data() as Event;
+    if (!current.suggestion) return;
+    const shared = Array.isArray(tripSnap.data()?.shared) ? tripSnap.data()?.shared as string[] : [];
+    const ownerId = typeof tripSnap.data()?.userId === 'string' ? tripSnap.data()?.userId as string : null;
+    const totalUsers = new Set([...(ownerId ? [ownerId] : []), ...shared]).size;
+    const threshold = getSuggestionVoteThreshold(totalUsers);
+    const yesVotes = current.suggestion.votes.yes.length;
+    const noVotes = current.suggestion.votes.no.length;
+
+    if (!allowed) {
+      const canCommunityApprove = yesVotes >= threshold;
+      if (!canCommunityApprove) throw new PermissionError('approve_suggestion');
+    }
+
+    if (current.suggestion.type === 'delete') {
+      const targetId = current.suggestion.targetEventId;
       if (targetId) {
         await deleteDoc(doc(eventsCol(event.tripId, event.dayId), targetId));
       }
@@ -174,6 +192,66 @@ export const approveSuggestion = async (uid: string, event: Event) => {
     console.error('Error approving suggestion: ', error);
     throw error;
   }
+};
+
+export const rejectDeletionSuggestion = async (uid: string, event: Event) => {
+  if (!event.suggestion || event.suggestion.type !== 'delete') return;
+  const suggestionRef = doc(eventsCol(event.tripId, event.dayId), event.id);
+  await deleteDoc(suggestionRef);
+};
+
+// Rejection/withdrawal of a create-type suggestion. The event doc is the proposal
+// itself, so deleting it removes both in one shot.
+// Allowed if: caller has approve_suggestion, OR is the original proposer, OR the
+// "no" (reject) votes have reached the community threshold (majority decided).
+export const rejectCreateSuggestion = async (uid: string, event: Event) => {
+  if (!event.suggestion || event.suggestion.type !== 'create') return;
+  const isProposer = event.suggestion.createdBy === uid;
+  if (!isProposer) {
+    const [allowed, tripSnap] = await Promise.all([
+      hasActionPermission(uid, event.tripId, 'approve_suggestion'),
+      getDoc(doc(db, 'trips', event.tripId)),
+    ]);
+    if (!allowed) {
+      const shared = Array.isArray(tripSnap.data()?.shared) ? tripSnap.data()?.shared as string[] : [];
+      const ownerId = typeof tripSnap.data()?.userId === 'string' ? tripSnap.data()?.userId as string : null;
+      const totalUsers = new Set([...(ownerId ? [ownerId] : []), ...shared]).size;
+      const threshold = getSuggestionVoteThreshold(totalUsers);
+      const noVotes = event.suggestion.votes.no.length;
+      if (noVotes < threshold) throw new PermissionError('approve_suggestion');
+    }
+  }
+  const suggestionRef = doc(eventsCol(event.tripId, event.dayId), event.id);
+  await deleteDoc(suggestionRef);
+};
+
+export const resolveSuggestionByVote = async (
+  uid: string,
+  event: Event,
+  resolution: 'approve' | 'delete',
+) => {
+  if (!event.suggestion) return;
+  if (resolution === 'approve') {
+    await approveSuggestion(uid, event);
+    return;
+  }
+
+  const suggestionRef = doc(eventsCol(event.tripId, event.dayId), event.id);
+  const suggestionSnap = await getDoc(suggestionRef);
+  if (!suggestionSnap.exists()) return;
+  const current = suggestionSnap.data() as Event;
+  if (!current.suggestion) return;
+  if (current.suggestion.type !== 'create') throw new PermissionError('approve_suggestion');
+
+  const tripSnap = await getDoc(doc(db, 'trips', event.tripId));
+  const shared = Array.isArray(tripSnap.data()?.shared) ? tripSnap.data()?.shared as string[] : [];
+  const ownerId = typeof tripSnap.data()?.userId === 'string' ? tripSnap.data()?.userId as string : null;
+  const totalUsers = new Set([...(ownerId ? [ownerId] : []), ...shared]).size;
+  const threshold = getSuggestionVoteThreshold(totalUsers);
+  const noVotes = current.suggestion.votes.no.length;
+  if (noVotes < threshold) throw new PermissionError('approve_suggestion');
+
+  await deleteDoc(suggestionRef);
 };
 
 // Attempts to acquire an edit lock on an event. Lock is stored at

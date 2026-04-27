@@ -297,12 +297,7 @@
 .share-modal-remove-confirm-actions {
   @apply flex gap-2;
 }
-.share-modal-remove-confirm-btn {
-  @apply flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg py-1.5 transition-colors;
-}
-.share-modal-remove-cancel-btn {
-  @apply flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg py-1.5 transition-colors;
-}
+
 .share-modal-empty {
   @apply text-sm text-gray-400 text-center py-4;
 }

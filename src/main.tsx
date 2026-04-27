@@ -18,7 +18,7 @@ const AppLayout = () => (
   <ProtectedRoute>
     <LastViewedTripProvider>
       <AppHeader /> {/* Fixed header inside here */}
-      <main className="pt-20">
+      <main className="pt-4">
         <Outlet />
       </main>
       <Navbar />
@@ -30,7 +30,7 @@ const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />

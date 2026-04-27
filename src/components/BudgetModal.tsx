@@ -175,10 +175,10 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
                   min={0}
                 />
               </div>
-              <button type="submit" className="budget-submit-btn">
+              <button type="submit" className="mt-5 global-btn default-btn">
                 Confirm
               </button>
-              <button type="button" onClick={() => setIsBudgetOpen(false)} className="budget-cancel-btn">
+              <button type="button" onClick={() => setIsBudgetOpen(false)} className="global-btn cancel-btn">
                 Cancel
               </button>
             </form>
@@ -243,7 +243,7 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
                   {!pctValid && <span className="split-config-warning"> (must equal 100%)</span>}
                 </div>
                 <button
-                  className="split-config-save"
+                  className="global-btn default-btn mt-4"
                   onClick={handleConfigSave}
                   disabled={!pctValid}
                 >
@@ -281,7 +281,7 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
                   );
                 })}
                 <button
-                  className="split-config-save"
+                  className="global-btn default-btn mt-4"
                   onClick={handleConfigSave}
                 >
                   Save Shares
@@ -369,7 +369,7 @@ const BudgetModal = ({ tripId, spent, events, tripUsers, currentUserId, canEditB
               </div>
             )}
 
-            <button type="button" onClick={() => setIsShareOpen(false)} className="split-done-btn">
+            <button type="button" onClick={() => setIsShareOpen(false)} className="global-btn default-btn">
               Done
             </button>
           </div>

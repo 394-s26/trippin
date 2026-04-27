@@ -9,7 +9,8 @@
 }
 
 .home-page-main {
-  @apply flex-grow flex flex-col gap-8 px-6 py-8 pb-20;
+  @apply flex-grow flex flex-col gap-8 py-8 pb-20 mt-12;
+  padding-inline: 2.25rem;
 }
 
 .home-page-section {
