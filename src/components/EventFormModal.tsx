@@ -9,7 +9,7 @@ import TimeSelect, { toMinutes } from './TimeSelect';
 import TimezoneModal from './TimezoneModal';
 import { toDate } from '../utilities/timestamps';
 import './EventFormModal.css';
-import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
+import { initPlaceAutocomplete } from '../services/googlePlacesService';
 
 export type EventFormMode = 'create' | 'edit' | 'readonly';
 
@@ -163,9 +163,7 @@ const EventFormModal = ({
   const startDayRef = useRef<HTMLDivElement>(null);
   const endDayRef = useRef<HTMLDivElement>(null);
 
-  const autocompleteRef = useRef<any>(null);
-
-  const suggestionOnly = !canCreateEvent && canProposeEvent;
+const suggestionOnly = !canCreateEvent && canProposeEvent;
   const showSuggestionToggle = canCreateEvent || canProposeEvent;
 
   const isLodgingType = EVENT_CATEGORY[type] === 'Lodging';
@@ -299,105 +297,39 @@ const EventFormModal = ({
   }, [isLodgingType, startDayId, endDayId]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !locationContainerRef.current) return;
 
-    let isMounted = true;
+    let cleanupFn: (() => void) | undefined;
+    let cancelled = false;
 
-    const init = async () => {
-      setOptions({
-        key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-        v: "weekly",
-      });
+    const initialValue = initialEvent?.location || location || undefined;
 
-      try {
-        const { PlaceAutocompleteElement } =
-          (await importLibrary("places")) as any;
-
-        if (!isMounted || !locationContainerRef.current) return;
-
-        const el = new PlaceAutocompleteElement();
-
-        el.classList.add("form-input");
-        el.style.display = "block";
-        el.style.width = "100%";
-        el.style.color = "#374151";
-
-        autocompleteRef.current = el;
-
-        // Use initialEvent directly if location state hasn't updated yet
-        if (initialEvent?.location)
-          el.value = initialEvent.location;
-        else if (location)
-          el.value = location;
-
-        locationContainerRef.current.innerHTML = "";
-        locationContainerRef.current.appendChild(el);
-
-        const handleInput = (event: any) => {
-          if (!isMounted) return;
-          const rawValue = event?.target?.value;
-          const nextLocation = typeof rawValue === "string" ? rawValue : String(el.value ?? "");
-          setLocation(nextLocation);
-          setLat(undefined);
-          setLng(undefined);
-        };
-
-        const handleSelect = async (event: any) => {
-          const placeId = event.placePrediction.placeId;
-          const { Place } = (await importLibrary("places")) as any;
-          const fullPlace = new Place({ id: placeId });
-
-          await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress", "location"] });
-
-          if (isMounted) {
-            const placeName = fullPlace.displayName || "";
-            const placeAddress = fullPlace.formattedAddress || "";
-            const placeLocation = fullPlace.location;
-            const nextLat =
-              typeof placeLocation?.lat === "function"
-                ? placeLocation.lat()
-                : placeLocation?.lat;
-            const nextLng =
-              typeof placeLocation?.lng === "function"
-                ? placeLocation.lng()
-                : placeLocation?.lng;
-
-            setLocation(placeAddress);
-            if (typeof nextLat === "number" && typeof nextLng === "number") {
-              setLat(nextLat);
-              setLng(nextLng);
-            } else {
-              setLat(undefined);
-              setLng(undefined);
-            }
-
-            setName((currentName) => {
-              // If the name is truly empty or just whitespace, use the place name
-              if (!currentName || currentName.trim() === "") {
-                return placeName;
-              }
-              return currentName;  // Otherwise, keep what the user already typed
-            });
-            el.value = placeAddress;
-          }
-        };
-
-        el.addEventListener("input", handleInput);
-        el.addEventListener("gmp-select", handleSelect);
-      } catch (error) {
-        console.error("Error loading Google Maps:", error);
-      }
-    };
-
-    init();
+    initPlaceAutocomplete(locationContainerRef.current, {
+      initialValue,
+      onInput: (value) => {
+        if (cancelled) return;
+        setLocation(value);
+        setLat(undefined);
+        setLng(undefined);
+      },
+      onSelect: (place) => {
+        if (cancelled) return;
+        setLocation(place.address);
+        setLat(place.lat);
+        setLng(place.lng);
+        setName((current) => (!current || current.trim() === '' ? place.name : current));
+      },
+    }).then((cleanup) => {
+      if (cancelled) { cleanup(); return; }
+      cleanupFn = cleanup;
+    }).catch((err) => console.error('Error loading Google Maps:', err));
 
     return () => {
-      isMounted = false;
-      if (locationContainerRef.current) {
-        locationContainerRef.current.innerHTML = "";
-      }
+      cancelled = true;
+      cleanupFn?.();
+      if (locationContainerRef.current) locationContainerRef.current.innerHTML = '';
     };
-  }, [isOpen]);
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
 

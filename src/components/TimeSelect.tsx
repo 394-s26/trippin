@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './TimeSelect.css';
 
 interface TimeSelectProps {
@@ -133,8 +134,27 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, dayOffset = 0, disable
   const [text, setText] = useState(formatTime12h(value));
   const [focused, setFocused] = useState(false);
   const [invalid, setInvalid] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const wrapRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  const updateDropdownPosition = () => {
+    if (!wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
+    const maxH = 240; // matches max-h-60 (15rem = 240px)
+    const spaceBelow = window.innerHeight - rect.bottom - 4;
+    const spaceAbove = rect.top - 4;
+    const expandUp = spaceBelow < maxH && spaceAbove > spaceBelow;
+    setDropdownStyle({
+      position: 'fixed',
+      left: rect.left,
+      width: rect.width,
+      zIndex: 9999,
+      ...(expandUp
+        ? { bottom: window.innerHeight - rect.top + 4, top: 'auto' }
+        : { top: rect.bottom + 4, bottom: 'auto' }),
+    });
+  };
 
   // Re-evaluate validity for the in-progress text. Empty input is treated as
   // valid (it just reverts on blur). Otherwise the parser is the source of
@@ -153,7 +173,11 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, dayOffset = 0, disable
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        wrapRef.current && !wrapRef.current.contains(target) &&
+        listRef.current && !listRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     };
@@ -214,6 +238,7 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, dayOffset = 0, disable
         inputMode="text"
         onFocus={(e) => {
           setFocused(true);
+          updateDropdownPosition();
           setOpen(true);
           e.target.select();
         }}
@@ -242,8 +267,8 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, dayOffset = 0, disable
           }
         }}
       />
-      {open && (
-        <div className="time-select-options" role="listbox" ref={listRef}>
+      {open && createPortal(
+        <div className="time-select-options" role="listbox" ref={listRef} style={dropdownStyle}>
           {options.map((opt) => {
             const isSelected = selectedMinutes != null && opt.minutes === selectedMinutes;
             return (
@@ -264,7 +289,8 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, dayOffset = 0, disable
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
