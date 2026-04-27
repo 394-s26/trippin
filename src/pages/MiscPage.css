@@ -29,6 +29,8 @@
 .misc-card {
   @apply w-full flex flex-col gap-2 p-4 rounded-2xl bg-white shadow-sm text-left transition-all;
   min-height: 7rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 button.misc-card {
@@ -53,6 +55,8 @@ button.misc-card {
 
 .misc-card-preview {
   @apply grid grid-cols-3 gap-1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .misc-card-preview-img {
@@ -61,6 +65,10 @@ button.misc-card {
 
 .misc-card-preview-empty {
   @apply col-span-3 flex items-center justify-center aspect-video bg-gray-50 rounded-md text-gray-300;
+  min-width: 0;
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .misc-card--ai {
