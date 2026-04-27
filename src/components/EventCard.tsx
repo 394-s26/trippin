@@ -140,7 +140,7 @@ const EventCard = ({
   const canCommunityDeleteEvent = noVotes >= voteThreshold;
   const showApproveButton = canApproveSuggestion || canCommunityApproveEvent;
   const conflictSummary = conflictWithEventName
-    ? `Conflicts with "${conflictWithEventName}"`
+    ? `Conflicts with ${conflictWithEventName}`
     : 'Conflicts with another event';
 
   return (

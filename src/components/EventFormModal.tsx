@@ -594,7 +594,7 @@ const EventFormModal = ({
     isOpen ? (
     <div className="overlay-bottom">
       <div className="overlay-scrim" onClick={onClose} />
-      <div className="overlay-panel overlay-panel--lg rounded-t-2xl p-6 pb-10 max-h-[90vh] overflow-y-auto animate-slide-up">
+      <div className="overlay-panel overlay-panel--lg rounded-t-2xl p-6 pb-10 max-h-[94vh] overflow-y-auto animate-slide-up">
         <div className="event-modal-header">
           <h2 className="event-modal-title">
             <span
@@ -855,14 +855,14 @@ const EventFormModal = ({
               >
                 Time zone
               </button>
+              {conflictingExistingEvents.length > 0 && (
+                <div className="event-form-conflict-banner" role="status">
+                  <strong>Time conflict:</strong>{' '}
+                  This overlaps with {conflictingExistingEvents.slice(0, 2).map((event) => `"${event.name}"`).join(' and ')}
+                  {conflictingExistingEvents.length > 2 ? ` and ${conflictingExistingEvents.length - 2} more event(s)` : ''}.
+                </div>
+              )}
             </div>
-            {conflictingExistingEvents.length > 0 && (
-              <div className="event-form-conflict-banner" role="status">
-                <strong>Time conflict:</strong>{' '}
-                This overlaps with {conflictingExistingEvents.slice(0, 2).map((event) => `"${event.name}"`).join(' and ')}
-                {conflictingExistingEvents.length > 2 ? ` and ${conflictingExistingEvents.length - 2} more event(s)` : ''}.
-              </div>
-            )}
           </div>
 
           <TimezoneModal
