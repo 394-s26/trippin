@@ -23,9 +23,18 @@
 }
 
 
-.map-top-right-controls {
+.map-banner-overlay {
   position: absolute;
   top: 0.75rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.map-top-right-controls {
+  position: absolute;
+  top: 4.5rem;
   right: 0.75rem;
   z-index: 10;
   display: flex;
@@ -264,11 +273,15 @@
 /* ── Day nav panel (below filter toggle) ─────────────────── */
 
 .map-day-nav {
-  @apply absolute top-18 right-0.5 z-[9] flex flex-col gap-1 pointer-events-auto p-1.5 rounded-lg bg-white/70 shadow-sm max-h-[7.75rem] overflow-y-auto;
+  @apply absolute top-[4.5rem] left-3 z-[9] flex flex-col pointer-events-auto rounded-lg bg-white/70 shadow-sm max-h-[9rem] overflow-y-auto;
 }
 
 .map-day-nav--title {
-  @apply text-sm text-gray-800;
+  @apply sticky top-0 z-10 text-sm font-semibold text-gray-800 text-center px-3 py-1.5 bg-white/70 border-b border-gray-200/80 backdrop-blur-sm;
+}
+
+.map-day-nav--buttons {
+  @apply flex flex-col gap-1 p-1.5;
 }
 
 .map-day-nav-btn {
