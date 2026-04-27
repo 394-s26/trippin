@@ -542,7 +542,11 @@
 }
 
 .when-meta-row {
-  @apply flex items-center gap-5 ml-8;
+  @apply flex flex-wrap items-center gap-x-5 gap-y-2 ml-8 min-h-[2.25rem];
+}
+
+.event-form-conflict-banner {
+  @apply rounded-xl border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm text-orange-800;
 }
 
 .when-allday {

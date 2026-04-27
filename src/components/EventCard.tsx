@@ -2,7 +2,7 @@ import { CSSProperties } from 'react';
 import { EVENT_CATEGORY, Event, SuggestionVote } from '../types/event';
 import { AppUser } from '../types/auth';
 import { EVENT_TYPE_ICONS } from '../services/eventSvgIcons';
-import { LocationPinIcon, CheckIcon, XIcon } from '../services/svgIcons';
+import { LocationPinIcon, CheckIcon, XIcon, WarningIcon } from '../services/svgIcons';
 import { UserSelection } from '../hooks/useSessionSelections';
 import { pickFirstSelector } from '../utilities/pickFirstSelector';
 import { getSuggestionVoteSummary, getSuggestionVoteThreshold } from '../utilities/eventSuggestions';
@@ -25,6 +25,7 @@ interface EventCardProps {
   canApproveSuggestion?: boolean;
   onApproveSuggestion?: (event: Event) => void;
   onDeleteSuggestion?: (event: Event) => void;
+  onDismissConflict?: (event: Event) => void;
 }
 
 const EventCard = ({
@@ -41,6 +42,7 @@ const EventCard = ({
   canApproveSuggestion = false,
   onApproveSuggestion,
   onDeleteSuggestion,
+  onDismissConflict,
 }: EventCardProps) => {
   const timeFmt = (d: Date) => new Date(d).toLocaleTimeString('en-US', {
     hour: 'numeric',
@@ -67,6 +69,7 @@ const EventCard = ({
   );
   const firstOther = pickFirstSelector(allSelections, event.id, currentUserId);
   const isSuggestion = !!event.suggestion;
+  const hasPersistentConflict = (event.conflictEventIds?.length ?? 0) > 0 && event.conflictDismissed !== true;
   const showVotingUI = isSuggestion && (!daySlice || daySlice.dayIndex === 1);
   const suggestionType = event.suggestion?.type;
   const myVote = currentUserId && event.suggestion
@@ -136,6 +139,9 @@ const EventCard = ({
   const canCommunityApproveEvent = yesVotes >= voteThreshold;
   const canCommunityDeleteEvent = noVotes >= voteThreshold;
   const showApproveButton = canApproveSuggestion || canCommunityApproveEvent;
+  const conflictSummary = conflictWithEventName
+    ? `Conflicts with ${conflictWithEventName}`
+    : 'Conflicts with another event';
 
   return (
     <div className={cardClass} style={cardStyle} data-event-id={event.id} onClick={(e) => { e.stopPropagation(); onSelect?.(); }}>
@@ -146,12 +152,7 @@ const EventCard = ({
         <div className="event-card-body">
           {!daySlice?.isAllDay && (
             <div className="event-card-time-row">
-              <span className="event-card-time">{time}</span>
-              {conflictWithEventName && (
-                <span className="event-card-conflict">
-                  Time conflict with "{conflictWithEventName}"
-                </span>
-              )}
+              <span className={`event-card-time${hasPersistentConflict ? ' event-card-time--conflict' : ''}`}>{time}</span>
               {showSpanPill && (
                 <span className="event-card-span-pill">Day {daySlice!.dayIndex} of {daySlice!.totalDays}</span>
               )}
@@ -182,6 +183,24 @@ const EventCard = ({
               </span>)}
               <span className="dollar-symbol">$</span>
               <p className="cost-value">{event.cost.toFixed(2)}</p>
+            </div>
+          )}
+          {hasPersistentConflict && (
+            <div className="event-card-conflict-banner">
+              <span className="event-card-conflict-row">
+                <WarningIcon size={14} className="event-card-conflict-icon" />
+                <span className="event-card-conflict-text">{conflictSummary}</span>
+              </span>
+              <button
+                type="button"
+                className="event-card-conflict-dismiss"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDismissConflict?.(event);
+                }}
+              >
+                Dismiss
+              </button>
             </div>
           )}
         </div>
