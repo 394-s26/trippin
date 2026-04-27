@@ -4,7 +4,8 @@ import MapGL, { Marker, Popup, MapRef } from 'react-map-gl/mapbox';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-import MapFilterPanel from '../components/MapFilterPanel';
+// import MapFilterPanel from '../components/MapFilterPanel';
+import MiniTripBanner from '../components/MiniTripBanner';
 import DirectionsExplorer from '../components/DirectionsExplorer';
 import useTrip from '../hooks/useTrip';
 import { useDays } from '../hooks/useDays';
@@ -95,7 +96,7 @@ const MapPage = () => {
   const { trip, loading, error, permissionDenied } = useTrip(tripId);
   const { days } = useDays(tripId);
   const { events } = useItinerary(tripId);
-  const { count, remaining, atLimit, max, increment } = useMapLoadLimit();
+  const { count, atLimit, max, increment } = useMapLoadLimit();
 
   const mapRef = useRef<MapRef>(null);
   const initializedRef = useRef(false);
@@ -108,13 +109,14 @@ const MapPage = () => {
     },
   }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [filterOpen, setFilterOpen] = useState(false);
+  // const [filterOpen, setFilterOpen] = useState(false);
   const [showUnmappable, setShowUnmappable] = useState(false);
   const [selectedDayIds, setSelectedDayIds] = useState<Set<string>>(new Set());
-  const [selectedCategories, setSelectedCategories] = useState<Set<EventCategory>>(new Set(ALL_CATEGORIES));
-  const [nameQuery, setNameQuery] = useState('');
+  const [selectedCategories] = useState<Set<EventCategory>>(new Set(ALL_CATEGORIES));
+  const [nameQuery] = useState('');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [activeDayIds, setActiveDayIds] = useState<Set<string>>(new Set());
+  const [dayNavOpen, setDayNavOpen] = useState(false);
 
   useEffect(() => {
     if (days.length > 0 && selectedDayIds.size === 0) {
@@ -180,11 +182,11 @@ const MapPage = () => {
     map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 800 });
   }, [singleActiveDayId, mapLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const clearFilters = () => {
-    setSelectedDayIds(new Set(days.map(d => d.id)));
-    setSelectedCategories(new Set(ALL_CATEGORIES));
-    setNameQuery('');
-  };
+  // const clearFilters = () => {
+  //   setSelectedDayIds(new Set(days.map(d => d.id)));
+  //   setSelectedCategories(new Set(ALL_CATEGORIES));
+  //   setNameQuery('');
+  // };
 
   const selectedEvent = selectedEventId
     ? (visibleEvents.find(e => e.id === selectedEventId) ?? null)
@@ -285,6 +287,14 @@ const MapPage = () => {
                 className="map-canvas-wrapper"
                 style={{ position: 'relative', flex: '1 1 0%', minWidth: 0, height: '100%' }}
               >
+                <div className="map-banner-overlay">
+                  <MiniTripBanner
+                    tripName={trip.name}
+                    backgroundImage={trip.bannerImageUrl}
+                    ownerId={trip.userId}
+                    shared={trip.shared}
+                  />
+                </div>
                 <MapGL
                   ref={mapRef}
                   initialViewState={{ longitude: 0, latitude: 20, zoom: 1.5 }}
@@ -325,7 +335,7 @@ const MapPage = () => {
                   )}
                 </MapGL>
 
-                <MapFilterPanel
+                {/* <MapFilterPanel
                   isOpen={filterOpen}
                   onToggle={() => setFilterOpen(o => !o)}
                   days={days}
@@ -337,12 +347,51 @@ const MapPage = () => {
                   onChangeNameQuery={setNameQuery}
                   onClose={() => setFilterOpen(false)}
                   onClearAll={clearFilters}
-                />
+                /> */}
+
+                {days.length > 0 && (
+                  <div className="map-day-nav">
+                    <button
+                      type="button"
+                      className={`map-day-nav--title${dayNavOpen ? ' map-day-nav--title-open' : ''}`}
+                      onClick={() => setDayNavOpen(o => !o)}
+                      aria-expanded={dayNavOpen}
+                    >
+                      <CaretRightIcon size={12} className={`map-day-nav--caret${dayNavOpen ? ' map-day-nav--caret-open' : ''}`} />
+                      <span>Daily Plan</span>
+                      {!dayNavOpen && activeDayIds.size === 1 && (() => {
+                        const activeDay = days.find(d => activeDayIds.has(d.id));
+                        return activeDay ? (
+                          <span className="map-day-nav--active-label">{formatDayLabel(activeDay.date)}</span>
+                        ) : null;
+                      })()}
+                    </button>
+                    <div className={`map-day-nav--buttons${dayNavOpen ? ' map-day-nav--buttons-open' : ''}`}>
+                      <div className="map-day-nav--buttons-inner">
+                        {days.map(day => {
+                          const dateLabel = formatDayLabel(day.date);
+                          const isActive = activeDayIds.size === 1 && activeDayIds.has(day.id);
+                          return (
+                            <button
+                              key={day.id}
+                              type="button"
+                              className={`map-day-nav-btn${isActive ? ' map-day-nav-btn--active' : ''}`}
+                              onClick={() => handleDayNavClick(day.id)}
+                              aria-pressed={isActive}
+                            >
+                              {dateLabel}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="map-top-right-controls">
-                  <div className="map-load-meter" aria-live="polite">
+                  {/* <div className="map-load-meter" aria-live="polite">
                     {remaining} map views left
-                  </div>
+                  </div> */}
                   <button
                     className="map-recenter-btn"
                     onClick={handleRecenter}
@@ -358,26 +407,6 @@ const MapPage = () => {
                     </svg>
                     Re-center
                   </button>
-                  {!filterOpen && days.length > 0 && (
-                    <div className="map-day-nav">
-                      <p className="map-day-nav--title">Daily Plan</p>
-                      {days.map(day => {
-                        const dateLabel = formatDayLabel(day.date);
-                        const isActive = activeDayIds.size === 1 && activeDayIds.has(day.id);
-                        return (
-                          <button
-                            key={day.id}
-                            type="button"
-                            className={`map-day-nav-btn${isActive ? ' map-day-nav-btn--active' : ''}`}
-                            onClick={() => handleDayNavClick(day.id)}
-                            aria-pressed={isActive}
-                          >
-                            {dateLabel}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
 
 
@@ -393,7 +422,7 @@ const MapPage = () => {
 
                 {unmappableEvents.length > 0 && (
                   <div className="map-unmappable">
-                    {showUnmappable && (
+                    <div className={`map-unmappable-list${showUnmappable ? ' map-unmappable-list-open' : ''}`}>
                       <ul>
                         {unmappableEvents.map(e => (
                           <li key={e.id}>
@@ -404,7 +433,7 @@ const MapPage = () => {
                           </li>
                         ))}
                       </ul>
-                    )}
+                    </div>
                     <button className="map-unmappable-toggle" onClick={() => setShowUnmappable(!showUnmappable)}>
                       <CaretRightIcon size={16} className={`map-unmappable-caret ${showUnmappable ? 'is-open' : ''}`} />
                       <span>{unmappableEvents.length} event{unmappableEvents.length === 1 ? '' : 's'} without coordinates</span>

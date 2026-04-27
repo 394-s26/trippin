@@ -1,4 +1,4 @@
-export const MAX_MAP_LOADS = 200;
+export const MAX_MAP_LOADS = 300;
 
 const keyFor = (uid: string) => `trippin:mapLoadCount:${uid}`;
 
