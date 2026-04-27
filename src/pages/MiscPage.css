@@ -63,12 +63,12 @@ button.misc-card {
   @apply col-span-3 flex items-center justify-center aspect-video bg-gray-50 rounded-md text-gray-300;
 }
 
-.misc-card--ai-expanded {
-  cursor: default;
+.misc-card--ai {
+  @apply cursor-pointer;
 }
 
-.misc-card--ai-expanded:hover {
-  @apply shadow-sm;
+.misc-card--ai-expanded {
+  cursor: default;
 }
 
 /* Shared modal (for photos popup, game popup, AI day/time picker) */

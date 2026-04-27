@@ -4,6 +4,7 @@ import { Event } from '../../types/event';
 import { Day } from '../../types/day';
 import { createEvent } from '../../services/firestoreEventsService';
 import { XIcon, PlusIcon, CheckIcon } from '../../services/svgIcons';
+import TimeSelect from '../TimeSelect';
 import './AISuggestionsCard.css';
 
 interface AISuggestionsCardProps {
@@ -281,18 +282,17 @@ const AISuggestionsCard = ({
             </label>
             <label className="misc-ai-picker-label">
               <span>Start time</span>
-              <input
-                type="time"
-                className="misc-ai-picker-input"
+              <TimeSelect
                 value={time}
-                onChange={(e) => setTime(e.target.value)}
+                onChange={setTime}
                 disabled={submitting}
+                ariaLabel="Start time"
               />
             </label>
             {error && <div className="misc-photos-error">{error}</div>}
             <button
               type="button"
-              className="misc-ai-confirm-btn"
+              className="global-btn default-btn"
               onClick={handleAdd}
               disabled={submitting || !dayId}
             >
