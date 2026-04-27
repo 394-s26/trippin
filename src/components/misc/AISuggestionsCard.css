@@ -194,6 +194,14 @@
   @apply px-3 py-1 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 transition-colors;
 }
 
+.misc-ai-model-label {
+  @apply text-xs text-gray-400 mt-1;
+}
+
+.misc-ai-model-select {
+  @apply px-2 py-1 rounded-lg bg-gray-100 text-gray-600 text-xs border border-gray-200 mt-1 cursor-pointer;
+}
+
 /* Address and cost metadata on suggestion items */
 .misc-ai-item-address {
   @apply flex items-start gap-1 text-xs text-gray-400 mt-0.5;

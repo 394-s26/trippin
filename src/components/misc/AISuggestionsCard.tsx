@@ -5,7 +5,7 @@ import { Day } from '../../types/day';
 import { Trip } from '../../types/trip';
 import { createEvent } from '../../services/firestoreEventsService';
 import { XIcon, PlusIcon, LocationPinIcon } from '../../services/svgIcons';
-import { fetchAISuggestions, loadSavedSuggestions, saveSuggestions, AISuggestion } from '../../services/aiSuggestionService';
+import { fetchAISuggestions, loadSavedSuggestions, saveSuggestions, AISuggestion, GEMINI_MODEL_OPTIONS, DEFAULT_GEMINI_MODEL } from '../../services/aiSuggestionService';
 import { geocodeAddress } from '../../services/googleMapsService';
 import TimeSelect from '../TimeSelect';
 import './AISuggestionsCard.css';
@@ -45,6 +45,8 @@ const AISuggestionsCard = ({
   const [initialLoading, setInitialLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+  const [isHighUsageError, setIsHighUsageError] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_GEMINI_MODEL);
 
   const sortedDays = useMemo(
     () => [...days].sort((a, b) => a.date.getTime() - b.date.getTime()),
@@ -73,16 +75,21 @@ const AISuggestionsCard = ({
     };
   };
 
-  const generate = async () => {
+  const generate = async (modelOverride?: string) => {
     setGenerating(true);
     setSuggestionsError(null);
+    setIsHighUsageError(false);
     try {
-      const result = await fetchAISuggestions(buildContext());
+      const result = await fetchAISuggestions(buildContext(), modelOverride ?? selectedModel);
       setSuggestions(result);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      
-      setSuggestionsError(msg === 'HIGH_USAGE' ? HIGH_USAGE_MESSAGE : `Error: ${msg}` );  // 'Could not load suggestions.'
+      if (msg === 'HIGH_USAGE') {
+        setIsHighUsageError(true);
+        setSuggestionsError(HIGH_USAGE_MESSAGE);
+      } else {
+        setSuggestionsError(`Error: ${msg}`);
+      }
     } finally {
       setGenerating(false);
     }
@@ -226,9 +233,23 @@ const AISuggestionsCard = ({
       {!generating && suggestionsError && (
         <div className="misc-ai-error-block">
           <span>{suggestionsError}</span>
-          <button type="button" className="misc-ai-retry-btn" onClick={generate}>
+          <button type="button" className="misc-ai-retry-btn" onClick={() => generate()}>
             Try again
           </button>
+          {isHighUsageError && (
+            <>
+            <span className="misc-ai-model-label">Or try again with a different model...</span>
+            <select
+              className="misc-ai-model-select"
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+            >
+              {GEMINI_MODEL_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            </>
+          )}
         </div>
       )}
 
@@ -275,7 +296,7 @@ const AISuggestionsCard = ({
           <button
             type="button"
             className="misc-ai-generate-btn"
-            onClick={generate}
+            onClick={() => generate()}
           >
             Generate suggestions
           </button>

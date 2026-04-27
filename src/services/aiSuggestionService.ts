@@ -44,11 +44,17 @@ async function fetchExistingEventNames(tripId: string): Promise<string[]> {
   return snap.docs.map((d) => (d.data() as { name?: string }).name ?? '').filter(Boolean);
 }
 
-export async function fetchAISuggestions(ctx: SuggestionContext): Promise<AISuggestion[]> {
+export const GEMINI_MODEL_OPTIONS = [
+  { value: 'gemini-3-flash-preview', label: 'gemini-3-flash-preview' },
+  { value: 'gemini-2.5-flash', label: 'gemini-2.5-flash' },
+  { value: 'gemini-2.5-flash-lite', label: 'gemini-2.5-flash-lite' },
+] as const;
+
+export const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
+
+export async function fetchAISuggestions(ctx: SuggestionContext, model: string = DEFAULT_GEMINI_MODEL): Promise<AISuggestion[]> {
   const key = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
-  const model = import.meta.env.VITE_GEMINI_MODEL as string | undefined;
   if (!key) throw new Error('VITE_GEMINI_API_KEY is not set.');
-  if (!model) throw new Error('VITE_GOOGLE_GEMINI_MODEL is not set.');
 
   const existingEventNames = await fetchExistingEventNames(ctx.tripId);
 
