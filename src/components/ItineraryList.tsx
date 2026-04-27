@@ -24,6 +24,7 @@ interface ItineraryListProps {
   canApproveSuggestion?: boolean;
   onApproveSuggestion?: (event: Event) => void;
   onDeleteSuggestion?: (event: Event) => void;
+  onDismissConflict?: (event: Event) => void;
 }
 
 const ORDINAL_SUFFIXES = ['th', 'st', 'nd', 'rd'];
@@ -55,7 +56,17 @@ const ItineraryList = ({
   canApproveSuggestion = false,
   onApproveSuggestion,
   onDeleteSuggestion,
+  onDismissConflict,
 }: ItineraryListProps) => {
+  const eventNameById = new Map<string, string>();
+  days.forEach((day) => {
+    day.events.forEach((event) => {
+      if (!eventNameById.has(event.id)) {
+        eventNameById.set(event.id, event.name);
+      }
+    });
+  });
+
   return (
     <div className="itinerary-list">
       {days.map((day, index) => {
@@ -68,7 +79,6 @@ const ItineraryList = ({
                 <span className="day-date-monthday">{monthDay}</span>
                 <span className="day-date-weekday">{weekday}</span>
               </div>
-
               <div className="day-label-wrapper">
                 <div className="day-actions">
                   {onAutoFillDay && (
@@ -127,10 +137,14 @@ const ItineraryList = ({
                                   currentUserId={currentUserId}
                                   tripUsers={tripUsers}
                                   totalTripUsers={totalTripUsers}
+                                  conflictWithEventName={event.conflictDismissed === true
+                                    ? null
+                                    : ((event.conflictEventIds?.[0] && eventNameById.get(event.conflictEventIds[0])) || null)}
                                   onVoteSuggestion={onVoteSuggestion}
                                   canApproveSuggestion={canApproveSuggestion}
                                   onApproveSuggestion={onApproveSuggestion}
                                   onDeleteSuggestion={onDeleteSuggestion}
+                                  onDismissConflict={onDismissConflict}
                                 />
                               </div>
                             );
@@ -164,10 +178,14 @@ const ItineraryList = ({
                               currentUserId={currentUserId}
                               tripUsers={tripUsers}
                               totalTripUsers={totalTripUsers}
+                              conflictWithEventName={event.conflictDismissed === true
+                                ? null
+                                : ((event.conflictEventIds?.[0] && eventNameById.get(event.conflictEventIds[0])) || null)}
                               onVoteSuggestion={onVoteSuggestion}
                               canApproveSuggestion={canApproveSuggestion}
                               onApproveSuggestion={onApproveSuggestion}
                               onDeleteSuggestion={onDeleteSuggestion}
+                              onDismissConflict={onDismissConflict}
                             />
                           </div>
                         );

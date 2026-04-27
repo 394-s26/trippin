@@ -9,8 +9,6 @@ import EventFormModal from '../components/EventFormModal';
 import BudgetModal from '../components/BudgetModal';
 import TripShareBar from '../components/TripShareBar';
 import { SelectionActionBar } from '../components/SelectionActionBar';
-import UpgradeRoleModal from '../components/UpgradeRoleModal';
-import RegenerateDayConfirmModal from '../components/RegenerateDayConfirmModal';
 import AutoFillDayLocationModal, { ResolvedLocation } from '../components/AutoFillDayLocationModal';
 import AutoFillDaySuggestionsModal from '../components/AutoFillDaySuggestionsModal';
 import { TripDateModal } from '../components/TripDateModal';
@@ -22,7 +20,7 @@ import { useDays } from '../hooks/useDays';
 import useItinerary from '../hooks/useItinerary';
 import { useSessionSelections } from '../hooks/useSessionSelections';
 import { useEventLock } from '../hooks/useEventLock';
-import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, resolveSuggestionByVote, rejectDeletionSuggestion } from '../services/firestoreEventsService';
+import { createEvent, deleteEvent, updateEvent, acquireEventLock, releaseEventLock, suggestEventDeletion, voteOnSuggestion, resolveSuggestionByVote, rejectDeletionSuggestion, rejectCreateSuggestion, recomputeEventConflicts, dismissEventConflict } from '../services/firestoreEventsService';
 import { eventOverlapsDay, sliceEventForDay } from '../utilities/eventOverlapsDay';
 import { EVENT_CATEGORY } from '../types/event';
 import { useAuth } from '../contexts/AuthContext';
@@ -90,6 +88,8 @@ const TripPage = () => {
   const { setLastViewedTrip } = useLastViewedTrip();
 
   const scrollRef = useRef<HTMLElement>(null);
+  const recomputingConflictsRef = useRef(false);
+  const bootstrappedConflictsRef = useRef(false);
 
   const [activeDay, setActiveDay] = useState<{ id: string; date: Date } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -110,6 +110,7 @@ const TripPage = () => {
     removedDays: number;
     removedEvents: number;
   } | null>(null);
+  const [conflictDismissConfirm, setConflictDismissConfirm] = useState<Event | null>(null);
   // Snapshot of event IDs pending deletion confirmation. Captured up-front so
   // the SelectionActionBar's overlay auto-deselect doesn't erase them mid-flow.
   const [deleteConfirmIds, setDeleteConfirmIds] = useState<string[] | null>(null);
@@ -119,10 +120,7 @@ const TripPage = () => {
   // Auto-fill day flow state. One active day at a time moves through:
   // regenerate-confirm (if day has events) → location picker → suggestions.
   const [autoFillDay, setAutoFillDay] = useState<Day | null>(null);
-  const [regenerateDay, setRegenerateDay] = useState<Day | null>(null);
   const [autoFillLocation, setAutoFillLocation] = useState<ResolvedLocation | null>(null);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [regenerateSubmitting, setRegenerateSubmitting] = useState(false);
 
   const canCreateEvent = can('add_event');
   const canProposeCreateEvent = can('propose_create_event');
@@ -240,6 +238,7 @@ const TripPage = () => {
       await Promise.all(
         removedEvents.map((event) => deleteEvent(appUser.uid, event.tripId, event.dayId, event.id))
       );
+      await recomputeEventConflicts(id!);
     }
     await syncDaysToRange(dateAdjustConfirm.newStart, dateAdjustConfirm.newEnd);
     await updateStartAndEndDate(dateAdjustConfirm.newStart, dateAdjustConfirm.newEnd);
@@ -321,31 +320,15 @@ const TripPage = () => {
       await Promise.all(lodgingEvents.map((lodgingEvent) =>
         createEvent(appUser.uid, { ...lodgingEvent, tripId: id! })
       ));
+      await recomputeEventConflicts(id!);
       return;
     }
     await createEvent(appUser.uid, { ...event, tripId: id! });
+    await recomputeEventConflicts(id!);
   };
 
   const handleAutoFillDay = (day: Day) => {
-    if (!can('auto_fill_day')) { setShowUpgradeModal(true); return; }
-    if (day.events.length > 0) { setRegenerateDay(day); return; }
     setAutoFillDay(day);
-  };
-
-  const handleRegenerateConfirmed = async () => {
-    if (!appUser || !regenerateDay) return;
-    setRegenerateSubmitting(true);
-    try {
-      await Promise.all(
-        regenerateDay.events.map((e) =>
-          deleteEvent(appUser.uid, e.tripId, e.dayId, e.id)
-        )
-      );
-      setAutoFillDay(regenerateDay);
-    } finally {
-      setRegenerateSubmitting(false);
-      setRegenerateDay(null);
-    }
   };
 
   const closeAutoFillFlow = () => {
@@ -368,7 +351,14 @@ const TripPage = () => {
   const handleConfirmDeleteSelected = async () => {
     if (!appUser || !deleteConfirmIds) return;
     if (pendingSuggestionDelete) {
-      await resolveSuggestionByVote(appUser.uid, pendingSuggestionDelete, 'approve');
+      // For a CREATE proposal being rejected, the event doesn't exist yet — the
+      // doc is just the proposal. Deleting it removes the would-be event.
+      // For a DELETE proposal being approved, we want to delete the real target.
+      if (pendingSuggestionDelete.suggestion?.type === 'create') {
+        await rejectCreateSuggestion(appUser.uid, pendingSuggestionDelete);
+      } else {
+        await resolveSuggestionByVote(appUser.uid, pendingSuggestionDelete, 'approve');
+      }
       setPendingSuggestionDelete(null);
     } else {
       const selected = events.filter(e => deleteConfirmIds.includes(e.id));
@@ -377,6 +367,7 @@ const TripPage = () => {
       );
       await deselectAll();
     }
+    await recomputeEventConflicts(id!);
     setDeleteConfirmIds(null);
   };
 
@@ -442,6 +433,7 @@ const TripPage = () => {
       await Promise.all(
         lodgingEvents.map((lodgingEvent) => createEvent(appUser.uid, { ...lodgingEvent, tripId: event.tripId }))
       );
+      await recomputeEventConflicts(id!);
       await Promise.all(groupedEvents.map((grouped) => releaseEventLock(id!, grouped.id, appUser.uid)));
       setEditingEvent(null);
       await deselectAll();
@@ -456,6 +448,7 @@ const TripPage = () => {
     } else {
       await updateEvent(appUser.uid, event.tripId, event.dayId, event.id, updated);
     }
+    await recomputeEventConflicts(id!);
     await releaseEventLock(id!, event.id, appUser.uid);
     setEditingEvent(null);
     await deselectAll();
@@ -482,13 +475,43 @@ const TripPage = () => {
     } else {
       await resolveSuggestionByVote(appUser.uid, event, 'approve');
     }
+    await recomputeEventConflicts(id!);
   };
 
-  const handleDeleteSuggestion = (event: Event) => {
+  const handleDeleteSuggestion = async (event: Event) => {
     if (!appUser || !event.suggestion) return;
     setPendingSuggestionDelete(event);
     setDeleteConfirmIds([event.id]);
   };
+
+  const handleDismissConflict = (event: Event) => {
+    setConflictDismissConfirm(event);
+  };
+
+  const handleConfirmDismissConflict = async () => {
+    if (!appUser || !conflictDismissConfirm) return;
+    await dismissEventConflict(
+      conflictDismissConfirm.tripId,
+      conflictDismissConfirm.dayId,
+      conflictDismissConfirm.id,
+    );
+    setConflictDismissConfirm(null);
+  };
+
+  useEffect(() => {
+    if (!id || !appUser || events.length === 0) return;
+    if (bootstrappedConflictsRef.current || recomputingConflictsRef.current) return;
+
+    recomputingConflictsRef.current = true;
+    bootstrappedConflictsRef.current = true;
+    recomputeEventConflicts(id)
+      .catch((error) => {
+        console.error('Failed to backfill event conflict metadata.', error);
+      })
+      .finally(() => {
+        recomputingConflictsRef.current = false;
+      });
+  }, [id, appUser, events]);
 
   if (loading) {
     return (
@@ -608,6 +631,7 @@ const TripPage = () => {
               canApproveSuggestion={canApproveSuggestion}
               onApproveSuggestion={handleApproveSuggestion}
               onDeleteSuggestion={handleDeleteSuggestion}
+              onDismissConflict={handleDismissConflict}
             />
           </div>
         </main>
@@ -679,6 +703,25 @@ const TripPage = () => {
           document.body
         )}
 
+        {conflictDismissConfirm && createPortal(
+          <div className="overlay-bottom">
+            <div className="overlay-scrim" onClick={() => setConflictDismissConfirm(null)} />
+            <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 flex flex-col gap-3 animate-slide-up">
+              <h2 className="delete-confirm-title">Dismiss conflict warning?</h2>
+              <p className="delete-confirm-body">
+                The warning for "{conflictDismissConfirm.name}" will be hidden until this event conflicts again.
+              </p>
+              <button onClick={handleConfirmDismissConflict} className="global-btn red-btn">
+                Dismiss Warning
+              </button>
+              <button onClick={() => setConflictDismissConfirm(null)} className="global-btn cancel-btn">
+                Cancel
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
+
         <EventFormModal
           isOpen={activeDay !== null}
           onClose={() => setActiveDay(null)}
@@ -691,6 +734,7 @@ const TripPage = () => {
           tripSpent={events.reduce((sum, e) => sum + (e.cost ?? 0), 0)}
           canCreateEvent={canCreateEvent}
           canProposeEvent={canProposeCreateEvent}
+          existingEvents={events}
         />
 
         <EventFormModal
@@ -706,18 +750,7 @@ const TripPage = () => {
           mode={editingEvent?.lock === 'readonly' ? 'readonly' : 'edit'}
           initialEvent={editingEvent?.event}
           lockHolderName={editingEvent?.holderName}
-        />
-
-        <UpgradeRoleModal
-          isOpen={showUpgradeModal}
-          onClose={() => setShowUpgradeModal(false)}
-        />
-
-        <RegenerateDayConfirmModal
-          isOpen={regenerateDay !== null}
-          onCancel={() => setRegenerateDay(null)}
-          onConfirm={handleRegenerateConfirmed}
-          submitting={regenerateSubmitting}
+          existingEvents={events}
         />
 
         <AutoFillDayLocationModal

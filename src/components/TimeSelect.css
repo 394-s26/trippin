@@ -9,7 +9,7 @@
 }
 
 .time-select-options {
-  @apply absolute left-0 right-0 top-[calc(100%+4px)] z-20 bg-white border border-gray-100 rounded-xl shadow-lg py-1 max-h-60 overflow-y-auto;
+  @apply bg-white border border-gray-100 rounded-xl shadow-lg py-1 max-h-60 overflow-y-auto;
 }
 
 .time-select-options::-webkit-scrollbar {
@@ -58,7 +58,6 @@
 }
 
 .time-select--chip .time-select-options {
-  @apply left-0 right-auto;
   min-width: 8.5rem;
 }
 

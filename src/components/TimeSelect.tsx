@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './TimeSelect.css';
 
 interface TimeSelectProps {
@@ -6,6 +7,10 @@ interface TimeSelectProps {
   value: string;
   onChange: (value: string) => void;
   anchorMinutes?: number;
+  // Number of full calendar days between the anchor's day and this select's day.
+  // 0 = same day (current behavior); 1 = next day; 2 = day after, etc. Used to
+  // show the duration hint as e.g. "48h + 6h 30m" for multi-day events.
+  dayOffset?: number;
   disabled?: boolean;
   ariaLabel?: string;
   variant?: 'input' | 'chip';
@@ -99,9 +104,24 @@ export const parseTime = (raw: string, meridiemHint?: 'am' | 'pm'): string | nul
   return `${pad2(h)}:${pad2(m)}`;
 };
 
-const formatDuration = (mins: number): string => {
+const formatDuration = (mins: number, dayOffset = 0): string => {
   let m = mins;
-  if (m <= 0) m += 24 * 60;
+  if (dayOffset === 0 && m <= 0) m += 24 * 60;
+  if (dayOffset > 0) {
+    const dayLabel = dayOffset === 1 ? '1 day' : `${dayOffset} days`;
+    if (m === 0) return dayLabel;
+    if (m < 0) {
+      // End time-of-day is before start → net duration is less than full days.
+      const total = dayOffset * 24 * 60 + m;
+      const ah = Math.floor(total / 60);
+      const am = total % 60;
+      return am === 0 ? `${ah}h` : `${ah}h ${am}m`;
+    }
+    const h = Math.floor(m / 60);
+    const r = m % 60;
+    const extra = h === 0 ? `${r}m` : r === 0 ? `${h}h` : `${h}h ${r}m`;
+    return `${dayLabel} + ${extra}`;
+  }
   const h = Math.floor(m / 60);
   const r = m % 60;
   if (h === 0) return `${r}m`;
@@ -109,13 +129,32 @@ const formatDuration = (mins: number): string => {
   return `${h}h ${r}m`;
 };
 
-const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel, variant = 'input' }: TimeSelectProps) => {
+const TimeSelect = ({ id, value, onChange, anchorMinutes, dayOffset = 0, disabled, ariaLabel, variant = 'input' }: TimeSelectProps) => {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(formatTime12h(value));
   const [focused, setFocused] = useState(false);
   const [invalid, setInvalid] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const wrapRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  const updateDropdownPosition = () => {
+    if (!wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
+    const maxH = 240; // matches max-h-60 (15rem = 240px)
+    const spaceBelow = window.innerHeight - rect.bottom - 4;
+    const spaceAbove = rect.top - 4;
+    const expandUp = spaceBelow < maxH && spaceAbove > spaceBelow;
+    setDropdownStyle({
+      position: 'fixed',
+      left: rect.left,
+      width: rect.width,
+      zIndex: 9999,
+      ...(expandUp
+        ? { bottom: window.innerHeight - rect.top + 4, top: 'auto' }
+        : { top: rect.bottom + 4, bottom: 'auto' }),
+    });
+  };
 
   // Re-evaluate validity for the in-progress text. Empty input is treated as
   // valid (it just reverts on blur). Otherwise the parser is the source of
@@ -134,7 +173,11 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel, v
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        wrapRef.current && !wrapRef.current.contains(target) &&
+        listRef.current && !listRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     };
@@ -195,6 +238,7 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel, v
         inputMode="text"
         onFocus={(e) => {
           setFocused(true);
+          updateDropdownPosition();
           setOpen(true);
           e.target.select();
         }}
@@ -223,12 +267,10 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel, v
           }
         }}
       />
-      {open && (
-        <div className="time-select-options" role="listbox" ref={listRef}>
+      {open && createPortal(
+        <div className="time-select-options" role="listbox" ref={listRef} style={dropdownStyle}>
           {options.map((opt) => {
             const isSelected = selectedMinutes != null && opt.minutes === selectedMinutes;
-            const showHint = anchorMinutes != null;
-            const diff = showHint ? opt.minutes - anchorMinutes : 0;
             return (
               <button
                 key={opt.hhmm}
@@ -244,13 +286,11 @@ const TimeSelect = ({ id, value, onChange, anchorMinutes, disabled, ariaLabel, v
                 }}
               >
                 <span className="time-select-option-label">{formatTime12h(opt.hhmm)}</span>
-                {showHint && diff !== 0 && (
-                  <span className="time-select-option-hint">{formatDuration(diff)}</span>
-                )}
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

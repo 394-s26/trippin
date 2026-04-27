@@ -8,8 +8,9 @@ import UserAvatar from './UserAvatar';
 import TimeSelect, { toMinutes } from './TimeSelect';
 import TimezoneModal from './TimezoneModal';
 import { toDate } from '../utilities/timestamps';
+import { eventsConflict } from '../utilities/eventConflicts';
 import './EventFormModal.css';
-import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
+import { initPlaceAutocomplete } from '../services/googlePlacesService';
 
 export type EventFormMode = 'create' | 'edit' | 'readonly';
 
@@ -33,6 +34,7 @@ interface EventFormModalProps {
   mode?: EventFormMode;
   initialEvent?: Event;
   lockHolderName?: string;
+  existingEvents?: Event[];
 }
 
 const toTimeString = (d: Date): string => {
@@ -133,6 +135,7 @@ const EventFormModal = ({
   mode = 'create',
   initialEvent,
   lockHolderName,
+  existingEvents = [],
 }: EventFormModalProps) => {
   const readOnly = mode === 'readonly';
   const [category, setCategory] = useState<FormCategory>('None');
@@ -163,9 +166,7 @@ const EventFormModal = ({
   const startDayRef = useRef<HTMLDivElement>(null);
   const endDayRef = useRef<HTMLDivElement>(null);
 
-  const autocompleteRef = useRef<any>(null);
-
-  const suggestionOnly = !canCreateEvent && canProposeEvent;
+const suggestionOnly = !canCreateEvent && canProposeEvent;
   const showSuggestionToggle = canCreateEvent || canProposeEvent;
 
   const isLodgingType = EVENT_CATEGORY[type] === 'Lodging';
@@ -299,111 +300,90 @@ const EventFormModal = ({
   }, [isLodgingType, startDayId, endDayId]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !locationContainerRef.current) return;
 
-    let isMounted = true;
+    let cleanupFn: (() => void) | undefined;
+    let cancelled = false;
 
-    const init = async () => {
-      setOptions({
-        key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-        v: "weekly",
-      });
+    const initialValue = initialEvent?.location || location || undefined;
 
-      try {
-        const { PlaceAutocompleteElement } =
-          (await importLibrary("places")) as any;
-
-        if (!isMounted || !locationContainerRef.current) return;
-
-        const el = new PlaceAutocompleteElement();
-
-        el.classList.add("form-input");
-        el.style.display = "block";
-        el.style.width = "100%";
-        el.style.color = "#374151";
-
-        autocompleteRef.current = el;
-
-        // Use initialEvent directly if location state hasn't updated yet
-        if (initialEvent?.location)
-          el.value = initialEvent.location;
-        else if (location)
-          el.value = location;
-
-        locationContainerRef.current.innerHTML = "";
-        locationContainerRef.current.appendChild(el);
-
-        const handleInput = (event: any) => {
-          if (!isMounted) return;
-          const rawValue = event?.target?.value;
-          const nextLocation = typeof rawValue === "string" ? rawValue : String(el.value ?? "");
-          setLocation(nextLocation);
-          setLat(undefined);
-          setLng(undefined);
-        };
-
-        const handleSelect = async (event: any) => {
-          const placeId = event.placePrediction.placeId;
-          const { Place } = (await importLibrary("places")) as any;
-          const fullPlace = new Place({ id: placeId });
-
-          await fullPlace.fetchFields({ fields: ["displayName", "formattedAddress", "location"] });
-
-          if (isMounted) {
-            const placeName = fullPlace.displayName || "";
-            const placeAddress = fullPlace.formattedAddress || "";
-            const placeLocation = fullPlace.location;
-            const nextLat =
-              typeof placeLocation?.lat === "function"
-                ? placeLocation.lat()
-                : placeLocation?.lat;
-            const nextLng =
-              typeof placeLocation?.lng === "function"
-                ? placeLocation.lng()
-                : placeLocation?.lng;
-
-            setLocation(placeAddress);
-            if (typeof nextLat === "number" && typeof nextLng === "number") {
-              setLat(nextLat);
-              setLng(nextLng);
-            } else {
-              setLat(undefined);
-              setLng(undefined);
-            }
-
-            setName((currentName) => {
-              // If the name is truly empty or just whitespace, use the place name
-              if (!currentName || currentName.trim() === "") {
-                return placeName;
-              }
-              return currentName;  // Otherwise, keep what the user already typed
-            });
-            el.value = placeAddress;
-          }
-        };
-
-        el.addEventListener("input", handleInput);
-        el.addEventListener("gmp-select", handleSelect);
-      } catch (error) {
-        console.error("Error loading Google Maps:", error);
-      }
-    };
-
-    init();
+    initPlaceAutocomplete(locationContainerRef.current, {
+      initialValue,
+      onInput: (value) => {
+        if (cancelled) return;
+        setLocation(value);
+        setLat(undefined);
+        setLng(undefined);
+      },
+      onSelect: (place) => {
+        if (cancelled) return;
+        setLocation(place.address);
+        setLat(place.lat);
+        setLng(place.lng);
+        setName((current) => (!current || current.trim() === '' ? place.name : current));
+      },
+    }).then((cleanup) => {
+      if (cancelled) { cleanup(); return; }
+      cleanupFn = cleanup;
+    }).catch((err) => console.error('Error loading Google Maps:', err));
 
     return () => {
-      isMounted = false;
-      if (locationContainerRef.current) {
-        locationContainerRef.current.innerHTML = "";
-      }
+      cancelled = true;
+      cleanupFn?.();
+      if (locationContainerRef.current) locationContainerRef.current.innerHTML = '';
     };
-  }, [isOpen]);
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
 
   const costNum = cost !== '' ? parseFloat(cost) : 0;
   const wouldExceedBudget = tripBudget != null && tripBudget > 0 && tripSpent != null && (tripSpent + costNum) > tripBudget;
   const submitLabel = mode === 'edit' ? 'Save Changes' : isSuggestion ? 'Submit Suggestion' : 'Add Event';
+  const selectedStartDay = tripDays.find((d) => d.id === startDayId) ?? tripDays[0];
+  const selectedRawEndDay = tripDays.find((d) => d.id === endDayId) ?? selectedStartDay;
+  const selectedEndDay = isLodgingType ? selectedRawEndDay : selectedStartDay;
+
+  const draftStart = selectedStartDay
+    ? (allDay
+      ? (() => {
+        const out = new Date(selectedStartDay.date);
+        out.setHours(0, 0, 0, 0);
+        return out;
+      })()
+      : combineDateAndTime(selectedStartDay.date, startTime))
+    : null;
+  const draftEnd = selectedEndDay
+    ? (allDay
+      ? (() => {
+        const out = new Date(selectedEndDay.date);
+        out.setHours(0, 0, 0, 0);
+        return out;
+      })()
+      : combineDateAndTime(selectedEndDay.date, endTime))
+    : null;
+  const draftEvent: Event | null = (draftStart && draftEnd && name.trim())
+    ? ({
+      id: initialEvent?.id ?? '__draft__',
+      tripId: initialEvent?.tripId ?? '',
+      dayId: selectedStartDay?.id ?? '',
+      type,
+      name: name.trim(),
+      startDate: draftStart,
+      endDate: draftEnd,
+      allDay,
+      suggestion: null,
+    } as Event)
+    : null;
+  const conflictingExistingEvents = draftEvent
+    ? existingEvents.filter((candidate) => {
+      if (initialEvent && candidate.id === initialEvent.id) return false;
+      return eventsConflict(draftEvent, {
+        ...candidate,
+        startDate: toDate(candidate.startDate as Parameters<typeof toDate>[0]),
+        endDate: candidate.endDate ? toDate(candidate.endDate as Parameters<typeof toDate>[0]) : candidate.endDate,
+      } as Event);
+    })
+    : [];
 
   // Start and end times are independent; changing start should not mutate end.
   const handleStartTimeChange = (next: string) => {
@@ -546,7 +526,7 @@ const EventFormModal = ({
     isOpen ? (
     <div className="overlay-bottom">
       <div className="overlay-scrim" onClick={onClose} />
-      <div className="overlay-panel overlay-panel--lg rounded-t-2xl p-6 pb-10 max-h-[90vh] overflow-y-auto animate-slide-up">
+      <div className="overlay-panel overlay-panel--lg rounded-t-2xl p-6 pb-10 max-h-[94vh] overflow-y-auto animate-slide-up">
         <div className="event-modal-header">
           <h2 className="event-modal-title">
             <span
@@ -593,7 +573,7 @@ const EventFormModal = ({
           {/* Suggestion toggle */}
           {showSuggestionToggle && mode === 'create' && (
             <div
-              className={`suggestion-toggle-card${suggestionOnly ? ' suggestion-toggle-card--locked' : ''}${isSuggestion ? ' suggestion-toggle-card--on' : ''}`}
+              className={`suggestion-toggle-card${suggestionOnly ? ' suggestion-toggle-card--locked suggestion-toggle-card--auto' : ''}${isSuggestion ? ' suggestion-toggle-card--on' : ''}`}
             >
               <div className="ballot-anim" aria-hidden="true">
                 <BallotBoxIcon className="ballot-anim__box" size={44} />
@@ -771,6 +751,11 @@ const EventFormModal = ({
                       value={endTime}
                       onChange={handleEndTimeChange}
                       anchorMinutes={toMinutes(startTime) ?? undefined}
+                      dayOffset={Math.max(
+                        0,
+                        tripDays.findIndex(d => d.id === endDayId)
+                          - tripDays.findIndex(d => d.id === startDayId),
+                      )}
                       disabled={readOnly || allDay}
                       ariaLabel="End time"
                       variant="chip"
@@ -802,6 +787,13 @@ const EventFormModal = ({
               >
                 Time zone
               </button>
+              {conflictingExistingEvents.length > 0 && (
+                <div className="event-form-conflict-banner" role="status">
+                  <strong>Time conflict:</strong>{' '}
+                  This overlaps with {conflictingExistingEvents.slice(0, 2).map((event) => `"${event.name}"`).join(' and ')}
+                  {conflictingExistingEvents.length > 2 ? ` and ${conflictingExistingEvents.length - 2} more event(s)` : ''}.
+                </div>
+              )}
             </div>
           </div>
 

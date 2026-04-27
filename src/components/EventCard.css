@@ -77,6 +77,10 @@
   @apply text-xs font-medium bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5;
 }
 
+.event-card-time--conflict {
+  @apply bg-orange-100 text-orange-800 ring-1 ring-orange-300;
+}
+
 .event-card-span-pill {
   @apply text-[10px] font-semibold uppercase tracking-wide text-primary bg-green-50 rounded-full px-2 py-0.5;
 }
@@ -121,6 +125,26 @@
   @apply text-[11px] font-semibold text-orange-700 bg-orange-100 rounded-full px-2 py-0.5;
 }
 
+.event-card-conflict-banner {
+  @apply mt-2 flex items-center justify-between gap-2 rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-1.5;
+}
+
+.event-card-conflict-row {
+  @apply inline-flex items-center gap-1 min-w-0;
+}
+
+.event-card-conflict-icon {
+  @apply text-orange-700;
+}
+
+.event-card-conflict-text {
+  @apply text-xs font-medium text-orange-800 truncate;
+}
+
+.event-card-conflict-dismiss {
+  @apply shrink-0 rounded-md border border-orange-300 px-2 py-0.5 text-[11px] font-semibold text-orange-700 hover:bg-orange-100 transition-colors;
+}
+
 .event-card-location-link {
   @apply text-gray-500 hover:text-primary transition-colors;
 }
@@ -135,6 +159,10 @@
 
 .event-card-vote-title {
   @apply text-[13px] uppercase tracking-[0.18em] font-semibold text-primary mb-3;
+}
+
+.event-card-vote-title--delete {
+  @apply text-red-600;
 }
 
 .event-card-vote-actions {

@@ -55,6 +55,24 @@ export const loadGoogleMaps = async (): Promise<any> => {
   return googleMapsPromise;
 };
 
+export const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
+  const google = await loadGoogleMaps();
+  const service = new google.maps.places.PlacesService(document.createElement('div'));
+  return new Promise((resolve) => {
+    service.findPlaceFromQuery(
+      { query: address, fields: ['geometry'] },
+      (results: any[], status: string) => {
+        if (status === 'OK' && results?.[0]?.geometry?.location) {
+          const loc = results[0].geometry.location;
+          resolve({ lat: loc.lat(), lng: loc.lng() });
+        } else {
+          resolve(null);
+        }
+      },
+    );
+  });
+};
+
 export const getPlacePredictions = async (input: string): Promise<string[]> => {
   const google = await loadGoogleMaps();
   const service = new google.maps.places.AutocompleteService();

@@ -81,11 +81,21 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .suggestion-toggle-card--on .ballot-anim__paper {
-    animation: ballot-paper-drop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation: ballot-paper-drop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) 0.45s forwards;
   }
 
   .suggestion-toggle-card--on .ballot-anim__box {
-    animation: ballot-box-bounce 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: ballot-box-bounce 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.45s;
+  }
+
+  /* Explorer auto-on: modal is already open in suggestion mode, so give the
+     title slide time to finish before the ballot drops. */
+  .suggestion-toggle-card--on.suggestion-toggle-card--auto .ballot-anim__paper {
+    animation-delay: 1.4s;
+  }
+
+  .suggestion-toggle-card--on.suggestion-toggle-card--auto .ballot-anim__box {
+    animation-delay: 1.4s;
   }
 }
 
@@ -104,6 +114,11 @@
   100%    { transform: scale(1, 1) translateY(0); }
 }
 
+.event-modal-title {
+  overflow: hidden;
+  line-height: 1.25;
+}
+
 .event-modal-title-text,
 .submit-btn-label {
   display: inline-block;
@@ -111,12 +126,17 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .event-modal-title-text {
-    animation: label-swap-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: title-slide-in 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .submit-btn-label {
     animation: label-swap-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
   }
+}
+
+@keyframes title-slide-in {
+  from { transform: translateX(-110%); }
+  to   { transform: translateX(0); }
 }
 
 @keyframes label-swap-in {
@@ -522,7 +542,11 @@
 }
 
 .when-meta-row {
-  @apply flex items-center gap-5 ml-8;
+  @apply flex flex-wrap items-center gap-x-5 gap-y-2 ml-8 min-h-[2.25rem];
+}
+
+.event-form-conflict-banner {
+  @apply rounded-xl border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm text-orange-800;
 }
 
 .when-allday {
