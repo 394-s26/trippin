@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Event } from '../../types/event';
 import { Day } from '../../types/day';
+import { Trip } from '../../types/trip';
 import { createEvent } from '../../services/firestoreEventsService';
-import { XIcon, PlusIcon, CheckIcon } from '../../services/svgIcons';
+import { XIcon, PlusIcon } from '../../services/svgIcons';
+import { fetchAISuggestions, loadSavedSuggestions, saveSuggestions, AISuggestion } from '../../services/aiSuggestionService';
+import { geocodeAddress } from '../../services/googleMapsService';
 import TimeSelect from '../TimeSelect';
 import './AISuggestionsCard.css';
 
@@ -13,49 +16,11 @@ interface AISuggestionsCardProps {
   days: Omit<Day, 'events'>[];
   canCreateEvent: boolean;
   canProposeEvent: boolean;
+  trip: Trip;
+  tripUserCount: number;
 }
 
-interface AISuggestion {
-  id: string;
-  title: string;
-  type: Event['type'];
-  description: string;
-}
-
-// Placeholder suggestions. Once an AI backend exists, swap this constant for
-// data keyed off trip location + already-added events.
-const PLACEHOLDER_SUGGESTIONS: AISuggestion[] = [
-  {
-    id: 's1',
-    title: 'Visit the local history museum',
-    type: 'Museum',
-    description: 'A classic first-day orientation — get context on the area before exploring.',
-  },
-  {
-    id: 's2',
-    title: 'Sunset viewpoint hike',
-    type: 'Hiking',
-    description: 'A short trail popular at golden hour. 1–2 hours round trip.',
-  },
-  {
-    id: 's3',
-    title: 'Try the highest-rated local restaurant',
-    type: 'Restaurant',
-    description: 'Book ahead. Reliably great reviews for authentic regional cuisine.',
-  },
-  {
-    id: 's4',
-    title: 'Morning coffee & pastry spot',
-    type: 'Cafe',
-    description: 'Start a day right with a neighborhood-favorite café.',
-  },
-  {
-    id: 's5',
-    title: 'City walking tour',
-    type: 'Tour',
-    description: 'Free or paid walking tours cover the main landmarks in 2–3 hours.',
-  },
-];
+const HIGH_USAGE_MESSAGE = 'Gemini is experiencing high usage right now. Please try again in a moment.';
 
 const formatDayOption = (d: Date): string =>
   d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -66,6 +31,8 @@ const AISuggestionsCard = ({
   days,
   canCreateEvent,
   canProposeEvent,
+  trip,
+  tripUserCount,
 }: AISuggestionsCardProps) => {
   const [expanded, setExpanded] = useState(false);
   const [adding, setAdding] = useState<AISuggestion | null>(null);
@@ -73,18 +40,60 @@ const AISuggestionsCard = ({
   const [time, setTime] = useState('10:00');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [addedState, setAddedState] = useState<{ id: string; mode: 'added' | 'suggested' } | null>(null);
+
+  const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
 
   const sortedDays = useMemo(
     () => [...days].sort((a, b) => a.date.getTime() - b.date.getTime()),
     [days],
   );
 
+  // Load cached suggestions from Firestore on mount
+  useEffect(() => {
+    loadSavedSuggestions(tripId)
+      .then((saved) => { if (saved) setSuggestions(saved); })
+      .catch(() => {/* silently ignore — user can still generate */})
+      .finally(() => setInitialLoading(false));
+  }, [tripId]);
+
+  const buildContext = () => {
+    const hasWeekend = sortedDays.some((d) => d.date.getDay() === 0 || d.date.getDay() === 6);
+    const hasWeekday = sortedDays.some((d) => d.date.getDay() >= 1 && d.date.getDay() <= 5);
+    return {
+      tripId,
+      tripName: trip.name,
+      totalUsers: tripUserCount,
+      budget: trip.budget > 0 ? trip.budget : null,
+      numDays: sortedDays.length,
+      hasWeekend,
+      hasWeekday,
+    };
+  };
+
+  const generate = async () => {
+    setGenerating(true);
+    setSuggestionsError(null);
+    try {
+      const result = await fetchAISuggestions(buildContext());
+      setSuggestions(result);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      
+      setSuggestionsError(msg === 'HIGH_USAGE' ? HIGH_USAGE_MESSAGE : `Error: ${msg}` );  // 'Could not load suggestions.'
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const canAct = canCreateEvent || canProposeEvent;
   const suggestOnly = !canCreateEvent && canProposeEvent;
   const actionLabel = suggestOnly ? 'Suggest' : 'Add';
   const pickerTitle = suggestOnly ? 'Suggest for the itinerary' : 'Add to itinerary';
   const confirmLabel = suggestOnly ? 'Suggest event' : 'Add to itinerary';
+  const hasSuggestions = suggestions.length > 0;
 
   const openPicker = (e: React.MouseEvent, s: AISuggestion) => {
     e.stopPropagation();
@@ -111,6 +120,8 @@ const AISuggestionsCard = ({
       const endDate = new Date(startDate);
       endDate.setHours(startDate.getHours() + 1);
 
+      const coords = adding.address ? await geocodeAddress(adding.address).catch(() => null) : null;
+
       await createEvent(currentUid, {
         tripId,
         dayId,
@@ -119,17 +130,17 @@ const AISuggestionsCard = ({
         startDate,
         endDate,
         allDay: false,
-        cost: null,
+        cost: adding.cost || null,
+        location: adding.address ?? undefined,
+        ...(coords ?? {}),
         suggestion: null,
         isSuggestion: suggestOnly,
       } as Omit<Event, 'id'> & { isSuggestion?: boolean });
       const addedId = adding.id;
-      const mode: 'added' | 'suggested' = suggestOnly ? 'suggested' : 'added';
-      setAddedState({ id: addedId, mode });
+      const updated = suggestions.filter((s) => s.id !== addedId);
+      setSuggestions(updated);
+      saveSuggestions(tripId, updated).catch(() => {});
       setAdding(null);
-      setTimeout(() => {
-        setAddedState((curr) => (curr?.id === addedId ? null : curr));
-      }, 2500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add.');
     } finally {
@@ -137,28 +148,36 @@ const AISuggestionsCard = ({
     }
   };
 
-  const handleCardClick = () => {
-    if (!expanded) setExpanded(true);
-  };
+  const handleCardClick = () => { if (!expanded) setExpanded(true); };
+  const handleCollapse = (e: React.MouseEvent) => { e.stopPropagation(); setExpanded(false); };
 
-  const handleCollapse = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpanded(false);
-  };
+  const renderSkeletonRows = (count: number) =>
+    Array.from({ length: count }).map((_, i) => (
+      <div key={i} className="misc-ai-preview-row misc-ai-skeleton-row">
+        <div className="misc-ai-preview-dot misc-ai-skeleton-dot" />
+        <div className="misc-ai-skeleton-line" />
+      </div>
+    ));
 
   const renderCollapsed = () => (
     <>
       <div className="misc-card-header">
-        <span className="misc-card-title">AI</span>
-        <span className="misc-card-count">{PLACEHOLDER_SUGGESTIONS.length}</span>
+        <span className="misc-card-title">AI SUGGESTIONS</span>
+        <span className="misc-card-count">
+          {initialLoading ? '…' : hasSuggestions ? suggestions.length : '0'}
+        </span>
       </div>
       <div className="misc-ai-preview">
-        {PLACEHOLDER_SUGGESTIONS.slice(0, 4).map((s) => (
-          <div key={s.id} className="misc-ai-preview-row">
-            <div className="misc-ai-preview-dot" />
-            <span className="misc-ai-preview-title">{s.title}</span>
-          </div>
-        ))}
+        {initialLoading
+          ? renderSkeletonRows(4)
+          : hasSuggestions
+            ? suggestions.slice(0, 4).map((s) => (
+                <div key={s.id} className="misc-ai-preview-row">
+                  <div className="misc-ai-preview-dot" />
+                  <span className="misc-ai-preview-title">{s.title}</span>
+                </div>
+              ))
+            : <span className="misc-ai-preview-hint misc-ai-preview-hint--empty">No suggestions yet</span>}
       </div>
       <span className="misc-ai-preview-hint">Tap for more</span>
     </>
@@ -167,25 +186,55 @@ const AISuggestionsCard = ({
   const renderExpanded = () => (
     <>
       <div className="misc-card-header">
-        <span className="misc-card-title">AI</span>
-        <button
-          type="button"
-          className="misc-modal-close"
-          onClick={handleCollapse}
-          aria-label="Collapse suggestions"
-        >
-          <XIcon size={18} />
-        </button>
+        <span className="misc-card-title">AI SUGGESTIONS</span>
+        <div className="misc-ai-header-actions">
+          {hasSuggestions && (
+            <button
+              type="button"
+              className="misc-ai-refresh-btn"
+              onClick={(e) => { e.stopPropagation(); generate(); }}
+              disabled={generating}
+              aria-label="Refresh suggestions"
+            >
+              {generating ? '…' : '↺'}
+            </button>
+          )}
+          <button
+            type="button"
+            className="misc-modal-close"
+            onClick={handleCollapse}
+            aria-label="Collapse suggestions"
+          >
+            <XIcon size={18} />
+          </button>
+        </div>
       </div>
+
       <p className="misc-ai-blurb">
         {suggestOnly
           ? 'Ideas based on your trip — suggest one for the group to vote on.'
           : 'Ideas based on your trip location and current itinerary.'}
       </p>
-      <ul className="misc-ai-list misc-ai-list--inline">
-        {PLACEHOLDER_SUGGESTIONS.map((s) => {
-          const isAdded = addedState?.id === s.id;
-          return (
+
+      {generating && (
+        <div className="misc-ai-loading">
+          <div className="misc-ai-spinner" />
+          <span>Getting suggestions…</span>
+        </div>
+      )}
+
+      {!generating && suggestionsError && (
+        <div className="misc-ai-error-block">
+          <span>{suggestionsError}</span>
+          <button type="button" className="misc-ai-retry-btn" onClick={generate}>
+            Try again
+          </button>
+        </div>
+      )}
+
+      {!generating && !suggestionsError && hasSuggestions && (
+        <ul className="misc-ai-list misc-ai-list--inline">
+          {suggestions.map((s) => (
             <li key={s.id} className="misc-ai-item">
               <div className="misc-ai-item-body">
                 <div className="misc-ai-item-header">
@@ -193,6 +242,8 @@ const AISuggestionsCard = ({
                   <h4 className="misc-ai-item-title">{s.title}</h4>
                 </div>
                 <p className="misc-ai-item-desc">{s.description}</p>
+                {s.address && <p className="misc-ai-item-address">{s.address}</p>}
+                {s.cost != null && <p className="misc-ai-item-cost">~${s.cost}/person</p>}
               </div>
               <button
                 type="button"
@@ -201,17 +252,27 @@ const AISuggestionsCard = ({
                 disabled={!canAct || !currentUid || sortedDays.length === 0}
                 aria-label={actionLabel}
               >
-                {isAdded ? <CheckIcon size={16} /> : <PlusIcon size={16} />}
-                <span>
-                  {isAdded
-                    ? addedState?.mode === 'suggested' ? 'Suggested' : 'Added'
-                    : actionLabel}
-                </span>
+                <PlusIcon size={16} />
+                <span>{actionLabel}</span>
               </button>
             </li>
-          );
-        })}
-      </ul>
+          ))}
+        </ul>
+      )}
+
+      {!generating && !suggestionsError && !hasSuggestions && !initialLoading && (
+        <div className="misc-ai-empty">
+          <p className="misc-ai-empty-text">No suggestions yet. Generate some based on your trip.</p>
+          <button
+            type="button"
+            className="misc-ai-generate-btn"
+            onClick={generate}
+          >
+            Generate suggestions
+          </button>
+        </div>
+      )}
+
       {sortedDays.length === 0 && (
         <div className="misc-ai-inline-error">
           Add some trip days first, then these can be inserted.

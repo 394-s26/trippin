@@ -103,6 +103,12 @@ service cloud.firestore {
         allow read, write: if isAuthed() && canAccessParentTrip(tripId);
       }
 
+      // AI suggestions cache (singleton doc at /meta/aiSuggestions).
+      // Any trip member can read; any member can write (generate/refresh suggestions).
+      match /meta/{metaId} {
+        allow read, write: if isAuthed() && canAccessParentTrip(tripId);
+      }
+
       // Misc page — collaborative notes (singleton doc at /notes/current).
       // Any trip member can read/write; the soft-edit lock is enforced at
       // the app layer via transactions.

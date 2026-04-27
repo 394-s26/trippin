@@ -1,0 +1,21 @@
+@reference "../index.css";
+
+.mini-trip-banner {
+  @apply relative w-full h-12 rounded-full overflow-hidden bg-cover bg-center flex items-center justify-between px-6;
+}
+
+.mini-trip-banner-overlay {
+  @apply absolute inset-0 bg-black/40;
+}
+
+.mini-trip-banner-name {
+  @apply relative z-10 text-white font-semibold text-lg truncate mr-3 leading-none;
+}
+
+.mini-trip-banner-users {
+  @apply relative z-10 flex items-center flex-shrink-0;
+}
+
+.mini-trip-banner-overflow {
+  @apply w-7 h-7 rounded-full bg-black/50 border-2 border-white text-white text-xs font-semibold flex items-center justify-center flex-shrink-0;
+}

@@ -95,3 +95,115 @@
 .misc-ai-confirm-btn {
   @apply w-full py-3 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-light disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
 }
+
+/* Header action row (refresh + close) */
+.misc-ai-header-actions {
+  @apply flex items-center gap-1 ml-auto;
+}
+
+.misc-ai-refresh-btn {
+  @apply w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors text-base disabled:opacity-40 disabled:cursor-not-allowed;
+}
+
+/* Empty state */
+.misc-ai-empty {
+  @apply flex flex-col items-center gap-3 py-6 text-center;
+}
+
+.misc-ai-empty-text {
+  @apply text-sm text-gray-400;
+}
+
+.misc-ai-generate-btn {
+  @apply px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-light transition-colors;
+}
+
+/* Skeleton loading rows */
+.misc-ai-skeleton-row {
+  @apply pointer-events-none;
+}
+
+.misc-ai-skeleton-dot {
+  @apply bg-gray-200 animate-pulse;
+}
+
+.misc-ai-skeleton-line {
+  @apply h-3 rounded bg-gray-200 animate-pulse flex-1;
+}
+
+/* Expanded loading state */
+.misc-ai-loading {
+  @apply flex items-center gap-2 text-sm text-gray-400 py-4 justify-center;
+}
+
+.misc-ai-spinner {
+  @apply w-4 h-4 rounded-full border-2 border-gray-200 border-t-primary animate-spin;
+}
+
+/* Expanded error state */
+.misc-ai-error-block {
+  @apply flex flex-col items-center gap-2 py-4 text-sm text-gray-500 text-center;
+}
+
+.misc-ai-retry-btn {
+  @apply px-3 py-1 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 transition-colors;
+}
+
+/* Address and cost metadata on suggestion items */
+.misc-ai-item-address {
+  @apply text-xs text-gray-400 mt-0.5;
+}
+
+.misc-ai-item-cost {
+  @apply text-xs text-gray-500 font-medium mt-0.5;
+}
+
+/* Collapsed empty hint variant */
+.misc-ai-preview-hint--empty {
+  @apply text-xs text-gray-400 normal-case tracking-normal mt-1;
+}
+
+/* Skeleton loading rows */
+.misc-ai-skeleton-row {
+  @apply pointer-events-none;
+}
+
+.misc-ai-skeleton-dot {
+  @apply bg-gray-200 animate-pulse;
+}
+
+.misc-ai-skeleton-line {
+  @apply h-3 rounded bg-gray-200 animate-pulse flex-1;
+}
+
+/* Expanded loading state */
+.misc-ai-loading {
+  @apply flex items-center gap-2 text-sm text-gray-400 py-4 justify-center;
+}
+
+.misc-ai-spinner {
+  @apply w-4 h-4 rounded-full border-2 border-gray-200 border-t-primary animate-spin;
+}
+
+/* Expanded error state */
+.misc-ai-error-block {
+  @apply flex flex-col items-center gap-2 py-4 text-sm text-gray-500;
+}
+
+.misc-ai-retry-btn {
+  @apply px-3 py-1 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 transition-colors;
+}
+
+/* Address and cost metadata on suggestion items */
+.misc-ai-item-address {
+  @apply text-xs text-gray-400 mt-0.5;
+}
+
+.misc-ai-item-cost {
+  @apply text-xs text-gray-500 font-medium mt-0.5;
+}
+
+/* Small inline error for collapsed state */
+.misc-ai-inline-error--sm {
+  @apply text-xs;
+}

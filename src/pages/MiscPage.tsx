@@ -9,6 +9,7 @@ import { useDays } from '../hooks/useDays';
 import useNotes from '../hooks/useNotes';
 import useTripPhotos from '../hooks/useTripPhotos';
 import useTripGame from '../hooks/useTripGame';
+import MiniTripBanner from '../components/MiniTripBanner';
 import NotesSection from '../components/misc/NotesSection';
 import PhotosCard from '../components/misc/PhotosCard';
 import GameCard from '../components/misc/GameCard';
@@ -74,7 +75,12 @@ const MiscPage = () => {
       <div className="home-container">
         <main className="home-main">
           <div className="home-content misc-page-content">
-            <h1 className="misc-page-title">{trip.name}</h1>
+            <MiniTripBanner
+              tripName={trip.name}
+              backgroundImage={trip.bannerImageUrl}
+              ownerId={trip.userId}
+              shared={trip.shared}
+            />
 
             <div className="misc-grid">
               <div className="misc-grid-col">
@@ -98,6 +104,8 @@ const MiscPage = () => {
                   days={days}
                   canCreateEvent={can('add_event')}
                   canProposeEvent={can('propose_create_event')}
+                  trip={trip}
+                  tripUserCount={tripUsers.length || 1}
                 />
               </div>
             </div>
