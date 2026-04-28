@@ -20,6 +20,10 @@
   @apply mt-auto text-[10px] text-gray-400 uppercase tracking-wider;
 }
 
+.misc-ai-preview-hint--exhausted {
+  @apply text-red-400;
+}
+
 .misc-ai-blurb {
   @apply text-xs text-gray-500;
 }
@@ -146,7 +150,7 @@
 }
 
 .misc-ai-retry-btn {
-  @apply px-3 py-1 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 transition-colors;
+  @apply px-3 py-1 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
 /* Address and cost metadata on suggestion items */
@@ -163,37 +167,7 @@
   @apply text-xs text-gray-400 normal-case tracking-normal mt-1;
 }
 
-/* Skeleton loading rows */
-.misc-ai-skeleton-row {
-  @apply pointer-events-none;
-}
-
-.misc-ai-skeleton-dot {
-  @apply bg-gray-200 animate-pulse;
-}
-
-.misc-ai-skeleton-line {
-  @apply h-3 rounded bg-gray-200 animate-pulse flex-1;
-}
-
-/* Expanded loading state */
-.misc-ai-loading {
-  @apply flex items-center gap-2 text-sm text-gray-400 py-4 justify-center;
-}
-
-.misc-ai-spinner {
-  @apply w-4 h-4 rounded-full border-2 border-gray-200 border-t-primary animate-spin;
-}
-
-/* Expanded error state */
-.misc-ai-error-block {
-  @apply flex flex-col items-center gap-2 py-4 text-sm text-gray-500;
-}
-
-.misc-ai-retry-btn {
-  @apply px-3 py-1 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 transition-colors;
-}
-
+/* Model selector for high-usage retry */
 .misc-ai-model-label {
   @apply text-xs text-gray-400 mt-1;
 }
@@ -202,16 +176,174 @@
   @apply px-2 py-1 rounded-lg bg-gray-100 text-gray-600 text-xs border border-gray-200 mt-1 cursor-pointer;
 }
 
-/* Address and cost metadata on suggestion items */
-.misc-ai-item-address {
-  @apply flex items-start gap-1 text-xs text-gray-400 mt-0.5;
-}
-
-.misc-ai-item-cost {
-  @apply text-xs text-gray-500 font-medium mt-0.5;
-}
-
 /* Small inline error for collapsed state */
 .misc-ai-inline-error--sm {
   @apply text-xs;
+}
+
+/* ----------- Locations setup panel ----------- */
+
+.misc-ai-setup {
+  @apply flex flex-col gap-3;
+}
+
+.misc-ai-setup-title {
+  @apply text-sm font-semibold text-gray-900;
+}
+
+.misc-ai-setup-subtitle {
+  @apply text-xs text-gray-500;
+}
+
+.misc-ai-setup-input-container {
+  @apply w-full;
+}
+
+/* ----------- Location tags ----------- */
+
+.misc-ai-location-tags {
+  @apply flex flex-wrap items-center gap-1.5;
+}
+
+.misc-ai-location-tag {
+  @apply inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium;
+}
+
+.misc-ai-location-tag-remove {
+  @apply ml-0.5 w-4 h-4 flex items-center justify-center rounded-full text-primary/70 hover:bg-primary/20 hover:text-primary text-sm leading-none;
+}
+
+.misc-ai-location-edit-btn {
+  @apply text-xs text-gray-500 hover:text-primary underline-offset-2 hover:underline;
+}
+
+/* ----------- Quota banner ----------- */
+
+.misc-ai-quota-banner {
+  @apply text-xs text-gray-600 px-3 py-2 rounded-lg bg-gray-50 flex items-center gap-2;
+}
+
+.misc-ai-quota-banner--exhausted {
+  @apply text-red-600 bg-red-50;
+}
+
+/* ----------- Prompt chips ----------- */
+
+.misc-ai-prompt-grid {
+  @apply flex flex-wrap gap-2;
+}
+
+.misc-ai-prompt-chip {
+  @apply px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left;
+}
+
+.misc-ai-prompt-chip:hover:not(:disabled) {
+  @apply bg-primary/10 text-primary border-primary/30;
+}
+
+/* ----------- Collapsed empty / branded state ----------- */
+
+.misc-ai-collapsed {
+  @apply flex flex-col gap-2 w-full h-full;
+}
+
+.misc-ai-collapsed-top {
+  @apply flex items-center justify-between;
+}
+
+.misc-ai-badge {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider text-white uppercase;
+  background: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
+}
+
+.misc-ai-quota-pill {
+  @apply text-[10px] font-semibold text-primary bg-primary/10 rounded-full px-2 py-0.5;
+}
+
+.misc-ai-quota-pill--exhausted {
+  @apply text-red-600 bg-red-100;
+}
+
+.misc-ai-collapsed-empty {
+  @apply flex-1 flex flex-col items-start justify-center gap-2 py-2;
+}
+
+.misc-ai-collapsed-heading {
+  @apply text-base font-bold text-gray-900 leading-tight;
+}
+
+.misc-ai-collapsed-sub {
+  @apply text-xs text-gray-500 leading-snug;
+}
+
+.misc-ai-collapsed-chips {
+  @apply flex flex-col gap-1.5 w-full mt-1;
+}
+
+.misc-ai-collapsed-chip {
+  @apply text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 truncate;
+}
+
+.misc-ai-collapsed-cta {
+  @apply mt-auto text-[11px] text-primary font-semibold;
+}
+
+/* ----------- View header (used by all three expanded views) ----------- */
+
+.misc-ai-view-header {
+  @apply flex items-center justify-between gap-2 pb-2 border-b border-gray-100 mb-1;
+}
+
+.misc-ai-view-header-left {
+  @apply flex items-center gap-2 min-w-0 flex-1;
+}
+
+.misc-ai-view-title {
+  @apply text-sm font-semibold text-gray-900 truncate;
+}
+
+.misc-ai-back-btn {
+  @apply w-7 h-7 flex items-center justify-center rounded-full text-gray-600 hover:text-primary hover:bg-primary/10 transition-colors text-base shrink-0;
+}
+
+.misc-ai-icon-btn {
+  @apply w-7 h-7 flex items-center justify-center rounded-full text-gray-500 hover:text-primary hover:bg-primary/10 transition-colors shrink-0;
+}
+
+.misc-ai-icon-btn--danger {
+  @apply hover:text-red-500 hover:bg-red-50;
+}
+
+/* ----------- View tabs ----------- */
+
+.misc-ai-tabs {
+  @apply flex items-center gap-1 p-1 bg-gray-100 rounded-full self-start;
+}
+
+.misc-ai-tab {
+  @apply flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.misc-ai-tab:hover:not(:disabled):not(.misc-ai-tab--active) {
+  @apply text-gray-900;
+}
+
+.misc-ai-tab--active {
+  @apply bg-white text-primary shadow-sm;
+}
+
+.misc-ai-tab-count {
+  @apply text-[10px] font-bold bg-primary/10 text-primary rounded-full px-1.5 py-0.5 min-w-[18px] text-center;
+}
+
+/* ----------- Inline link from prompts → results ----------- */
+
+.misc-ai-view-results-link {
+  @apply text-xs text-primary font-medium hover:underline self-start;
+}
+
+/* ----------- Ask again CTA on results view ----------- */
+
+.misc-ai-ask-again-btn {
+  @apply w-full py-2.5 rounded-full bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
 }
