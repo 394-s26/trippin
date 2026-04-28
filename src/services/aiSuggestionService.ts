@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   onSnapshot,
   query,
   setDoc,
@@ -10,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Event, EVENT_CATEGORY } from '../types/event';
+import { findPlaceWithDetails } from './googleMapsService';
 
 export interface AISuggestion {
   id: string;
@@ -114,6 +116,26 @@ export async function saveLocations(tripId: string, locations: TripLocation[]): 
     { locations, updatedAt: Date.now() },
     { merge: true },
   );
+}
+
+export async function hasExistingEvents(tripId: string): Promise<boolean> {
+  const q = query(collectionGroup(db, 'events'), where('tripId', '==', tripId), limit(1));
+  const snap = await getDocs(q);
+  return !snap.empty;
+}
+
+// Tries to resolve the trip name to a city via Google Places.
+// Returns an empty array if the name doesn't identify a geographic place.
+export async function detectTripLocations(
+  tripName: string,
+): Promise<TripLocation[]> {
+  try {
+    const place = await findPlaceWithDetails(tripName);
+    if (place) {
+      return [{ name: place.name, address: place.address, lat: place.lat, lng: place.lng }];
+    }
+  } catch { /* ignore */ }
+  return [];
 }
 
 async function fetchExistingEventNames(tripId: string): Promise<string[]> {

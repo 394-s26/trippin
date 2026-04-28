@@ -14,6 +14,8 @@ import {
   PromptKey,
   TripLocation,
   buildPromptChips,
+  detectTripLocations,
+  hasExistingEvents,
   fetchAISuggestions,
   saveLocations,
   saveSuggestions,
@@ -74,6 +76,9 @@ const AISuggestionsCard = ({
   const [isHighUsageError, setIsHighUsageError] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_GEMINI_MODEL);
 
+  // Auto-detection state.
+  const [autoDetecting, setAutoDetecting] = useState(false);
+
   // The expanded card has three navigable views.
   type View = 'setup' | 'prompts' | 'results';
   const [view, setView] = useState<View>('prompts');
@@ -94,14 +99,30 @@ const AISuggestionsCard = ({
   }, [tripId]);
 
   // Pick a sensible default view the first time the card opens / meta loads.
+  // When no locations are saved yet, attempt to auto-detect from the trip name
+  // and existing events before falling back to the manual setup view.
   const initializedRef = useRef(false);
   useEffect(() => {
     if (!expanded || initialLoading || initializedRef.current) return;
     initializedRef.current = true;
-    if (locations.length === 0) setView('setup');
-    else if (suggestions.length > 0) setView('results');
-    else setView('prompts');
-  }, [expanded, initialLoading, locations.length, suggestions.length]);
+    if (locations.length > 0) {
+      setView(suggestions.length > 0 ? 'results' : 'prompts');
+      return;
+    }
+    setAutoDetecting(true);
+    hasExistingEvents(tripId)
+      .then((hasEvents) => {
+        if (hasEvents) { setView('prompts'); return; }
+        return detectTripLocations(trip.name).then((detected) => {
+          if (detected.length > 0) {
+            return saveLocations(tripId, detected).then(() => setView('prompts'));
+          }
+          setView('setup');
+        });
+      })
+      .catch(() => setView('setup'))
+      .finally(() => setAutoDetecting(false));
+  }, [expanded, initialLoading, locations.length, suggestions.length, tripId, trip.name]);
 
   // Reset the "first time" flag when the card collapses so reopening picks a
   // sensible landing view again.
@@ -320,9 +341,6 @@ const AISuggestionsCard = ({
         </>
       ) : (
         <div className="misc-ai-collapsed-empty">
-          <div className="misc-ai-collapsed-orb">
-            <SparkleIcon size={20} />
-          </div>
           <h3 className="misc-ai-collapsed-heading">Plan smarter with AI</h3>
           <p className="misc-ai-collapsed-sub">
             Get ideas pulled live from Reddit, TripAdvisor & more.
@@ -679,13 +697,22 @@ const AISuggestionsCard = ({
     </>
   );
 
+  const renderAutoDetecting = () => (
+    <div className="misc-ai-loading">
+      <div className="misc-ai-spinner" />
+      <span>Detecting your trip's location…</span>
+    </div>
+  );
+
   const renderExpanded = () => (
     <>
-      {showSetup
-        ? renderSetupView()
-        : view === 'results'
-          ? renderResultsView()
-          : renderPromptsView()}
+      {autoDetecting
+        ? renderAutoDetecting()
+        : showSetup
+          ? renderSetupView()
+          : view === 'results'
+            ? renderResultsView()
+            : renderPromptsView()}
     </>
   );
 
