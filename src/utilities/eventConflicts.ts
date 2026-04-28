@@ -48,8 +48,9 @@ const toMs = (value: Date | TimestampLike | string | number | null | undefined):
 
 // Create-suggestions occupy real time slots and should surface conflicts.
 // Delete-suggestions are proposals about existing events, not new time blocks.
+// All-day events are exempt from conflict detection.
 const isConflictEligible = (event: Event): boolean =>
-  !event.suggestion || event.suggestion.type === 'create';
+  !event.allDay && (!event.suggestion || event.suggestion.type === 'create');
 
 const toRange = (event: Event): EventRange | null => {
   const startMs = toMs(event.startDate);
