@@ -5,7 +5,6 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 // import MapFilterPanel from '../components/MapFilterPanel';
-import MiniTripBanner from '../components/MiniTripBanner';
 import DirectionsExplorer from '../components/DirectionsExplorer';
 import useTrip from '../hooks/useTrip';
 import { useDays } from '../hooks/useDays';
@@ -287,14 +286,7 @@ const MapPage = () => {
                 className="map-canvas-wrapper"
                 style={{ position: 'relative', flex: '1 1 0%', minWidth: 0, height: '100%' }}
               >
-                <div className="map-banner-overlay">
-                  <MiniTripBanner
-                    tripName={trip.name}
-                    backgroundImage={trip.bannerImageUrl}
-                    ownerId={trip.userId}
-                    shared={trip.shared}
-                  />
-                </div>
+
                 <MapGL
                   ref={mapRef}
                   initialViewState={{ longitude: 0, latitude: 20, zoom: 1.5 }}
@@ -350,55 +342,62 @@ const MapPage = () => {
                 /> */}
 
                 {days.length > 0 && (
-                  <div className="map-day-nav">
-                    <button
-                      type="button"
-                      className={`map-day-nav--title${dayNavOpen ? ' map-day-nav--title-open' : ''}`}
-                      onClick={() => setDayNavOpen(o => !o)}
-                      aria-expanded={dayNavOpen}
-                    >
-                      <CaretRightIcon size={12} className={`map-day-nav--caret${dayNavOpen ? ' map-day-nav--caret-open' : ''}`} />
-                      <span>Daily Plan</span>
-                      {!dayNavOpen && activeDayIds.size === 1 && (() => {
-                        const activeDay = days.find(d => activeDayIds.has(d.id));
-                        return activeDay ? (
-                          <span className="map-day-nav--active-label">{formatDayLabel(activeDay.date)}</span>
-                        ) : null;
-                      })()}
-                    </button>
-                    <div className={`map-day-nav--buttons${dayNavOpen ? ' map-day-nav--buttons-open' : ''}`}>
-                      <div className="map-day-nav--buttons-inner">
-                        {days.map(day => {
-                          const dateLabel = formatDayLabel(day.date);
-                          const isActive = activeDayIds.size === 1 && activeDayIds.has(day.id);
-                          return (
-                            <button
-                              key={day.id}
-                              type="button"
-                              className={`map-day-nav-btn${isActive ? ' map-day-nav-btn--active' : ''}`}
-                              onClick={() => handleDayNavClick(day.id)}
-                              aria-pressed={isActive}
-                            >
-                              {dateLabel}
-                            </button>
-                          );
-                        })}
+                  <div className="map-top-left-controls">
+                    <div className="map-day-nav">
+                      <button
+                        type="button"
+                        className={`map-day-nav--title${dayNavOpen ? ' map-day-nav--title-open' : ''}`}
+                        onClick={() => setDayNavOpen(o => !o)}
+                        aria-expanded={dayNavOpen}
+                      >
+                        <CaretRightIcon size={12} className={`map-day-nav--caret${dayNavOpen ? ' map-day-nav--caret-open' : ''}`} />
+                        <span>Daily Plan</span>
+                        {!dayNavOpen && activeDayIds.size === 1 && (() => {
+                          const activeDay = days.find(d => activeDayIds.has(d.id));
+                          return activeDay ? (
+                            <span className="map-day-nav--active-label">{formatDayLabel(activeDay.date)}</span>
+                          ) : null;
+                        })()}
+                      </button>
+                      <div className={`map-day-nav--buttons${dayNavOpen ? ' map-day-nav--buttons-open' : ''}`}>
+                        <div className="map-day-nav--buttons-inner">
+                          <button
+                            type="button"
+                            className={`map-day-nav-btn${activeDayIds.size === 0 ? ' map-day-nav-btn--active' : ''}`}
+                            onClick={() => { setActiveDayIds(new Set()); handleRecenter(); }}
+                            aria-pressed={activeDayIds.size === 0}
+                          >
+                            View All
+                          </button>
+                          {days.map(day => {
+                            const dateLabel = formatDayLabel(day.date);
+                            const isActive = activeDayIds.size === 1 && activeDayIds.has(day.id);
+                            return (
+                              <button
+                                key={day.id}
+                                type="button"
+                                className={`map-day-nav-btn${isActive ? ' map-day-nav-btn--active' : ''}`}
+                                onClick={() => handleDayNavClick(day.id)}
+                                aria-pressed={isActive}
+                              >
+                                {dateLabel}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
                 <div className="map-top-right-controls">
-                  {/* <div className="map-load-meter" aria-live="polite">
-                    {remaining} map views left
-                  </div> */}
                   <button
                     className="map-recenter-btn"
                     onClick={handleRecenter}
                     title="Re-center on events"
                     aria-label="Re-center map on visible events"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="12" cy="12" r="3"/>
                       <line x1="12" y1="2" x2="12" y2="6"/>
                       <line x1="12" y1="18" x2="12" y2="22"/>
@@ -407,18 +406,15 @@ const MapPage = () => {
                     </svg>
                     Re-center
                   </button>
+                  <DirectionsExplorer
+                    days={days}
+                    mappableEvents={mappableEvents}
+                    mapRef={mapboxMapRef}
+                    accessToken={ACCESS_TOKEN}
+                    activeDayIds={activeDayIds}
+                    onChangeActiveDayIds={setActiveDayIds}
+                  />
                 </div>
-
-
-
-                <DirectionsExplorer
-                  days={days}
-                  mappableEvents={mappableEvents}
-                  mapRef={mapboxMapRef}
-                  accessToken={ACCESS_TOKEN}
-                  activeDayIds={activeDayIds}
-                  onChangeActiveDayIds={setActiveDayIds}
-                />
 
                 {unmappableEvents.length > 0 && (
                   <div className="map-unmappable">

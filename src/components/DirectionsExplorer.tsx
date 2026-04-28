@@ -274,6 +274,17 @@ const DirectionsExplorer = ({
 
   return (
     <div className={`directions-explorer${isOpen ? ' directions-explorer--open' : ''}`}>
+      <button
+        type="button"
+        className={`directions-explorer-toggle${isOpen ? ' directions-explorer-toggle--active' : ''}`}
+        onClick={() => setIsOpen(o => !o)}
+        aria-label="Toggle directions explorer"
+        aria-expanded={isOpen}
+      >
+        <RouteIcon size={18} />
+        <span>Directions</span>
+      </button>
+
       <div className="directions-explorer-card">
         <div className="directions-explorer-header">
           <h2 className="directions-explorer-title">Directions Explorer</h2>
@@ -344,17 +355,6 @@ const DirectionsExplorer = ({
           )}
         </div>
       </div>
-
-      <button
-        type="button"
-        className={`directions-explorer-toggle${isOpen ? ' directions-explorer-toggle--active' : ''}`}
-        onClick={() => setIsOpen(o => !o)}
-        aria-label="Toggle directions explorer"
-        aria-expanded={isOpen}
-      >
-        <RouteIcon size={18} />
-        <span>Directions</span>
-      </button>
     </div>
   );
 };
