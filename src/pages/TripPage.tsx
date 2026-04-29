@@ -110,7 +110,6 @@ const TripPage = () => {
     removedDays: number;
     removedEvents: number;
   } | null>(null);
-  const [conflictDismissConfirm, setConflictDismissConfirm] = useState<Event | null>(null);
   // Snapshot of event IDs pending deletion confirmation. Captured up-front so
   // the SelectionActionBar's overlay auto-deselect doesn't erase them mid-flow.
   const [deleteConfirmIds, setDeleteConfirmIds] = useState<string[] | null>(null);
@@ -484,18 +483,9 @@ const TripPage = () => {
     setDeleteConfirmIds([event.id]);
   };
 
-  const handleDismissConflict = (event: Event) => {
-    setConflictDismissConfirm(event);
-  };
-
-  const handleConfirmDismissConflict = async () => {
-    if (!appUser || !conflictDismissConfirm) return;
-    await dismissEventConflict(
-      conflictDismissConfirm.tripId,
-      conflictDismissConfirm.dayId,
-      conflictDismissConfirm.id,
-    );
-    setConflictDismissConfirm(null);
+  const handleDismissConflict = async (event: Event) => {
+    if (!appUser) return;
+    await dismissEventConflict(event.tripId, event.dayId, event.id);
   };
 
   useEffect(() => {
@@ -696,25 +686,6 @@ const TripPage = () => {
                 Adjust Dates
               </button>
               <button onClick={() => setDateAdjustConfirm(null)} className="delete-global-btn cancel-btn">
-                Cancel
-              </button>
-            </div>
-          </div>,
-          document.body
-        )}
-
-        {conflictDismissConfirm && createPortal(
-          <div className="overlay-bottom">
-            <div className="overlay-scrim" onClick={() => setConflictDismissConfirm(null)} />
-            <div className="overlay-panel overlay-panel--sm rounded-t-2xl p-6 pb-8 flex flex-col gap-3 animate-slide-up">
-              <h2 className="delete-confirm-title">Dismiss conflict warning?</h2>
-              <p className="delete-confirm-body">
-                The warning for "{conflictDismissConfirm.name}" will be hidden until this event conflicts again.
-              </p>
-              <button onClick={handleConfirmDismissConflict} className="global-btn red-btn">
-                Dismiss Warning
-              </button>
-              <button onClick={() => setConflictDismissConfirm(null)} className="global-btn cancel-btn">
                 Cancel
               </button>
             </div>
